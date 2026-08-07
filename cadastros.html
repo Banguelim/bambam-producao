@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>BAMBAM · Cadastros</title>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/forms.css">
+</head>
+<body>
+  <div class="topbar">
+    <span class="logo">BAMBAM <b>BABY</b></span>
+    <nav class="nav">
+      <a href="index.html">Painel</a>
+      <a href="novo-corte.html">Novo corte</a>
+      <a href="designacao.html" class="TELA_DESIG">Designação</a>
+      <a href="retorno.html" class="TELA_RET">Retorno</a>
+      <a href="pagamento.html" class="TELA_PAG">Pagamento</a>
+      <a href="estoque-entrada.html" class="TELA_EST">Estoque</a>
+      <a href="cadastros.html" class="ativo">Cadastros</a>
+    </nav>
+    <div class="user">
+      <span id="user-email">—</span>
+      <button class="logout" onclick="logout()">sair</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <h1>Cadastros</h1>
+    <div style="background:var(--surface-1);border:0.5px dashed var(--border);border-radius:10px;padding:40px 20px;text-align:center;margin-top:20px">
+      <div style="font-size:32px;margin-bottom:10px">🚧</div>
+      <div style="font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:6px">Em construção</div>
+      <div style="font-size:13px;color:var(--text-secondary)">Essa tela será implementada na próxima etapa.<br>Você já pode usar o <b>Novo corte</b> pra registrar cortes de tecido.</div>
+      <a href="index.html" class="btn btn-secondary" style="margin-top:14px;display:inline-block">Voltar ao painel</a>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/auth.js"></script>
+  <script>protegerRota();</script>
+</body>
+</html>

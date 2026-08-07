@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BAMBAM · Painel</title>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/forms.css">
+<style>
+  .dash-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .card-tela {
+    background: var(--surface-1);
+    border: 0.5px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    text-decoration: none;
+    color: var(--text-primary);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .card-tela:hover {
+    border-color: var(--border-accent);
+    background: color-mix(in srgb, var(--bg-accent) 30%, var(--surface-1));
+    text-decoration: none;
+  }
+  .card-tela .num {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 700;
+  }
+  .card-tela .titulo {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text-primary);
+  }
+  .card-tela .desc {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-top: 8px;
+  }
+  .stat-card {
+    background: var(--surface-1);
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .stat-card .k {
+    font-size: 10px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+  }
+  .stat-card .v {
+    font-size: 24px;
+    font-weight: 900;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+    margin-top: 4px;
+  }
+  .stat-card .v.destaque { color: var(--text-accent); }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <span class="logo">BAMBAM <b>BABY</b></span>
+    <nav class="nav">
+      <a href="index.html" class="ativo">Painel</a>
+      <a href="novo-corte.html">Novo corte</a>
+      <a href="designacao.html">Designação</a>
+      <a href="retorno.html">Retorno</a>
+      <a href="pagamento.html">Pagamento</a>
+      <a href="estoque-entrada.html">Estoque</a>
+      <a href="cadastros.html">Cadastros</a>
+    </nav>
+    <div class="user">
+      <span id="user-email">—</span>
+      <button class="logout" onclick="logout()">sair</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <h1>Painel</h1>
+
+    <div class="stats" id="stats">
+      <div class="stat-card"><div class="k">Cortes hoje</div><div class="v" id="s-cortes">—</div></div>
+      <div class="stat-card"><div class="k">Notas em aberto</div><div class="v destaque" id="s-notas">—</div></div>
+      <div class="stat-card"><div class="k">Peças fora com costureiras</div><div class="v" id="s-fora">—</div></div>
+      <div class="stat-card"><div class="k">Peças em arremate</div><div class="v" id="s-arremate">—</div></div>
+    </div>
+
+    <div class="dash-grid">
+      <a class="card-tela" href="novo-corte.html">
+        <span class="num">Tela 1</span>
+        <span class="titulo">Novo corte</span>
+        <span class="desc">Registrar corte de tecido — cores + tamanhos por lote/ref</span>
+      </a>
+      <a class="card-tela" href="designacao.html">
+        <span class="num">Tela 2</span>
+        <span class="titulo">Designação</span>
+        <span class="desc">Escolher costureira + gerar nota do lote</span>
+      </a>
+      <a class="card-tela" href="retorno.html">
+        <span class="num">Tela 3</span>
+        <span class="titulo">Retorno</span>
+        <span class="desc">Costureira volta com as peças — registrar chegada</span>
+      </a>
+      <a class="card-tela" href="pagamento.html">
+        <span class="num">Tela 4</span>
+        <span class="titulo">Pagamento</span>
+        <span class="desc">Pagar costureira — com opção de adiantamento</span>
+      </a>
+      <a class="card-tela" href="estoque-entrada.html">
+        <span class="num">Tela 5</span>
+        <span class="titulo">Entrada no estoque</span>
+        <span class="desc">Arremate pronto — vira estoque vendável (por cor)</span>
+      </a>
+      <a class="card-tela" href="cadastros.html">
+        <span class="num">Cadastros</span>
+        <span class="titulo">Cadastros</span>
+        <span class="desc">Referências, costureiras, preços</span>
+      </a>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/db.js"></script>
+  <script>
+    protegerRota().then(async () => {
+      // Carrega stats
+      try {
+        // Cortes hoje
+        const hoje = hojeISO();
+        const cortesHoje = await colCortes().where('data_corte', '==', hoje).get();
+        document.getElementById('s-cortes').textContent = cortesHoje.size;
+        // Notas em aberto
+        const notasAbertas = await colNotas().where('status', 'in', ['aberta', 'paga_parcial']).get();
+        document.getElementById('s-notas').textContent = notasAbertas.size;
+        // Total peças fora (soma dos totais das notas em aberto)
+        let totalFora = 0;
+        notasAbertas.forEach(d => totalFora += (d.data().total_saida || 0));
+        document.getElementById('s-fora').textContent = totalFora;
+        // Aguardando arremate = peças chegou_1 mas não deu entrada estoque ainda (aprox)
+        document.getElementById('s-arremate').textContent = '—';
+      } catch (e) {
+        console.warn('Falha ao carregar stats:', e);
+      }
+    });
+  </script>
+</body>
+</html>

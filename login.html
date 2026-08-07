@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BAMBAM · Login</title>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/forms.css">
+<style>
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+  }
+  .card {
+    background: var(--surface-1);
+    border: 0.5px solid var(--border);
+    border-radius: 12px;
+    padding: 32px 28px;
+    width: 340px;
+    max-width: 92vw;
+  }
+  .card h1 {
+    text-align: center;
+    margin-bottom: 24px;
+    font-size: 20px;
+    letter-spacing: 0.5px;
+  }
+  .card h1 b { color: var(--text-accent); }
+  .card h1 small {
+    display: block;
+    font-size: 11px;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    margin-top: 4px;
+    font-weight: 500;
+    text-transform: uppercase;
+  }
+  .campo { margin-bottom: 14px; }
+  .campo input { width: 100%; padding: 10px 12px; }
+  #btn-login {
+    width: 100%;
+    padding: 11px;
+    font-size: 14px;
+    margin-top: 6px;
+  }
+  #erro { color: var(--text-danger); font-size: 12px; margin-top: 10px; text-align: center; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>BAMBAM <b>BABY</b><small>Controle de produção</small></h1>
+    <form id="form">
+      <div class="campo"><label class="lbl">E-mail</label><input type="email" id="email" autocomplete="username" required></div>
+      <div class="campo"><label class="lbl">Senha</label><input type="password" id="senha" autocomplete="current-password" required></div>
+      <button type="submit" class="btn btn-primary" id="btn-login">Entrar</button>
+      <div id="erro"></div>
+    </form>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    // Se já tá logado, manda pro index
+    auth.onAuthStateChanged(u => { if (u) window.location.href = 'index.html'; });
+    document.getElementById('form').addEventListener('submit', async e => {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      const senha = document.getElementById('senha').value;
+      document.getElementById('btn-login').disabled = true;
+      const erro = await fazerLogin(email, senha);
+      if (erro) {
+        document.getElementById('erro').textContent = 'Falha no login. Verifique email e senha.';
+        document.getElementById('btn-login').disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

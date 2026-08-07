@@ -1,0 +1,341 @@
+/* Grade das 5 colunas (RN P M G GG) — padrão aprovado
+   Usado em: Novo Corte, Designação, Retorno, Entrada Estoque */
+
+.grade5 {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+}
+
+.col {
+  background: var(--surface-1);
+  border-radius: 8px;
+  padding: 5px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid transparent;
+  min-height: 160px;
+}
+.col.completo {
+  border-color: var(--success);
+  background: color-mix(in srgb, var(--success) 8%, var(--surface-1));
+}
+.col.parcial {
+  border-color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 6%, var(--surface-1));
+}
+.col.confirmada {
+  background: color-mix(in srgb, var(--bg-accent-strong) 6%, var(--surface-1));
+  border-color: color-mix(in srgb, var(--bg-accent-strong) 30%, transparent);
+}
+.col.tem-pendente {
+  border-color: var(--border-accent);
+  border-style: dashed;
+}
+
+.col-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  font-weight: 800;
+  color: var(--text-primary);
+  font-size: 13px;
+  letter-spacing: 1px;
+  padding: 2px 4px 4px;
+  border-bottom: 0.5px solid var(--border);
+}
+.col-h .check {
+  font-size: 12px;
+  color: var(--text-accent);
+  font-weight: 900;
+  display: none;
+}
+.col.confirmada .col-h .check { display: inline; }
+.col-h .tudo-col {
+  font-size: 8px;
+  cursor: pointer;
+  user-select: none;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 3px;
+  border: 0.5px dashed;
+  background: none;
+}
+.col-h .tudo-col.azul {
+  color: var(--text-accent);
+  border-color: var(--border-accent);
+}
+.col-h .tudo-col.azul:hover { background: var(--bg-accent); }
+.col-h .tudo-col.verde {
+  color: var(--success);
+  border-color: var(--success);
+}
+.col-h .tudo-col.verde:hover { background: color-mix(in srgb, var(--success) 15%, transparent); }
+
+.entradas {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-height: 14px;
+}
+
+/* Cada linha de cor: nome + qtd contenteditable + × */
+.cor-linha {
+  display: flex;
+  align-items: center;
+  padding: 5px 7px;
+  border-radius: 5px;
+  gap: 5px;
+  background: var(--surface-2);
+  border: 0.5px solid transparent;
+}
+.cor-linha.pending {
+  border-color: var(--border-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--bg-accent) 25%, var(--surface-2));
+}
+.cor-linha.completo {
+  border-color: var(--success);
+  background: color-mix(in srgb, var(--success) 10%, var(--surface-2));
+}
+.cor-linha.parcial {
+  border-color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 8%, var(--surface-2));
+}
+
+.cor-linha .cor {
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 12px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: 0.2px;
+}
+.cor-linha .max {
+  color: var(--text-muted);
+  font-weight: 700;
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.cor-linha .max b {
+  color: var(--warning);
+  font-weight: 800;
+  font-size: 11px;
+}
+/* qtd como span contenteditable — aprovado: sem caixa de input */
+.cor-linha .q {
+  color: var(--text-primary);
+  font-weight: 800;
+  font-size: 15px;
+  min-width: 22px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  padding: 1px 4px;
+  border-radius: 3px;
+  line-height: 1.1;
+}
+.cor-linha.pending .q,
+.cor-linha .q[contenteditable="true"] {
+  cursor: text;
+  outline: none;
+  user-select: text;
+}
+.cor-linha.pending .q:hover,
+.cor-linha .q[contenteditable="true"]:hover {
+  background: var(--surface-1);
+  outline: 0.5px solid var(--border);
+}
+.cor-linha.pending .q:focus,
+.cor-linha .q[contenteditable="true"]:focus {
+  background: white;
+  color: #000;
+  outline: 0.5px solid var(--border-accent);
+}
+.cor-linha .q.zero {
+  color: var(--text-muted);
+}
+.cor-linha .x {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0;
+  width: 12px;
+  line-height: 1;
+  opacity: 0.3;
+  flex-shrink: 0;
+}
+.cor-linha:hover .x { opacity: 0.7; }
+.cor-linha .x:hover { color: var(--text-danger); opacity: 1; }
+
+/* Nova entrada (usado só no Novo Corte) */
+.nova-entrada {
+  display: flex;
+  gap: 3px;
+  padding: 5px 3px 3px;
+  border-top: 0.5px dashed var(--border);
+  align-items: center;
+  margin-top: auto;
+}
+.nova-entrada .cor-field { flex: 1; min-width: 0; }
+.nova-entrada .cor-input {
+  width: 100%;
+  padding: 5px 16px 5px 6px;
+  border: 0.5px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface-2);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+  box-sizing: border-box;
+  text-transform: uppercase;
+}
+.nova-entrada .qty-input {
+  width: 32px;
+  padding: 5px 3px;
+  border: 0.5px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface-2);
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
+  color: var(--text-primary);
+  box-sizing: border-box;
+  font-variant-numeric: tabular-nums;
+}
+
+.confirmar-btn {
+  padding: 7px;
+  font-size: 10px;
+  background: var(--bg-accent-strong);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  width: 100%;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  margin-top: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.confirmar-btn:hover { opacity: 0.9; }
+.confirmar-btn:disabled {
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  border: 0.5px solid var(--border);
+  cursor: default;
+}
+.confirmar-btn .badge {
+  background: rgba(255,255,255,0.28);
+  border-radius: 999px;
+  padding: 1px 6px;
+  font-size: 9px;
+  font-weight: 800;
+}
+.col.confirmada .confirmar-btn {
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  border: 0.5px solid var(--border);
+  font-weight: 500;
+}
+
+/* Rodapé de coluna com 3 células (conf/pend/total ou saída/chegou/fora ou aguard/entra/resta) */
+.subtot-col {
+  padding: 5px 4px 3px;
+  border-top: 0.5px dotted var(--border);
+  margin-top: 2px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 3px;
+  text-align: center;
+  font-size: 9px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.subtot-col .cell {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.subtot-col .cell b {
+  color: var(--text-primary);
+  font-weight: 800;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.subtot-col .cell.destaque-azul b { color: var(--text-accent); }
+.subtot-col .cell.destaque-verde b { color: var(--success); }
+.subtot-col .cell.destaque-laranja b { color: var(--warning); }
+.subtot-col .cell.pend b { color: var(--text-accent); }
+
+/* Rodapé geral com totais por tam + total geral */
+.rodape-tot {
+  background: var(--surface-2);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+.rodape-tot .col-totais {
+  display: flex;
+  gap: 12px;
+  flex: 1;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+.rodape-tot .ct {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  color: var(--text-secondary);
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+.rodape-tot .ct b {
+  font-weight: 800;
+  font-size: 14px;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+.rodape-tot .ct em {
+  color: var(--text-accent);
+  font-style: italic;
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: 2px;
+}
+.rodape-tot .total-geral {
+  color: var(--text-secondary);
+  white-space: nowrap;
+  text-align: right;
+}
+.rodape-tot .total-geral b {
+  color: var(--text-accent);
+  font-weight: 800;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+.rodape-tot .total-geral small {
+  font-size: 10px;
+  color: var(--text-muted);
+  display: block;
+}

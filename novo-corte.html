@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BAMBAM · Novo corte</title>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/forms.css">
+<link rel="stylesheet" href="css/grade5.css">
+<style>
+  .cabec {
+    grid-template-columns: auto auto 1fr;
+    align-items: flex-end;
+  }
+  .ref-area { display: flex; flex-direction: column; gap: 3px; }
+  .ref-line { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .ref-line input { width: 100px; font-weight: 700; text-transform: uppercase; }
+  .ref-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 10px; background: var(--surface-2);
+    border: 0.5px solid var(--border); border-radius: 999px;
+    font-size: 13px; font-weight: 600;
+  }
+  .ref-chip .x-ref {
+    background: none; border: none; color: var(--text-muted);
+    cursor: pointer; font-size: 11px; padding: 0;
+  }
+  .aplic-btn {
+    padding: 5px 10px; font-size: 11px;
+    border: 0.5px dashed var(--border-accent);
+    border-radius: 999px; background: none;
+    color: var(--text-accent); font-weight: 500;
+    white-space: nowrap;
+  }
+  .aplic-btn:hover { background: var(--bg-accent); }
+  .acoes { display: flex; gap: 6px; justify-content: flex-end; margin-top: 10px; }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <span class="logo">BAMBAM <b>BABY</b></span>
+    <nav class="nav">
+      <a href="index.html">Painel</a>
+      <a href="novo-corte.html" class="ativo">Novo corte</a>
+      <a href="designacao.html">Designação</a>
+      <a href="retorno.html">Retorno</a>
+      <a href="pagamento.html">Pagamento</a>
+      <a href="estoque-entrada.html">Estoque</a>
+      <a href="cadastros.html">Cadastros</a>
+    </nav>
+    <div class="user">
+      <span id="user-email">—</span>
+      <button class="logout" onclick="logout()">sair</button>
+    </div>
+  </div>
+
+  <datalist id="cores-list">
+    <option value="AZUL"><option value="TURQ"><option value="PISC"><option value="ROSA">
+    <option value="PINK"><option value="ROSÃO"><option value="VERDE"><option value="MAR">
+    <option value="VERMELHO"><option value="MARINHO"><option value="AMARELO"><option value="BCO">
+    <option value="LILAS"><option value="MROM"><option value="BEGE"><option value="MCLA">
+    <option value="MARFIM"><option value="RIAL">
+  </datalist>
+  <datalist id="refs-list"></datalist>
+
+  <div class="wrap">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+      <h1 style="margin:0">Novo corte</h1>
+      <span class="hint">Digita cor + qtd numa coluna, replica pras outras como pending, ajusta e confirma</span>
+    </div>
+
+    <div class="cabec">
+      <div><label class="lbl">Data</label><input type="date" id="data" class="data-in"></div>
+      <div><label class="lbl">Lote</label><input id="lote" placeholder="ex: 2041A" style="width:110px;font-weight:700;text-transform:uppercase"></div>
+      <div class="ref-area">
+        <label class="lbl">Referência</label>
+        <div class="ref-line">
+          <input list="refs-list" id="ref-principal" placeholder="ex: 205">
+          <span id="refs-extras"></span>
+          <button class="aplic-btn" id="aplic-btn">+ aplicar em outra ref</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="grade5" id="grade"></div>
+
+    <div class="rodape-tot">
+      <div class="col-totais" id="col-totais">
+        <span class="ct" data-ct="RN">RN <b>0</b><em></em></span>
+        <span class="ct" data-ct="P">P <b>0</b><em></em></span>
+        <span class="ct" data-ct="M">M <b>0</b><em></em></span>
+        <span class="ct" data-ct="G">G <b>0</b><em></em></span>
+        <span class="ct" data-ct="GG">GG <b>0</b><em></em></span>
+      </div>
+      <div class="total-geral">
+        <div>Total <b id="lbl-t">0</b> peças <small id="lbl-t-sub"></small></div>
+      </div>
+    </div>
+
+    <div class="acoes">
+      <button class="btn btn-secondary" onclick="location.href='index.html'">Cancelar</button>
+      <button class="btn btn-primary" id="btn-salvar">Finalizar corte</button>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/novo-corte.js"></script>
+</body>
+</html>

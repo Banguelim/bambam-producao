@@ -1,0 +1,139 @@
+/* Reset e vars — modo escuro por padrão */
+:root {
+  --bg: #0f1115;
+  --surface-1: #1a1d24;
+  --surface-2: #232730;
+  --border: #333844;
+  --border-accent: #4a5568;
+  --text-primary: #f0f1f5;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+  --text-accent: #60a5fa;
+  --text-danger: #f87171;
+  --bg-accent: rgba(96, 165, 250, 0.12);
+  --bg-accent-strong: #3b82f6;
+  --success: #22c55e;
+  --success-dark: #16a34a;
+  --warning: #f59e0b;
+  --radius: 6px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+  min-height: 100vh;
+}
+
+a { color: var(--text-accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+h1, h2, h3, h4 { margin: 0; font-weight: 700; }
+h1 { font-size: 22px; }
+h2 { font-size: 18px; }
+h3 { font-size: 16px; }
+h4 { font-size: 14px; }
+
+.wrap {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 12px;
+}
+
+/* Topbar com nav entre telas */
+.topbar {
+  background: var(--surface-1);
+  border-bottom: 0.5px solid var(--border);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.topbar .logo {
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.5px;
+  color: var(--text-primary);
+}
+.topbar .logo b { color: var(--text-accent); }
+.topbar .nav {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+.topbar .nav a {
+  padding: 7px 12px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+.topbar .nav a:hover { background: var(--surface-2); color: var(--text-primary); }
+.topbar .nav a.ativo { background: var(--bg-accent); color: var(--text-accent); }
+.topbar .user {
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.topbar .user .logout {
+  color: var(--text-muted);
+  cursor: pointer;
+  background: none;
+  border: 0.5px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
+}
+.topbar .user .logout:hover { color: var(--text-danger); border-color: var(--text-danger); }
+
+/* Labels e textos utils */
+.lbl {
+  font-size: 11px;
+  color: var(--text-secondary);
+  display: block;
+  margin-bottom: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Estados globais de linha (usado em várias telas) */
+.linha-completo { background: color-mix(in srgb, var(--success) 8%, transparent) !important; border-color: var(--success) !important; }
+.linha-parcial  { background: color-mix(in srgb, var(--warning) 6%, transparent) !important; border-color: var(--warning) !important; }
+
+/* Toast pra mensagens */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  border: 0.5px solid var(--border);
+  color: var(--text-primary);
+  font-size: 13px;
+  z-index: 100;
+  animation: slideIn 0.2s ease;
+}
+.toast.ok { border-color: var(--success); }
+.toast.err { border-color: var(--text-danger); }
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}

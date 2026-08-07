@@ -1,0 +1,2042 @@
+[
+  {
+    "lote": "2009B",
+    "ref": "298MT",
+    "costureira": "ANAILDA",
+    "data_saida": "2026-07-15",
+    "total_saida": 164,
+    "itens": [
+      {
+        "cor": "VERDE",
+        "tam": "RN",
+        "qtd": 158
+      },
+      {
+        "cor": "BCO",
+        "tam": "RN",
+        "qtd": 6
+      }
+    ]
+  },
+  {
+    "lote": "7848A",
+    "ref": "108",
+    "costureira": "ANGELINA",
+    "data_saida": "2026-07-07",
+    "total_saida": 160,
+    "itens": [
+      {
+        "cor": "AZUL",
+        "tam": "M",
+        "qtd": 40
+      },
+      {
+        "cor": "VERDE",
+        "tam": "M",
+        "qtd": 40
+      },
+      {
+        "cor": "MARINHO",
+        "tam": "M",
+        "qtd": 80
+      }
+    ]
+  },
+  {
+    "lote": "2030B",
+    "ref": "108",
+    "costureira": "ANGELINA",
+    "data_saida": "2026-07-13",
+    "total_saida": 160,
+    "itens": [
+      {
+        "cor": "AZUL",
+        "tam": "RN",
+        "qtd": 40
+      },
+      {
+        "cor": "VERDE",
+        "tam": "RN",
+        "qtd": 40
+      },
+      {
+        "cor": "MARINHO",
+        "tam": "RN",
+        "qtd": 40
+      },
+      {
+        "cor": "BCO",
+        "tam": "RN",
+        "qtd": 40
+      }
+    ]
+  },
+  {
+    "lote": "2031B",
+    "ref": "010",
+    "costureira": "BRUNA",
+    "data_saida": "2026-07-14",
+    "total_saida": 800,
+    "itens": [
+      {
+        "cor": "AZUL",
+        "tam": "P",
+        "qtd": 34
+      },
+      {
+        "cor": "VERDE",
+        "tam": "P",
+        "qtd": 32
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "P",
+        "qtd": 34
+      },
+      {
+        "cor": "MARINHO",
+        "tam": "P",
+        "qtd": 34
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "P",
+        "qtd": 32
+      },
+      {
+        "cor": "BCO",
+        "tam": "P",
+        "qtd": 34
+      },
+      {
+        "cor": "AZUL",
+        "tam": "M",
+        "qtd": 34
+      },
+      {
+        "cor": "VERDE",
+        "tam": "M",
+        "qtd": 32
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "M",
+        "qtd": 34
+      },
+      {
+        "cor": "MARINHO",
+        "tam": "M",
+        "qtd": 34
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "M",
+        "qtd": 32
+      },
+      {
+        "cor": "BCO",
+        "tam": "M",
+        "qtd": 34
+      },
+      {
+        "cor": "AZUL",
+        "tam": "G",
+        "qtd": 34
+      },
+      {
+        "cor": "VERDE",
+        "tam": "G",
+        "qtd": 32
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "G",
+        "qtd": 34
+      },
+      {
+        "cor": "MARINHO",
+        "tam": "G",
+        "qtd": 34
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "G",
+        "qtd": 32
+      },
+      {
+        "cor": "BCO",
+        "tam": "G",
+        "qtd": 34
+      },
+      {
+        "cor": "AZUL",
+        "tam": "GG",
+        "qtd": 34
+      },
+      {
+        "cor": "VERDE",
+        "tam": "GG",
+        "qtd": 32
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "GG",
+        "qtd": 34
+      },
+      {
+        "cor": "MARINHO",
+        "tam": "GG",
+        "qtd": 34
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "GG",
+        "qtd": 32
+      },
+      {
+        "cor": "BCO",
+        "tam": "GG",
+        "qtd": 34
+      }
+    ]
+  },
+  {
+    "lote": "8024A",
+    "ref": "004",
+    "costureira": "BRUNA",
+    "data_saida": "2026-07-15",
+    "total_saida": 28,
+    "itens": [
+      {
+        "cor": "ROSA",
+        "tam": "RN",
+        "qtd": 4
+      },
+      {
+        "cor": "PINK",
+        "tam": "RN",
+        "qtd": 4
+      },
+      {
+        "cor": "ROSÃO",
+        "tam": "RN",
+        "qtd": 4
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "RN",
+        "qtd": 4
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "RN",
+        "qtd": 4
+      },
+      {
+        "cor": "BCO",
+        "tam": "RN",
+        "qtd": 4
+      },
+      {
+        "cor": "LILAS",
+        "tam": "RN",
+        "qtd": 4
+      }
+    ]
+  },
+  {
+    "lote": "2021B",
+    "ref": "004",
+    "costureira": "BRUNA",
+    "data_saida": "2026-07-15",
+    "total_saida": 24,
+    "itens": [
+      {
+        "cor": "AZUL",
+        "tam": "RN",
+        "qtd": 4
+      },
+      {
+        "cor": "VERDE",
+        "tam": "RN",
+        "qtd": 4
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "RN",
+        "qtd": 4
+      },
+      {
+        "cor": "MARINHO",
+        "tam": "RN",
+        "qtd": 4
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "RN",
+        "qtd": 4
+      },
+      {
+        "cor": "BCO",
+        "tam": "RN",
+        "qtd": 4
+      }
+    ]
+  },
+  {
+    "lote": "2026B",
+    "ref": "106",
+    "costureira": "CLAUDIA",
+    "data_saida": "2026-07-02",
+    "total_saida": 200,
+    "itens": [
+      {
+        "cor": "AZUL",
+        "tam": "P",
+        "qtd": 20
+      },
+      {
+        "cor": "PISC",
+        "tam": "P",
+        "qtd": 20
+      },
+      {
+        "cor": "ROSA",
+        "tam": "P",
+        "qtd": 20
+      },
+      {
+        "cor": "PINK",
+        "tam": "P",
+        "qtd": 20
+      },
+      {
+        "cor": "ROSÃO",
+        "tam": "P",
+        "qtd": 20
+      },
+      {
+        "cor": "VERDE",
+        "tam": "P",
+        "qtd": 20
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "P",
+        "qtd": 20
+      },
+      {
+        "cor": "MARINHO",
+        "tam": "P",
+        "qtd": 20
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "P",
+        "qtd": 20
+      },
+      {
+        "cor": "BCO",
+        "tam": "P",
+        "qtd": 20
+      }
+    ]
+  },
+  {
+    "lote": "2001B",
+    "ref": "419",
+    "costureira": "CLAUDIA",
+    "data_saida": "2026-07-06",
+    "total_saida": 320,
+    "itens": [
+      {
+        "cor": "AZUL",
+        "tam": "G",
+        "qtd": 80
+      },
+      {
+        "cor": "VERDE",
+        "tam": "G",
+        "qtd": 160
+      },
+      {
+        "cor": "BCO",
+        "tam": "G",
+        "qtd": 80
+      }
+    ]
+  },
+  {
+    "lote": "2038B",
+    "ref": "104",
+    "costureira": "DAIANE",
+    "data_saida": "2026-07-20",
+    "total_saida": 200,
+    "itens": [
+      {
+        "cor": "ROSA",
+        "tam": "P",
+        "qtd": 80
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "P",
+        "qtd": 80
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "P",
+        "qtd": 40
+      }
+    ]
+  },
+  {
+    "lote": "2063B",
+    "ref": "004",
+    "costureira": "DIANA",
+    "data_saida": "2026-07-27",
+    "total_saida": 160,
+    "itens": [
+      {
+        "cor": "VERMELHO",
+        "tam": "RN",
+        "qtd": 20
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "RN",
+        "qtd": 60
+      },
+      {
+        "cor": "BCO",
+        "tam": "RN",
+        "qtd": 60
+      },
+      {
+        "cor": "LILAS",
+        "tam": "RN",
+        "qtd": 20
+      }
+    ]
+  },
+  {
+    "lote": "2063B",
+    "ref": "005",
+    "costureira": "DIANA",
+    "data_saida": "2026-07-27",
+    "total_saida": 400,
+    "itens": [
+      {
+        "cor": "AZUL",
+        "tam": "GG",
+        "qtd": 160
+      },
+      {
+        "cor": "VERDE",
+        "tam": "GG",
+        "qtd": 80
+      },
+      {
+        "cor": "MARINHO",
+        "tam": "GG",
+        "qtd": 160
+      }
+    ]
+  },
+  {
+    "lote": "2060B",
+    "ref": "004",
+    "costureira": "DIANA",
+    "data_saida": "2026-07-27",
+    "total_saida": 200,
+    "itens": [
+      {
+        "cor": "ROSA",
+        "tam": "G",
+        "qtd": 100
+      },
+      {
+        "cor": "ROSA",
+        "tam": "GG",
+        "qtd": 100
+      }
+    ]
+  },
+  {
+    "lote": "2066B",
+    "ref": "004",
+    "costureira": "DIANA",
+    "data_saida": "2026-07-30",
+    "total_saida": 160,
+    "itens": [
+      {
+        "cor": "ROSA",
+        "tam": "RN",
+        "qtd": 40
+      },
+      {
+        "cor": "PINK",
+        "tam": "RN",
+        "qtd": 20
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "RN",
+        "qtd": 20
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "RN",
+        "qtd": 20
+      },
+      {
+        "cor": "BCO",
+        "tam": "RN",
+        "qtd": 20
+      },
+      {
+        "cor": "LILAS",
+        "tam": "RN",
+        "qtd": 40
+      }
+    ]
+  },
+  {
+    "lote": "2074B",
+    "ref": "920",
+    "costureira": "DIANA",
+    "data_saida": "2026-07-30",
+    "total_saida": 160,
+    "itens": [
+      {
+        "cor": "ROSA",
+        "tam": "RN",
+        "qtd": 40
+      },
+      {
+        "cor": "PINK",
+        "tam": "RN",
+        "qtd": 20
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "RN",
+        "qtd": 20
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "RN",
+        "qtd": 40
+      },
+      {
+        "cor": "BCO",
+        "tam": "RN",
+        "qtd": 20
+      },
+      {
+        "cor": "LILAS",
+        "tam": "RN",
+        "qtd": 20
+      }
+    ]
+  },
+  {
+    "lote": "2073B",
+    "ref": "004",
+    "costureira": "DIANA",
+    "data_saida": "2026-07-30",
+    "total_saida": 40,
+    "itens": [
+      {
+        "cor": "AMARELO",
+        "tam": "RN",
+        "qtd": 20
+      },
+      {
+        "cor": "BCO",
+        "tam": "RN",
+        "qtd": 20
+      }
+    ]
+  },
+  {
+    "lote": "2057B",
+    "ref": "714",
+    "costureira": "ERIKA",
+    "data_saida": "2026-07-27",
+    "total_saida": 40,
+    "itens": [
+      {
+        "cor": "BCO",
+        "tam": "G",
+        "qtd": 40
+      }
+    ]
+  },
+  {
+    "lote": "2058B",
+    "ref": "714",
+    "costureira": "ERIKA",
+    "data_saida": "2026-07-27",
+    "total_saida": 40,
+    "itens": [
+      {
+        "cor": "AMARELO",
+        "tam": "P",
+        "qtd": 40
+      }
+    ]
+  },
+  {
+    "lote": "2056B",
+    "ref": "714",
+    "costureira": "ERIKA",
+    "data_saida": "2026-07-27",
+    "total_saida": 400,
+    "itens": [
+      {
+        "cor": "AZUL",
+        "tam": "M",
+        "qtd": 68
+      },
+      {
+        "cor": "PINK",
+        "tam": "M",
+        "qtd": 68
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "M",
+        "qtd": 64
+      },
+      {
+        "cor": "AZUL",
+        "tam": "G",
+        "qtd": 68
+      },
+      {
+        "cor": "PINK",
+        "tam": "G",
+        "qtd": 68
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "G",
+        "qtd": 64
+      }
+    ]
+  },
+  {
+    "lote": "2063B",
+    "ref": "920",
+    "costureira": "GERALDA",
+    "data_saida": "2026-07-27",
+    "total_saida": 160,
+    "itens": [
+      {
+        "cor": "VERMELHO",
+        "tam": "RN",
+        "qtd": 20
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "RN",
+        "qtd": 60
+      },
+      {
+        "cor": "BCO",
+        "tam": "RN",
+        "qtd": 60
+      },
+      {
+        "cor": "LILAS",
+        "tam": "RN",
+        "qtd": 20
+      }
+    ]
+  },
+  {
+    "lote": "8006A",
+    "ref": "006",
+    "costureira": "GISELE",
+    "data_saida": "2026-03-18",
+    "total_saida": 472,
+    "itens": [
+      {
+        "cor": "AZUL",
+        "tam": "G",
+        "qtd": 88
+      },
+      {
+        "cor": "VERDE",
+        "tam": "G",
+        "qtd": 112
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "G",
+        "qtd": 92
+      },
+      {
+        "cor": "MARINHO",
+        "tam": "G",
+        "qtd": 84
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "G",
+        "qtd": 96
+      }
+    ]
+  },
+  {
+    "lote": "8024A",
+    "ref": "920",
+    "costureira": "GISELE",
+    "data_saida": "2026-07-15",
+    "total_saida": 28,
+    "itens": [
+      {
+        "cor": "ROSA",
+        "tam": "RN",
+        "qtd": 4
+      },
+      {
+        "cor": "PINK",
+        "tam": "RN",
+        "qtd": 4
+      },
+      {
+        "cor": "ROSÃO",
+        "tam": "RN",
+        "qtd": 4
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "RN",
+        "qtd": 4
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "RN",
+        "qtd": 4
+      },
+      {
+        "cor": "BCO",
+        "tam": "RN",
+        "qtd": 4
+      },
+      {
+        "cor": "LILAS",
+        "tam": "RN",
+        "qtd": 4
+      }
+    ]
+  },
+  {
+    "lote": "2032B",
+    "ref": "006",
+    "costureira": "GISELE",
+    "data_saida": "2026-07-20",
+    "total_saida": 960,
+    "itens": [
+      {
+        "cor": "AZUL",
+        "tam": "G",
+        "qtd": 80
+      },
+      {
+        "cor": "ROSA",
+        "tam": "G",
+        "qtd": 40
+      },
+      {
+        "cor": "PINK",
+        "tam": "G",
+        "qtd": 40
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "G",
+        "qtd": 80
+      },
+      {
+        "cor": "MARINHO",
+        "tam": "G",
+        "qtd": 80
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "G",
+        "qtd": 80
+      },
+      {
+        "cor": "BCO",
+        "tam": "G",
+        "qtd": 80
+      },
+      {
+        "cor": "AZUL",
+        "tam": "GG",
+        "qtd": 80
+      },
+      {
+        "cor": "ROSA",
+        "tam": "GG",
+        "qtd": 40
+      },
+      {
+        "cor": "PINK",
+        "tam": "GG",
+        "qtd": 40
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "GG",
+        "qtd": 80
+      },
+      {
+        "cor": "MARINHO",
+        "tam": "GG",
+        "qtd": 80
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "GG",
+        "qtd": 80
+      },
+      {
+        "cor": "BCO",
+        "tam": "GG",
+        "qtd": 80
+      }
+    ]
+  },
+  {
+    "lote": "2066B",
+    "ref": "920",
+    "costureira": "GISELIA",
+    "data_saida": "2026-07-27",
+    "total_saida": 160,
+    "itens": [
+      {
+        "cor": "ROSA",
+        "tam": "RN",
+        "qtd": 40
+      },
+      {
+        "cor": "PINK",
+        "tam": "RN",
+        "qtd": 20
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "RN",
+        "qtd": 20
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "RN",
+        "qtd": 20
+      },
+      {
+        "cor": "BCO",
+        "tam": "RN",
+        "qtd": 20
+      },
+      {
+        "cor": "LILAS",
+        "tam": "RN",
+        "qtd": 40
+      }
+    ]
+  },
+  {
+    "lote": "2074B",
+    "ref": "920",
+    "costureira": "GISELIA",
+    "data_saida": "2026-07-30",
+    "total_saida": 160,
+    "itens": [
+      {
+        "cor": "ROSA",
+        "tam": "RN",
+        "qtd": 40
+      },
+      {
+        "cor": "PINK",
+        "tam": "RN",
+        "qtd": 20
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "RN",
+        "qtd": 20
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "RN",
+        "qtd": 40
+      },
+      {
+        "cor": "BCO",
+        "tam": "RN",
+        "qtd": 20
+      },
+      {
+        "cor": "LILAS",
+        "tam": "RN",
+        "qtd": 20
+      }
+    ]
+  },
+  {
+    "lote": "8006A",
+    "ref": "006",
+    "costureira": "JOSIANE",
+    "data_saida": "2026-03-18",
+    "total_saida": 236,
+    "itens": [
+      {
+        "cor": "AZUL",
+        "tam": "M",
+        "qtd": 44
+      },
+      {
+        "cor": "VERDE",
+        "tam": "M",
+        "qtd": 56
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "M",
+        "qtd": 46
+      },
+      {
+        "cor": "MARINHO",
+        "tam": "M",
+        "qtd": 42
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "M",
+        "qtd": 48
+      }
+    ]
+  },
+  {
+    "lote": "7848A",
+    "ref": "108",
+    "costureira": "JOSIANE",
+    "data_saida": "2026-07-07",
+    "total_saida": 160,
+    "itens": [
+      {
+        "cor": "AZUL",
+        "tam": "RN",
+        "qtd": 40
+      },
+      {
+        "cor": "VERDE",
+        "tam": "RN",
+        "qtd": 40
+      },
+      {
+        "cor": "MARINHO",
+        "tam": "RN",
+        "qtd": 80
+      }
+    ]
+  },
+  {
+    "lote": "7705A",
+    "ref": "607C",
+    "costureira": "JU MINARINE",
+    "data_saida": "2025-10-02",
+    "total_saida": 32,
+    "itens": [
+      {
+        "cor": "VERDE",
+        "tam": "M",
+        "qtd": 32
+      }
+    ]
+  },
+  {
+    "lote": "9020A",
+    "ref": "427",
+    "costureira": "JU MINARINE",
+    "data_saida": "2026-04-14",
+    "total_saida": 120,
+    "itens": [
+      {
+        "cor": "AZUL",
+        "tam": "M",
+        "qtd": 20
+      },
+      {
+        "cor": "TURQ",
+        "tam": "M",
+        "qtd": 22
+      },
+      {
+        "cor": "PISC",
+        "tam": "M",
+        "qtd": 19
+      },
+      {
+        "cor": "ROSA",
+        "tam": "M",
+        "qtd": 27
+      },
+      {
+        "cor": "PINK",
+        "tam": "M",
+        "qtd": 20
+      },
+      {
+        "cor": "ROSÃO",
+        "tam": "M",
+        "qtd": 12
+      }
+    ]
+  },
+  {
+    "lote": "9020A",
+    "ref": "427",
+    "costureira": "JU MINARINE",
+    "data_saida": "2026-05-12",
+    "total_saida": 121,
+    "itens": [
+      {
+        "cor": "AZUL",
+        "tam": "G",
+        "qtd": 20
+      },
+      {
+        "cor": "TURQ",
+        "tam": "G",
+        "qtd": 22
+      },
+      {
+        "cor": "PISC",
+        "tam": "G",
+        "qtd": 20
+      },
+      {
+        "cor": "ROSA",
+        "tam": "G",
+        "qtd": 27
+      },
+      {
+        "cor": "PINK",
+        "tam": "G",
+        "qtd": 20
+      },
+      {
+        "cor": "ROSÃO",
+        "tam": "G",
+        "qtd": 12
+      }
+    ]
+  },
+  {
+    "lote": "2010B",
+    "ref": "112S",
+    "costureira": "JU MINARINE",
+    "data_saida": "2026-07-15",
+    "total_saida": 144,
+    "itens": [
+      {
+        "cor": "AZUL",
+        "tam": "G",
+        "qtd": 24
+      },
+      {
+        "cor": "ROSA",
+        "tam": "G",
+        "qtd": 18
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "G",
+        "qtd": 34
+      },
+      {
+        "cor": "MARINHO",
+        "tam": "G",
+        "qtd": 42
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "G",
+        "qtd": 26
+      }
+    ]
+  },
+  {
+    "lote": "1023B",
+    "ref": "006",
+    "costureira": "JUNIOR",
+    "data_saida": "2026-06-01",
+    "total_saida": 720,
+    "itens": [
+      {
+        "cor": "AZUL",
+        "tam": "P",
+        "qtd": 32
+      },
+      {
+        "cor": "ROSA",
+        "tam": "P",
+        "qtd": 32
+      },
+      {
+        "cor": "PINK",
+        "tam": "P",
+        "qtd": 30
+      },
+      {
+        "cor": "ROSÃO",
+        "tam": "P",
+        "qtd": 28
+      },
+      {
+        "cor": "VERDE",
+        "tam": "P",
+        "qtd": 28
+      },
+      {
+        "cor": "MARINHO",
+        "tam": "P",
+        "qtd": 30
+      },
+      {
+        "cor": "AZUL",
+        "tam": "M",
+        "qtd": 32
+      },
+      {
+        "cor": "ROSA",
+        "tam": "M",
+        "qtd": 32
+      },
+      {
+        "cor": "PINK",
+        "tam": "M",
+        "qtd": 30
+      },
+      {
+        "cor": "ROSÃO",
+        "tam": "M",
+        "qtd": 28
+      },
+      {
+        "cor": "VERDE",
+        "tam": "M",
+        "qtd": 28
+      },
+      {
+        "cor": "MARINHO",
+        "tam": "M",
+        "qtd": 30
+      },
+      {
+        "cor": "AZUL",
+        "tam": "G",
+        "qtd": 32
+      },
+      {
+        "cor": "ROSA",
+        "tam": "G",
+        "qtd": 32
+      },
+      {
+        "cor": "PINK",
+        "tam": "G",
+        "qtd": 30
+      },
+      {
+        "cor": "ROSÃO",
+        "tam": "G",
+        "qtd": 28
+      },
+      {
+        "cor": "VERDE",
+        "tam": "G",
+        "qtd": 28
+      },
+      {
+        "cor": "MARINHO",
+        "tam": "G",
+        "qtd": 30
+      },
+      {
+        "cor": "AZUL",
+        "tam": "GG",
+        "qtd": 32
+      },
+      {
+        "cor": "ROSA",
+        "tam": "GG",
+        "qtd": 32
+      },
+      {
+        "cor": "PINK",
+        "tam": "GG",
+        "qtd": 30
+      },
+      {
+        "cor": "ROSÃO",
+        "tam": "GG",
+        "qtd": 28
+      },
+      {
+        "cor": "VERDE",
+        "tam": "GG",
+        "qtd": 28
+      },
+      {
+        "cor": "MARINHO",
+        "tam": "GG",
+        "qtd": 30
+      }
+    ]
+  },
+  {
+    "lote": "2036B",
+    "ref": "112",
+    "costureira": "JUNIOR",
+    "data_saida": "2026-07-13",
+    "total_saida": 300,
+    "itens": [
+      {
+        "cor": "AZUL",
+        "tam": "M",
+        "qtd": 10
+      },
+      {
+        "cor": "ROSA",
+        "tam": "M",
+        "qtd": 20
+      },
+      {
+        "cor": "PINK",
+        "tam": "M",
+        "qtd": 30
+      },
+      {
+        "cor": "VERDE",
+        "tam": "M",
+        "qtd": 10
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "M",
+        "qtd": 10
+      },
+      {
+        "cor": "MARINHO",
+        "tam": "M",
+        "qtd": 10
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "M",
+        "qtd": 10
+      },
+      {
+        "cor": "AZUL",
+        "tam": "G",
+        "qtd": 20
+      },
+      {
+        "cor": "ROSA",
+        "tam": "G",
+        "qtd": 40
+      },
+      {
+        "cor": "PINK",
+        "tam": "G",
+        "qtd": 60
+      },
+      {
+        "cor": "VERDE",
+        "tam": "G",
+        "qtd": 20
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "G",
+        "qtd": 20
+      },
+      {
+        "cor": "MARINHO",
+        "tam": "G",
+        "qtd": 20
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "G",
+        "qtd": 20
+      }
+    ]
+  },
+  {
+    "lote": "9055A",
+    "ref": "607",
+    "costureira": "KEILA",
+    "data_saida": "2026-04-29",
+    "total_saida": 480,
+    "itens": [
+      {
+        "cor": "AZUL",
+        "tam": "P",
+        "qtd": 40
+      },
+      {
+        "cor": "VERDE",
+        "tam": "P",
+        "qtd": 40
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "P",
+        "qtd": 20
+      },
+      {
+        "cor": "MARINHO",
+        "tam": "P",
+        "qtd": 20
+      },
+      {
+        "cor": "BCO",
+        "tam": "P",
+        "qtd": 40
+      },
+      {
+        "cor": "AZUL",
+        "tam": "M",
+        "qtd": 40
+      },
+      {
+        "cor": "VERDE",
+        "tam": "M",
+        "qtd": 40
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "M",
+        "qtd": 20
+      },
+      {
+        "cor": "MARINHO",
+        "tam": "M",
+        "qtd": 20
+      },
+      {
+        "cor": "BCO",
+        "tam": "M",
+        "qtd": 40
+      },
+      {
+        "cor": "AZUL",
+        "tam": "G",
+        "qtd": 40
+      },
+      {
+        "cor": "VERDE",
+        "tam": "G",
+        "qtd": 40
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "G",
+        "qtd": 20
+      },
+      {
+        "cor": "MARINHO",
+        "tam": "G",
+        "qtd": 20
+      },
+      {
+        "cor": "BCO",
+        "tam": "G",
+        "qtd": 40
+      }
+    ]
+  },
+  {
+    "lote": "2030B",
+    "ref": "607",
+    "costureira": "KEILA",
+    "data_saida": "2026-07-10",
+    "total_saida": 480,
+    "itens": [
+      {
+        "cor": "AZUL",
+        "tam": "P",
+        "qtd": 40
+      },
+      {
+        "cor": "VERDE",
+        "tam": "P",
+        "qtd": 40
+      },
+      {
+        "cor": "MARINHO",
+        "tam": "P",
+        "qtd": 40
+      },
+      {
+        "cor": "BCO",
+        "tam": "P",
+        "qtd": 40
+      },
+      {
+        "cor": "AZUL",
+        "tam": "M",
+        "qtd": 40
+      },
+      {
+        "cor": "VERDE",
+        "tam": "M",
+        "qtd": 40
+      },
+      {
+        "cor": "MARINHO",
+        "tam": "M",
+        "qtd": 40
+      },
+      {
+        "cor": "BCO",
+        "tam": "M",
+        "qtd": 40
+      },
+      {
+        "cor": "AZUL",
+        "tam": "G",
+        "qtd": 40
+      },
+      {
+        "cor": "VERDE",
+        "tam": "G",
+        "qtd": 40
+      },
+      {
+        "cor": "MARINHO",
+        "tam": "G",
+        "qtd": 40
+      },
+      {
+        "cor": "BCO",
+        "tam": "G",
+        "qtd": 40
+      }
+    ]
+  },
+  {
+    "lote": "2017B",
+    "ref": "298",
+    "costureira": "LANINHA",
+    "data_saida": "2026-07-09",
+    "total_saida": 164,
+    "itens": [
+      {
+        "cor": "VERDE",
+        "tam": "RN",
+        "qtd": 158
+      },
+      {
+        "cor": "BCO",
+        "tam": "RN",
+        "qtd": 6
+      }
+    ]
+  },
+  {
+    "lote": "2030B",
+    "ref": "419",
+    "costureira": "LENIMAR",
+    "data_saida": "2026-07-09",
+    "total_saida": 160,
+    "itens": [
+      {
+        "cor": "AZUL",
+        "tam": "RN",
+        "qtd": 40
+      },
+      {
+        "cor": "VERDE",
+        "tam": "RN",
+        "qtd": 40
+      },
+      {
+        "cor": "MARINHO",
+        "tam": "RN",
+        "qtd": 40
+      },
+      {
+        "cor": "BCO",
+        "tam": "RN",
+        "qtd": 40
+      }
+    ]
+  },
+  {
+    "lote": "2064B",
+    "ref": "246",
+    "costureira": "LENIMAR",
+    "data_saida": "2026-07-30",
+    "total_saida": 160,
+    "itens": [
+      {
+        "cor": "AZUL",
+        "tam": "RN",
+        "qtd": 40
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "RN",
+        "qtd": 40
+      },
+      {
+        "cor": "MARINHO",
+        "tam": "RN",
+        "qtd": 40
+      },
+      {
+        "cor": "BCO",
+        "tam": "RN",
+        "qtd": 40
+      }
+    ]
+  },
+  {
+    "lote": "7912A",
+    "ref": "703",
+    "costureira": "LILIA",
+    "data_saida": "2026-03-05",
+    "total_saida": 62,
+    "itens": [
+      {
+        "cor": "VERMELHO",
+        "tam": "P",
+        "qtd": 62
+      }
+    ]
+  },
+  {
+    "lote": "2050B",
+    "ref": "715",
+    "costureira": "LILIA",
+    "data_saida": "2026-07-23",
+    "total_saida": 480,
+    "itens": [
+      {
+        "cor": "AZUL",
+        "tam": "RN",
+        "qtd": 20
+      },
+      {
+        "cor": "ROSA",
+        "tam": "RN",
+        "qtd": 20
+      },
+      {
+        "cor": "PINK",
+        "tam": "RN",
+        "qtd": 20
+      },
+      {
+        "cor": "ROSÃO",
+        "tam": "RN",
+        "qtd": 20
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "RN",
+        "qtd": 20
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "RN",
+        "qtd": 20
+      },
+      {
+        "cor": "AZUL",
+        "tam": "P",
+        "qtd": 20
+      },
+      {
+        "cor": "ROSA",
+        "tam": "P",
+        "qtd": 20
+      },
+      {
+        "cor": "PINK",
+        "tam": "P",
+        "qtd": 20
+      },
+      {
+        "cor": "ROSÃO",
+        "tam": "P",
+        "qtd": 20
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "P",
+        "qtd": 20
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "P",
+        "qtd": 20
+      },
+      {
+        "cor": "AZUL",
+        "tam": "M",
+        "qtd": 20
+      },
+      {
+        "cor": "ROSA",
+        "tam": "M",
+        "qtd": 20
+      },
+      {
+        "cor": "PINK",
+        "tam": "M",
+        "qtd": 20
+      },
+      {
+        "cor": "ROSÃO",
+        "tam": "M",
+        "qtd": 20
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "M",
+        "qtd": 20
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "M",
+        "qtd": 20
+      },
+      {
+        "cor": "AZUL",
+        "tam": "G",
+        "qtd": 20
+      },
+      {
+        "cor": "ROSA",
+        "tam": "G",
+        "qtd": 20
+      },
+      {
+        "cor": "PINK",
+        "tam": "G",
+        "qtd": 20
+      },
+      {
+        "cor": "ROSÃO",
+        "tam": "G",
+        "qtd": 20
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "G",
+        "qtd": 20
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "G",
+        "qtd": 20
+      }
+    ]
+  },
+  {
+    "lote": "1093B",
+    "ref": "650S",
+    "costureira": "MARCIANA",
+    "data_saida": "2026-07-13",
+    "total_saida": 60,
+    "itens": [
+      {
+        "cor": "AZUL",
+        "tam": "G",
+        "qtd": 60
+      }
+    ]
+  },
+  {
+    "lote": "2053B",
+    "ref": "658",
+    "costureira": "MARCIANA",
+    "data_saida": "2026-07-27",
+    "total_saida": 40,
+    "itens": [
+      {
+        "cor": "LILAS",
+        "tam": "G",
+        "qtd": 40
+      }
+    ]
+  },
+  {
+    "lote": "2054B",
+    "ref": "658",
+    "costureira": "MARCIANA",
+    "data_saida": "2026-07-27",
+    "total_saida": 84,
+    "itens": [
+      {
+        "cor": "VERMELHO",
+        "tam": "RN",
+        "qtd": 28
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "P",
+        "qtd": 28
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "M",
+        "qtd": 28
+      }
+    ]
+  },
+  {
+    "lote": "1065B",
+    "ref": "470",
+    "costureira": "ROSALVA",
+    "data_saida": "2026-05-27",
+    "total_saida": 160,
+    "itens": [
+      {
+        "cor": "VERMELHO",
+        "tam": "G",
+        "qtd": 40
+      },
+      {
+        "cor": "MARINHO",
+        "tam": "G",
+        "qtd": 40
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "G",
+        "qtd": 40
+      },
+      {
+        "cor": "LILAS",
+        "tam": "G",
+        "qtd": 40
+      }
+    ]
+  },
+  {
+    "lote": "2038B",
+    "ref": "104",
+    "costureira": "ROSALVA",
+    "data_saida": "2026-07-20",
+    "total_saida": 200,
+    "itens": [
+      {
+        "cor": "ROSA",
+        "tam": "G",
+        "qtd": 80
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "G",
+        "qtd": 80
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "G",
+        "qtd": 40
+      }
+    ]
+  },
+  {
+    "lote": "2029B",
+    "ref": "001",
+    "costureira": "SHIRLEY",
+    "data_saida": "2026-07-10",
+    "total_saida": 1304,
+    "itens": [
+      {
+        "cor": "VERMELHO",
+        "tam": "P",
+        "qtd": 112
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "P",
+        "qtd": 116
+      },
+      {
+        "cor": "BCO",
+        "tam": "P",
+        "qtd": 98
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "M",
+        "qtd": 112
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "M",
+        "qtd": 116
+      },
+      {
+        "cor": "BCO",
+        "tam": "M",
+        "qtd": 98
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "G",
+        "qtd": 112
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "G",
+        "qtd": 116
+      },
+      {
+        "cor": "BCO",
+        "tam": "G",
+        "qtd": 98
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "GG",
+        "qtd": 112
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "GG",
+        "qtd": 116
+      },
+      {
+        "cor": "BCO",
+        "tam": "GG",
+        "qtd": 98
+      }
+    ]
+  },
+  {
+    "lote": "2070B",
+    "ref": "001E",
+    "costureira": "SHIRLEY",
+    "data_saida": "2026-07-30",
+    "total_saida": 400,
+    "itens": [
+      {
+        "cor": "BCO",
+        "tam": "P",
+        "qtd": 100
+      },
+      {
+        "cor": "BCO",
+        "tam": "M",
+        "qtd": 100
+      },
+      {
+        "cor": "BCO",
+        "tam": "G",
+        "qtd": 100
+      },
+      {
+        "cor": "BCO",
+        "tam": "GG",
+        "qtd": 100
+      }
+    ]
+  },
+  {
+    "lote": "2026B",
+    "ref": "106",
+    "costureira": "VANESSA",
+    "data_saida": "2026-07-02",
+    "total_saida": 200,
+    "itens": [
+      {
+        "cor": "AZUL",
+        "tam": "G",
+        "qtd": 20
+      },
+      {
+        "cor": "PISC",
+        "tam": "G",
+        "qtd": 20
+      },
+      {
+        "cor": "ROSA",
+        "tam": "G",
+        "qtd": 20
+      },
+      {
+        "cor": "PINK",
+        "tam": "G",
+        "qtd": 20
+      },
+      {
+        "cor": "ROSÃO",
+        "tam": "G",
+        "qtd": 20
+      },
+      {
+        "cor": "VERDE",
+        "tam": "G",
+        "qtd": 20
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "G",
+        "qtd": 20
+      },
+      {
+        "cor": "MARINHO",
+        "tam": "G",
+        "qtd": 20
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "G",
+        "qtd": 20
+      },
+      {
+        "cor": "BCO",
+        "tam": "G",
+        "qtd": 20
+      }
+    ]
+  },
+  {
+    "lote": "2018B",
+    "ref": "106",
+    "costureira": "VANESSA",
+    "data_saida": "2026-07-07",
+    "total_saida": 200,
+    "itens": [
+      {
+        "cor": "AZUL",
+        "tam": "P",
+        "qtd": 20
+      },
+      {
+        "cor": "PISC",
+        "tam": "P",
+        "qtd": 20
+      },
+      {
+        "cor": "ROSA",
+        "tam": "P",
+        "qtd": 20
+      },
+      {
+        "cor": "PINK",
+        "tam": "P",
+        "qtd": 20
+      },
+      {
+        "cor": "ROSÃO",
+        "tam": "P",
+        "qtd": 20
+      },
+      {
+        "cor": "VERDE",
+        "tam": "P",
+        "qtd": 20
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "P",
+        "qtd": 20
+      },
+      {
+        "cor": "MARINHO",
+        "tam": "P",
+        "qtd": 20
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "P",
+        "qtd": 20
+      },
+      {
+        "cor": "BCO",
+        "tam": "P",
+        "qtd": 20
+      }
+    ]
+  },
+  {
+    "lote": "2036B",
+    "ref": "112",
+    "costureira": "VANESSA",
+    "data_saida": "2026-07-22",
+    "total_saida": 200,
+    "itens": [
+      {
+        "cor": "ROSA",
+        "tam": "G",
+        "qtd": 40
+      },
+      {
+        "cor": "PINK",
+        "tam": "G",
+        "qtd": 40
+      },
+      {
+        "cor": "ROSÃO",
+        "tam": "G",
+        "qtd": 40
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "G",
+        "qtd": 40
+      },
+      {
+        "cor": "MARINHO",
+        "tam": "G",
+        "qtd": 20
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "G",
+        "qtd": 20
+      }
+    ]
+  },
+  {
+    "lote": "2038B",
+    "ref": "104",
+    "costureira": "VANESSA",
+    "data_saida": "2026-07-22",
+    "total_saida": 200,
+    "itens": [
+      {
+        "cor": "ROSA",
+        "tam": "M",
+        "qtd": 80
+      },
+      {
+        "cor": "VERMELHO",
+        "tam": "M",
+        "qtd": 80
+      },
+      {
+        "cor": "AMARELO",
+        "tam": "M",
+        "qtd": 40
+      }
+    ]
+  }
+]
