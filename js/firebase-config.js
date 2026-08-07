@@ -1,19 +1,18 @@
-// SUBSTITUIR OS VALORES ABAIXO pelas credenciais do SEU Firebase
-// (mesmo projeto do bambam-ponto). Pega em: console.firebase.google.com
-// → Configurações do projeto → Configuração do SDK
+// Config do Firebase — bambam-ponto (compartilhado com sistema de ponto)
 const firebaseConfig = {
-  apiKey: "SUA_API_KEY_AQUI",
-  authDomain: "SEU_PROJETO.firebaseapp.com",
-  projectId: "SEU_PROJETO_ID",
-  storageBucket: "SEU_PROJETO.appspot.com",
-  messagingSenderId: "000000000000",
-  appId: "1:000000000000:web:0000000000000000000000"
+  apiKey: "AIzaSyDQ6EUH_HBLYd76HMCdlgupNcwzTHvgido",
+  authDomain: "bambam-ponto.firebaseapp.com",
+  databaseURL: "https://bambam-ponto-default-rtdb.firebaseio.com",
+  projectId: "bambam-ponto",
+  storageBucket: "bambam-ponto.firebasestorage.app",
+  messagingSenderId: "30916647304",
+  appId: "1:30916647304:web:70323b427dbdd0e51d423d"
 };
 
-// Inicializa o Firebase (v9 modular, mas usando compat pra ficar simples)
+// Inicializa o Firebase
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// TUDO desse sistema vai em /producao/ pra não misturar com bambam-ponto
+// TUDO desse sistema vai em /producao_dados/ pra não misturar com bambam-ponto
 const PRODUCAO = db.collection('producao_dados');
