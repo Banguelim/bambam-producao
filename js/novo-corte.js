@@ -64,17 +64,16 @@ function buildCol(tam) {
     if (e.key === 'Enter') { e.preventDefault(); salvarEntradaNovaEmCol(col); }
   });
 
-  // Ligar confirmar
+  // Ligar confirmar/reabrir — clica confirma, clica de novo reabre. Simples.
   col.querySelector('.confirmar-btn').addEventListener('click', () => {
-    console.log('CLIQUE em confirmar', col.dataset.tam, 'confirmada?', col.classList.contains('confirmada'));
     if (col.classList.contains('confirmada') && col.querySelectorAll('.cor-linha.pending').length === 0) {
+      // Reabrir: só remove a marca de confirmada, mantém as entradas
       col.classList.remove('confirmada');
       atualizarBtnCol(col);
       recalc();
     } else {
       confirmarPendentes(col);
     }
-    console.log('DEPOIS do clique:', col.dataset.tam, 'confirmada?', col.classList.contains('confirmada'));
   });
 
   atualizarBtnCol(col);
@@ -274,12 +273,53 @@ async function salvarCorteBtn() {
 
   try {
     const id = await salvarCorte(corte);
-    toast(`Corte salvo (${totalPecas} peças em ${refs.length} refs)`, 'ok');
-    setTimeout(() => window.location.href = 'designacao.html?corte=' + id, 800);
+    toast(`✓ Corte ${lote} / ${refPrincipal} salvo (${totalPecas} peças). Pronto pro próximo!`, 'ok');
+    limparFormularioPraNovoCorte(lote);
+    btn.disabled = false;
   } catch (e) {
     toast('Erro ao salvar: ' + e.message, 'err');
     btn.disabled = false;
   }
+}
+
+// Limpa os campos e a grade, mantendo a data e sugerindo próximo lote
+function limparFormularioPraNovoCorte(loteAnterior) {
+  // Mantém data (você tá lançando vários no mesmo dia)
+  // Sugere próximo lote se for numérico com letra (ex: 2030B → 2030C)
+  const proxLote = sugerirProximoLote(loteAnterior);
+  document.getElementById('lote').value = proxLote;
+  document.getElementById('ref-principal').value = '';
+  refsExtras = [];
+  redesenharRefsExtras();
+
+  // Limpa as 5 colunas
+  document.querySelectorAll('.col').forEach(col => {
+    col.querySelector('.entradas').innerHTML = '';
+    col.querySelector('.cor-input').value = '';
+    col.querySelector('.qty-input').value = '';
+    col.classList.remove('confirmada', 'tem-pendente');
+    atualizarBtnCol(col);
+  });
+  recalc();
+
+  // Foca no lote pra você já digitar o próximo (ou usa a sugestão + Tab)
+  document.getElementById('lote').focus();
+  document.getElementById('lote').select();
+}
+
+// Sugere próximo lote: 2030B → 2030C, 2030 → 2031, ABC → deixa vazio
+function sugerirProximoLote(lote) {
+  if (!lote) return '';
+  const m = lote.match(/^(\d+)([A-Z])?$/i);
+  if (!m) return '';
+  const [, num, letra] = m;
+  if (letra) {
+    // Incrementa a letra: B → C, Z → volta A e incrementa número
+    const proxLetra = String.fromCharCode(letra.toUpperCase().charCodeAt(0) + 1);
+    if (proxLetra > 'Z') return String(parseInt(num) + 1) + 'A';
+    return num + proxLetra;
+  }
+  return String(parseInt(num) + 1);
 }
 
 // Recalcula quando ref principal muda
