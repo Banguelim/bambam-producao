@@ -99,8 +99,6 @@ function salvarEntradaNovaEmCol(col) {
   corInput.value = '';
   qtyInput.value = '';
   corInput.focus();
-  // A coluna onde o usuário digitou já entra confirmada — sem precisar clicar em nada
-  col.classList.add('confirmada');
   atualizarBtnCol(col);
   recalc();
 }
