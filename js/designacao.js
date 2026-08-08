@@ -343,35 +343,27 @@ function recalcValor() {
 function mostrarModalNota(numero, itens, totalPecas, preco, valor, costureira, data) {
   const refsTxt = corteAtual.refs.join(' + ');
 
-  // Agrupar por tamanho e cores
+  // Agrupar por tamanho
   const qtds = {};
-  const coresPorTam = {};
-  TAMS.forEach(t => { qtds[t] = 0; coresPorTam[t] = []; });
-  itens.forEach(i => {
-    qtds[i.tam] += i.qtd;
-    coresPorTam[i.tam].push(`${i.cor} ${i.qtd}`);
-  });
+  TAMS.forEach(t => qtds[t] = 0);
+  itens.forEach(i => { qtds[i.tam] += i.qtd; });
 
-  // Cores agrupadas (todas cores enviadas)
+  // Cores enviadas
   const cores = new Set();
   itens.forEach(i => cores.add(i.cor));
   const coresTxt = [...cores].join(', ');
 
   const caixa = document.getElementById('caixa-nota');
   caixa.innerHTML = `
-    <div class="cabecalho-nota">
-      <h2>BAMBAM BABY</h2>
-      <div class="num">Nota #${numero}</div>
-    </div>
+    <div class="num-nota">Nota #${numero}</div>
 
     <table>
-      <thead>
+      <tbody>
+        <!-- Cabeçalho tam -->
         <tr>
           <th>RN</th><th>P</th><th>M</th><th>G</th><th>GG</th><th>TOTAL</th>
         </tr>
-      </thead>
-      <tbody>
-        <!-- SAÍDA (peças enviadas) -->
+        <!-- SAÍDA -->
         <tr class="destaque">
           <td class="tam-cel">${qtds.RN}</td>
           <td class="tam-cel">${qtds.P}</td>
@@ -380,23 +372,26 @@ function mostrarModalNota(numero, itens, totalPecas, preco, valor, costureira, d
           <td class="tam-cel">${qtds.GG}</td>
           <td class="tam-cel">${totalPecas}</td>
         </tr>
+        <!-- Cores -->
         <tr>
-          <td colspan="6" class="cores-linha"><b>Cores:</b> ${coresTxt}</td>
+          <td colspan="6" class="cores-linha">${coresTxt}</td>
         </tr>
+        <!-- Data / Lote / Ref / Preço -->
         <tr>
           <td class="esq">${formatDataBR(data)}</td>
           <td colspan="2" class="esq">Lote <b>${corteAtual.lote}</b></td>
           <td class="esq">Ref <b>${refsTxt}</b></td>
-          <td colspan="2" class="esq">Preço/peça <b>${formatBRL(preco)}</b></td>
+          <td colspan="2" class="esq">Preço ${formatBRL(preco)}</td>
         </tr>
+        <!-- Costureira + Total -->
         <tr>
-          <td colspan="4" class="esq">Costureira <b style="font-size:14px">${costureira}</b></td>
-          <td colspan="2" class="valor-total-cel">Total ${formatBRL(valor)}</td>
+          <td colspan="4" class="esq"><b style="font-size:13px">${costureira}</b></td>
+          <td colspan="2" class="esq">Total <b>${formatBRL(valor)}</b></td>
         </tr>
 
         <!-- 1ª CHEGADA -->
         <tr>
-          <td colspan="6" class="barra-preta">1ª CHEGADA — data ___/___/________</td>
+          <td colspan="6" class="rot-chegada">1ª CHEGADA — data ___/___/________</td>
         </tr>
         <tr>
           <th>RN</th><th>P</th><th>M</th><th>G</th><th>GG</th><th>TOTAL</th>
@@ -407,7 +402,7 @@ function mostrarModalNota(numero, itens, totalPecas, preco, valor, costureira, d
 
         <!-- 2ª CHEGADA -->
         <tr>
-          <td colspan="6" class="barra-preta">2ª CHEGADA — data ___/___/________</td>
+          <td colspan="6" class="rot-chegada">2ª CHEGADA — data ___/___/________</td>
         </tr>
         <tr>
           <th>RN</th><th>P</th><th>M</th><th>G</th><th>GG</th><th>TOTAL</th>
@@ -419,20 +414,16 @@ function mostrarModalNota(numero, itens, totalPecas, preco, valor, costureira, d
     </table>
 
     <div class="botoes">
-      <button class="btn-imp" onclick="window.print()">🖨 Imprimir nota</button>
+      <button class="btn-imp" onclick="window.print()">🖨 Imprimir</button>
       <button class="btn-cont" id="btn-continuar">✓ Continuar</button>
     </div>
   `;
 
   document.getElementById('modal-nota').classList.add('visivel');
 
-  // Handler do continuar (recarrega pra próxima designação)
+  // Continuar sempre volta pra tela inicial da designação
   document.getElementById('btn-continuar').addEventListener('click', () => {
-    if (window._sobrouAlgo) {
-      window.location.href = 'designacao.html?corte=' + corteAtual.id;
-    } else {
-      window.location.href = 'designacao.html';
-    }
+    window.location.href = 'designacao.html';
   });
 }
 
@@ -444,9 +435,12 @@ async function gerarNota() {
   const preco = parseFloat(document.getElementById('preco').value);
   const data = document.getElementById('data-designacao').value;
 
+  console.log('[gerarNota] iniciando', { nome, preco, data, corteAtual: corteAtual?.id });
+
   if (!nome) { toast('Escolha uma costureira', 'err'); btn.disabled = false; return; }
   if (!preco || preco <= 0) { toast('Digite o preço por peça', 'err'); btn.disabled = false; return; }
   if (!data) { toast('Preencha a data', 'err'); btn.disabled = false; return; }
+  if (!corteAtual) { toast('Corte não carregado', 'err'); btn.disabled = false; return; }
 
   // Coletar itens marcados
   const itens = [];
@@ -461,6 +455,8 @@ async function gerarNota() {
     });
   });
 
+  console.log('[gerarNota] itens coletados:', itens, 'total:', totalSaida);
+
   if (totalSaida === 0) {
     toast('Marque ao menos uma cor + qtd', 'err');
     btn.disabled = false;
@@ -468,13 +464,16 @@ async function gerarNota() {
   }
 
   try {
-    const numero = await proximoNumeroNota(false);  // agora incrementa de verdade
+    const numero = await proximoNumeroNota(false);
+    console.log('[gerarNota] próximo número:', numero);
+
     const valorNota = totalSaida * preco;
     const refPrincipal = corteAtual.refs[0];
 
     // Se o preço mudou vs matriz, atualiza a matriz
     if (precoBase === null || Math.abs(precoBase - preco) > 0.001) {
       await salvarPreco(refPrincipal, nome, preco);
+      console.log('[gerarNota] preço salvo na matriz');
     }
 
     const nota = {
@@ -495,21 +494,22 @@ async function gerarNota() {
       status: 'aberta'
     };
 
+    console.log('[gerarNota] salvando nota:', nota);
     await salvarNota(nota);
+    console.log('[gerarNota] nota salva com sucesso');
 
     // Atualiza status do corte
-    const restanteAntes = await calcularRestante(corteAtual);
-    const sobrouAlgo = restanteAntes.reduce((a, i) => a + i.qtd, 0) - totalSaida > 0;
+    const restanteDepois = await calcularRestante(corteAtual);
+    const totalRestante = restanteDepois.reduce((a, i) => a + i.qtd, 0);
+    const sobrouAlgo = totalRestante > 0;
     const novoStatus = sobrouAlgo ? 'designado_parcial' : 'designado_total';
     await colCortes().doc(corteAtual.id).update({ status: novoStatus });
+    console.log('[gerarNota] corte atualizado, sobrou:', totalRestante);
 
-    // Guarda pra decidir onde ir depois do modal
-    window._sobrouAlgo = sobrouAlgo;
-
-    // Abre o modal da nota gerada (com botões IMPRIMIR / CONTINUAR)
+    // Abre o modal da nota gerada
     mostrarModalNota(numero, itens, totalSaida, preco, valorNota, nome, data);
   } catch (e) {
-    console.error('Erro ao gerar nota:', e);
+    console.error('[gerarNota] ERRO:', e);
     toast('Erro ao gerar nota: ' + e.message, 'err');
     btn.disabled = false;
   }
