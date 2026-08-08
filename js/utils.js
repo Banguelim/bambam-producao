@@ -8,20 +8,10 @@ const CORES = [
   'MCLA','MARFIM','RIAL'
 ];
 
-// Abreviações aprovadas pra nomes de cor com mais de 5 chars
-const ABREV_COR = {
-  'AMARELO': 'AMAR',
-  'VERMELHO': 'VERM',
-  'MARINHO': 'MAR',
-  'BRANCO': 'BCO',
-  'MARFIM': 'MARF'
-};
-
-// Retorna o nome abreviado quando >5 chars
+// Retorna sempre o nome COMPLETO da cor (sem abreviar)
 function abrevCor(cor) {
   if (!cor) return '';
-  const c = cor.trim().toUpperCase();
-  return ABREV_COR[c] || (c.length > 5 ? c.substring(0, 4) : c);
+  return cor.trim().toUpperCase();
 }
 
 // Formata R$ 1.050,00 (BR)
