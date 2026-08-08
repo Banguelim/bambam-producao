@@ -168,11 +168,12 @@ function buildCol(tam, itens) {
     e.dataset.cor = item.cor;
     e.dataset.ref = item.ref;
     e.innerHTML = `
-      <input type="checkbox" class="chk" checked>
+      <input type="checkbox" class="chk">
       <span class="cor" title="${item.cor}">${item.cor}</span>
       <span class="qmax">/${item.qtd}</span>
-      <span class="q" contenteditable="true" spellcheck="false" inputmode="numeric">${item.qtd}</span>
+      <span class="q" contenteditable="true" spellcheck="false" inputmode="numeric">0</span>
     `;
+    e.classList.add('desmarcada');
 
     const chk = e.querySelector('.chk');
     const q = e.querySelector('.q');
@@ -250,7 +251,14 @@ function recalc() {
     sobraGeral += (total - saiu);
   });
   document.getElementById('lbl-designando').textContent = totalGeral;
-  document.getElementById('lbl-sobra').textContent = sobraGeral > 0 ? `(sobram ${sobraGeral} pra outra costureira)` : '';
+  const sobra = document.getElementById('lbl-sobra');
+  if (totalGeral === 0) {
+    sobra.innerHTML = '<span style="color:var(--text-muted)">— marque as cores/qtds ou clique em TODOS numa coluna</span>';
+  } else if (sobraGeral > 0) {
+    sobra.textContent = `(sobram ${sobraGeral} pra outra costureira)`;
+  } else {
+    sobra.innerHTML = '<span style="color:var(--success)">✓ todo o corte designado</span>';
+  }
   recalcValor();
 }
 
