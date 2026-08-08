@@ -346,7 +346,7 @@ async function salvarCorteBtn() {
 
   try {
     const id = await salvarCorte(corte);
-    toast(`✓ Corte ${lote} / ${refPrincipal} salvo (${totalPecas} peças). Pronto pro próximo!`, 'ok');
+    toast(`✓ Corte ${lote} / ${refPrincipal} salvo (${totalPecas} peças)`, 'ok');
 
     // Salva cores novas no Firestore pra próxima vez aparecerem no autocomplete
     // (isolado num try/catch próprio pra não quebrar o limpar tela se der problema)
