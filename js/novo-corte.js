@@ -17,6 +17,24 @@ async function init() {
     });
   } catch (e) { console.warn('Refs não carregadas:', e); }
 
+  // Popular datalist de cores: pré-definidas + salvas no Firestore
+  try {
+    const dl = document.getElementById('cores-list');
+    const jaTem = new Set();
+    // Primeiro: as cores que já estão no HTML (pré-definidas)
+    dl.querySelectorAll('option').forEach(o => jaTem.add(o.value.toUpperCase()));
+    // Depois: as salvas no Firestore
+    const salvas = await listarCoresSalvas();
+    salvas.forEach(nome => {
+      if (!jaTem.has(nome.toUpperCase())) {
+        const opt = document.createElement('option');
+        opt.value = nome;
+        dl.appendChild(opt);
+        jaTem.add(nome.toUpperCase());
+      }
+    });
+  } catch (e) { console.warn('Cores não carregadas:', e); }
+
   // Construir 5 colunas
   const grade = document.getElementById('grade');
   TAMS.forEach(tam => grade.appendChild(buildCol(tam)));
@@ -87,13 +105,22 @@ function salvarEntradaNovaEmCol(col) {
   const q = parseInt(qtyInput.value);
   if (!cor || !q) return;
 
+  // Verifica se é cor nova ou erro de digitação
+  const corFinal = verificarCorNova(cor);
+  if (!corFinal) {
+    // Usuário cancelou — deixa o input focado pra corrigir
+    corInput.focus();
+    corInput.select();
+    return;
+  }
+
   // Adiciona confirmada nessa col
-  addEntrada(col, cor, q, false);
+  addEntrada(col, corFinal, q, false);
 
   // Adiciona pending nas outras
   document.querySelectorAll('.col').forEach(outra => {
     if (outra === col) return;
-    addEntrada(outra, cor, q, true);
+    addEntrada(outra, corFinal, q, true);
     atualizarBtnCol(outra);
   });
 
@@ -102,6 +129,51 @@ function salvarEntradaNovaEmCol(col) {
   corInput.focus();
   atualizarBtnCol(col);
   recalc();
+}
+
+// Verifica se a cor existe. Se não, oferece correção ou cadastro.
+// Retorna a cor final a usar (pode ser a original, uma sugestão, ou null se cancelar)
+function verificarCorNova(cor) {
+  const dl = document.getElementById('cores-list');
+  const existentes = [...dl.querySelectorAll('option')].map(o => o.value.toUpperCase());
+  const corUp = cor.toUpperCase();
+
+  // Se já existe, tudo certo
+  if (existentes.includes(corUp)) return corUp;
+
+  // Procura cores parecidas (distância <= 2 letras)
+  const parecidas = existentes.filter(e => distancia(corUp, e) <= 2).sort((a, b) => distancia(corUp, a) - distancia(corUp, b));
+
+  if (parecidas.length > 0) {
+    // Achou parecida → sugere correção
+    const sug = parecidas[0];
+    const msg = `A cor "${corUp}" não existe ainda.\n\n` +
+                `Você quis dizer "${sug}"?\n\n` +
+                `[OK] usa "${sug}"\n` +
+                `[Cancelar] volta pra corrigir (ou cadastrar como nova)`;
+    if (confirm(msg)) return sug;
+    // Cancelou → oferece cadastrar como nova
+    if (confirm(`Cadastrar "${corUp}" como cor nova?\n\n[OK] cadastra\n[Cancelar] volta pra corrigir`)) return corUp;
+    return null;
+  }
+
+  // Cor totalmente nova, sem parecidas
+  if (confirm(`Cor "${corUp}" não existe ainda. Cadastrar como cor nova?`)) return corUp;
+  return null;
+}
+
+// Distância de Levenshtein — quantas edições de letras pra transformar a em b
+function distancia(a, b) {
+  const dp = Array.from({length: a.length + 1}, () => new Array(b.length + 1).fill(0));
+  for (let i = 0; i <= a.length; i++) dp[i][0] = i;
+  for (let j = 0; j <= b.length; j++) dp[0][j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      if (a[i - 1] === b[j - 1]) dp[i][j] = dp[i - 1][j - 1];
+      else dp[i][j] = 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[a.length][b.length];
 }
 
 function addEntrada(col, cor, q, isPending) {
@@ -275,6 +347,20 @@ async function salvarCorteBtn() {
   try {
     const id = await salvarCorte(corte);
     toast(`✓ Corte ${lote} / ${refPrincipal} salvo (${totalPecas} peças). Pronto pro próximo!`, 'ok');
+
+    // Salva cores novas no Firestore pra próxima vez aparecerem no autocomplete
+    const coresUnicas = [...new Set(itensBase.map(i => i.cor))];
+    const dl = document.getElementById('cores-list');
+    const jaTem = new Set([...dl.querySelectorAll('option')].map(o => o.value.toUpperCase()));
+    for (const cor of coresUnicas) {
+      if (!jaTem.has(cor.toUpperCase())) {
+        salvarCorSeNova(cor);  // salva async, sem esperar
+        const opt = document.createElement('option');
+        opt.value = cor;
+        dl.appendChild(opt);
+      }
+    }
+
     limparFormularioPraNovoCorte(lote);
     btn.disabled = false;
   } catch (e) {
