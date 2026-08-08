@@ -349,21 +349,28 @@ async function salvarCorteBtn() {
     toast(`✓ Corte ${lote} / ${refPrincipal} salvo (${totalPecas} peças). Pronto pro próximo!`, 'ok');
 
     // Salva cores novas no Firestore pra próxima vez aparecerem no autocomplete
-    const coresUnicas = [...new Set(itensBase.map(i => i.cor))];
-    const dl = document.getElementById('cores-list');
-    const jaTem = new Set([...dl.querySelectorAll('option')].map(o => o.value.toUpperCase()));
-    for (const cor of coresUnicas) {
-      if (!jaTem.has(cor.toUpperCase())) {
-        salvarCorSeNova(cor);  // salva async, sem esperar
-        const opt = document.createElement('option');
-        opt.value = cor;
-        dl.appendChild(opt);
+    // (isolado num try/catch próprio pra não quebrar o limpar tela se der problema)
+    try {
+      const coresUnicas = [...new Set(itensBase.map(i => i.cor))];
+      const dl = document.getElementById('cores-list');
+      const jaTem = new Set([...dl.querySelectorAll('option')].map(o => o.value.toUpperCase()));
+      for (const cor of coresUnicas) {
+        if (!jaTem.has(cor.toUpperCase())) {
+          salvarCorSeNova(cor);  // salva async, sem esperar
+          const opt = document.createElement('option');
+          opt.value = cor;
+          dl.appendChild(opt);
+        }
       }
+    } catch (e) {
+      console.warn('Falha ao registrar cores novas (não afeta o corte):', e);
     }
 
+    // Sempre limpa a tela, mesmo se der problema com as cores
     limparFormularioPraNovoCorte(lote);
     btn.disabled = false;
   } catch (e) {
+    console.error('Erro ao salvar corte:', e);
     toast('Erro ao salvar: ' + e.message, 'err');
     btn.disabled = false;
   }
