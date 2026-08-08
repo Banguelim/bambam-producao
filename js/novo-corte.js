@@ -66,6 +66,7 @@ function buildCol(tam) {
 
   // Ligar confirmar
   col.querySelector('.confirmar-btn').addEventListener('click', () => {
+    console.log('CLIQUE em confirmar', col.dataset.tam, 'confirmada?', col.classList.contains('confirmada'));
     if (col.classList.contains('confirmada') && col.querySelectorAll('.cor-linha.pending').length === 0) {
       col.classList.remove('confirmada');
       atualizarBtnCol(col);
@@ -73,6 +74,7 @@ function buildCol(tam) {
     } else {
       confirmarPendentes(col);
     }
+    console.log('DEPOIS do clique:', col.dataset.tam, 'confirmada?', col.classList.contains('confirmada'));
   });
 
   atualizarBtnCol(col);
