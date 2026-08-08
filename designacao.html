@@ -131,26 +131,18 @@
     border: 0.5px solid var(--border);
     border-radius: 6px;
     padding: 10px 14px;
-    display: grid;
-    grid-template-columns: auto auto 1fr auto auto;
-    gap: 12px;
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
+    gap: 12px;
     cursor: pointer;
     font-size: 13px;
   }
-  .item-corte:hover {
-    border-color: var(--border-accent);
-    background: color-mix(in srgb, var(--bg-accent) 30%, var(--surface-2));
-  }
-  .item-corte .lote {
-    font-weight: 800;
-    color: var(--text-primary);
-    font-size: 15px;
-    letter-spacing: 0.3px;
-  }
-  .item-corte .ref { color: var(--text-secondary); font-weight: 600; }
-  .item-corte .info { color: var(--text-muted); font-size: 12px; }
-  .item-corte .status {
+  .item-corte > .lote { font-weight: 800; color: var(--text-primary); font-size: 15px; letter-spacing: 0.3px; min-width: 50px; }
+  .item-corte > .ref { color: var(--text-secondary); font-weight: 600; min-width: 45px; }
+  .item-corte > .info { color: var(--text-muted); font-size: 12px; min-width: 85px; }
+  .item-corte > .pecas { font-weight: 700; color: var(--text-primary); min-width: 75px; }
+  .item-corte > .status {
     padding: 3px 9px;
     border-radius: 999px;
     font-size: 10px;
@@ -158,22 +150,26 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
+  .item-corte > .detalhe-linha {
+    flex: 1;
+    text-align: right;
+    font-size: 11px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 200px;
+    padding-left: 8px;
+    border-left: 0.5px dashed var(--border);
+  }
+  .item-corte > .detalhe-linha b { color: var(--text-primary); font-weight: 700; }
+  .item-corte:hover {
+    border-color: var(--border-accent);
+    background: color-mix(in srgb, var(--bg-accent) 30%, var(--surface-2));
+  }
   .item-corte .status.cortado { background: color-mix(in srgb, var(--text-accent) 20%, transparent); color: var(--text-accent); }
   .item-corte .status.parcial { background: color-mix(in srgb, var(--warning) 20%, transparent); color: var(--warning); }
   .item-corte .status.total { background: color-mix(in srgb, var(--success) 20%, transparent); color: var(--success); }
-  .item-corte .pecas { font-weight: 700; color: var(--text-primary); }
-  .item-corte .detalhe-linha {
-    padding-top: 6px;
-    margin-top: 4px;
-    border-top: 0.5px dashed var(--border);
-    font-size: 11px;
-    color: var(--text-secondary);
-    grid-column: 1 / -1;
-    white-space: nowrap;
-    overflow-x: auto;
-    line-height: 1.4;
-  }
-  .item-corte .detalhe-linha b { color: var(--text-primary); font-weight: 700; }
 
   /* Modal da nota gerada — aparece depois de designar */
   .modal-nota {
@@ -191,116 +187,110 @@
     background: white;
     color: #000;
     border-radius: 10px;
-    padding: 20px 24px;
-    max-width: 720px;
+    padding: 18px 22px;
+    max-width: 620px;
     width: 100%;
     max-height: 92vh;
     overflow-y: auto;
     box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+    font-family: 'Courier New', ui-monospace, monospace;
   }
-  .modal-nota .cabecalho-nota {
-    text-align: center;
-    padding-bottom: 10px;
-    margin-bottom: 12px;
-    border-bottom: 2px solid #000;
-  }
-  .modal-nota .cabecalho-nota h2 {
-    font-size: 18px;
-    margin: 0;
-    letter-spacing: 1px;
-  }
-  .modal-nota .cabecalho-nota .num {
-    color: var(--bg-accent-strong);
-    font-size: 22px;
-    font-weight: 900;
-    margin-top: 4px;
+  .modal-nota .num-nota {
+    font-size: 12px;
+    font-weight: 700;
+    color: #444;
+    text-align: right;
+    margin-bottom: 6px;
   }
   .modal-nota table {
     width: 100%;
     border-collapse: collapse;
-    font-family: 'Courier New', ui-monospace, monospace;
-    font-size: 12px;
+    font-size: 11px;
   }
   .modal-nota table td,
   .modal-nota table th {
-    border: 1.5px solid #000;
-    padding: 8px 10px;
+    border: 1px solid #000;
+    padding: 4px 6px;
     text-align: center;
     vertical-align: middle;
   }
   .modal-nota table th {
-    background: #e8e8e8;
-    font-weight: 800;
-    font-size: 11px;
-    letter-spacing: 1px;
-  }
-  .modal-nota table .tam-cel { text-align: center; font-weight: 800; font-size: 15px; }
-  .modal-nota table .esq { text-align: left; }
-  .modal-nota table .barra-preta {
-    background: #000;
-    color: white;
     font-weight: 700;
-    letter-spacing: 1px;
-    font-size: 11px;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    background: white;
   }
-  .modal-nota table .row-vazio td {
-    height: 44px;
-  }
-  .modal-nota table .destaque {
-    background: #fffdd0;
-    font-weight: 800;
-    font-size: 16px;
-  }
-  .modal-nota table .valor-total-cel {
-    color: #00631f;
-    font-weight: 800;
-    font-size: 15px;
-  }
+  .modal-nota table .tam-cel { font-weight: 700; font-size: 12px; }
+  .modal-nota table .esq { text-align: left; }
   .modal-nota table .cores-linha {
     text-align: left;
-    padding: 8px 12px;
-    background: #f6f6f6;
-    font-family: inherit;
+    padding: 5px 6px;
     font-size: 11px;
+    font-weight: 600;
+  }
+  .modal-nota table .rot-chegada {
+    text-align: left;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    font-size: 11px;
+    padding: 4px 6px;
+  }
+  .modal-nota table .row-vazio td {
+    height: 28px;
+  }
+  .modal-nota table .destaque {
+    font-weight: 700;
+    font-size: 13px;
   }
   .modal-nota .botoes {
     display: flex;
     gap: 10px;
     justify-content: flex-end;
-    margin-top: 16px;
-    padding-top: 12px;
+    margin-top: 14px;
+    padding-top: 10px;
     border-top: 1px solid #ddd;
   }
-  .modal-nota .btn-imp {
-    padding: 10px 22px;
-    background: #000;
-    color: white;
+  .modal-nota .btn-imp,
+  .modal-nota .btn-cont {
+    padding: 9px 20px;
     border: none;
     border-radius: 6px;
     cursor: pointer;
     font-weight: 700;
-    font-size: 14px;
+    font-size: 13px;
+  }
+  .modal-nota .btn-imp {
+    background: #000;
+    color: white;
   }
   .modal-nota .btn-imp:hover { background: #333; }
   .modal-nota .btn-cont {
-    padding: 10px 22px;
     background: var(--bg-accent-strong);
     color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 700;
-    font-size: 14px;
   }
   .modal-nota .btn-cont:hover { opacity: 0.9; }
 
-  /* Ao imprimir, mostra SÓ o modal, esconde topbar/tela */
+  /* Impressão: compacta, sem cores fortes, várias notas por página */
   @media print {
     body * { visibility: hidden; }
     .modal-nota, .modal-nota * { visibility: visible; }
-    .modal-nota { position: absolute; background: white; padding: 0; }
-    .modal-nota .caixa { box-shadow: none; padding: 0; max-height: none; overflow: visible; }
-    .modal-nota .botoes { display: none; }
+    .modal-nota {
+      position: absolute;
+      background: white;
+      padding: 0;
+      display: block !important;
+      top: 0; left: 0; right: 0;
+    }
+    .modal-nota .caixa {
+      box-shadow: none;
+      padding: 6mm 8mm;
+      max-height: none;
+      overflow: visible;
+      max-width: 100%;
+      page-break-inside: avoid;
+    }
+    .modal-nota .botoes { display: none !important; }
+    @page { margin: 8mm; }
   }
 </style>
 </head>
