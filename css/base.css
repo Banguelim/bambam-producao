@@ -120,19 +120,24 @@ h4 { font-size: 14px; }
 /* Toast pra mensagens */
 .toast {
   position: fixed;
-  bottom: 20px;
-  right: 20px;
-  padding: 10px 16px;
+  bottom: 24px;
+  right: 24px;
+  padding: 14px 20px;
   border-radius: 8px;
   background: var(--surface-2);
-  border: 0.5px solid var(--border);
+  border: 1px solid var(--border);
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: 15px;
+  font-weight: 600;
   z-index: 100;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
   animation: slideIn 0.2s ease;
+  max-width: 420px;
+  white-space: pre-line;
+  line-height: 1.4;
 }
-.toast.ok { border-color: var(--success); }
-.toast.err { border-color: var(--text-danger); }
+.toast.ok { border-color: var(--success); border-left-width: 5px; }
+.toast.err { border-color: var(--text-danger); border-left-width: 5px; }
 @keyframes slideIn {
   from { transform: translateX(100%); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
