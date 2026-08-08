@@ -6,10 +6,34 @@
 const colRefs        = () => PRODUCAO.doc('meta').collection('refs');
 const colCostureiras = () => PRODUCAO.doc('meta').collection('costureiras');
 const colPrecos      = () => PRODUCAO.doc('meta').collection('precos');
+const colCores       = () => PRODUCAO.doc('meta').collection('cores');
 const colCortes      = () => PRODUCAO.doc('op').collection('cortes');
 const colNotas       = () => PRODUCAO.doc('op').collection('notas');
 const colAdiants     = () => PRODUCAO.doc('op').collection('adiantamentos');
 const colEstoque     = () => PRODUCAO.doc('op').collection('estoque');
+
+// ============ CORES ============
+async function listarCoresSalvas() {
+  try {
+    const snap = await colCores().orderBy('nome').get();
+    return snap.docs.map(d => d.data().nome);
+  } catch (e) {
+    console.warn('Não deu pra carregar cores salvas:', e);
+    return [];
+  }
+}
+async function salvarCorSeNova(cor) {
+  const nome = cor.trim().toUpperCase();
+  if (!nome) return;
+  try {
+    await colCores().doc(nome).set({
+      nome,
+      criado_em: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+  } catch (e) {
+    console.warn('Não deu pra salvar cor:', e);
+  }
+}
 
 // ============ REFS ============
 async function listarRefs() {
