@@ -147,13 +147,14 @@ function atualizarBtnCol(col) {
     btn.disabled = false;
   } else {
     col.classList.remove('tem-pendente');
+    btn.disabled = false;  // Sempre reabilita quando não tem pending
     if (col.classList.contains('confirmada')) {
       btn.textContent = 'reabrir ' + col.dataset.tam;
     } else if (conf > 0) {
       btn.textContent = 'confirmar ' + col.dataset.tam;
     } else {
       btn.textContent = 'confirmar ' + col.dataset.tam;
-      btn.disabled = true;
+      btn.disabled = true;  // Só desabilita quando coluna tá vazia mesmo
     }
   }
 }
