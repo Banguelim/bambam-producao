@@ -25,7 +25,6 @@ async function init() {
   document.getElementById('costureira').addEventListener('blur', onMudarCostureira);
   document.getElementById('preco').addEventListener('input', recalcValor);
   document.getElementById('btn-voltar').addEventListener('click', () => { window.location.href = 'index.html'; });
-  document.getElementById('btn-previa').addEventListener('click', mostrarPrevia);
   document.getElementById('btn-gerar').addEventListener('click', gerarNota);
 
   // Ver se veio corte pela URL
@@ -53,17 +52,52 @@ async function mostrarSelecao() {
       return;
     }
     lista.innerHTML = '';
-    pendentes.forEach(c => {
+
+    // Buscar quantas peças já foram designadas de cada corte (em paralelo)
+    const infos = await Promise.all(pendentes.map(async c => {
+      try {
+        const snap = await colNotas().where('corte_id', '==', c.id).get();
+        let designado = 0, numNotas = 0;
+        const porCostureira = {};
+        snap.forEach(d => {
+          const n = d.data();
+          designado += n.total_saida || 0;
+          numNotas++;
+          const nome = n.costureira || '?';
+          if (!porCostureira[nome]) porCostureira[nome] = { total: 0, tams: {} };
+          porCostureira[nome].total += n.total_saida || 0;
+          (n.itens || []).forEach(i => {
+            porCostureira[nome].tams[i.tam] = (porCostureira[nome].tams[i.tam] || 0) + i.qtd;
+          });
+        });
+        return { designado, numNotas, porCostureira };
+      } catch (e) { return { designado: 0, numNotas: 0, porCostureira: {} }; }
+    }));
+
+    pendentes.forEach((c, idx) => {
+      const info = infos[idx];
       const div = document.createElement('div');
       div.className = 'item-corte';
       const statusClass = c.status === 'designado_parcial' ? 'parcial' : 'cortado';
       const statusTxt = c.status === 'designado_parcial' ? 'parcial' : 'aguardando';
+
+      // Detalhe compacto por costureira: NOME: RN 30 P 20 (50)
+      let detalheDesig = '';
+      if (info.numNotas > 0) {
+        const partes = Object.entries(info.porCostureira).map(([nome, d]) => {
+          const tamsStr = TAMS.filter(t => d.tams[t]).map(t => `${t}${d.tams[t]}`).join(' ');
+          return `<b>${nome}:</b> ${tamsStr} <span style="color:var(--text-muted)">(${d.total})</span>`;
+        });
+        detalheDesig = `<div class="detalhe-linha">${partes.join(' · ')}</div>`;
+      }
+
       div.innerHTML = `
         <span class="lote">${c.lote}</span>
         <span class="ref">${(c.refs || []).join(' + ')}</span>
         <span class="info">${formatDataBR(c.data_corte)}</span>
         <span class="pecas">${c.total_pecas} peças</span>
         <span class="status ${statusClass}">${statusTxt}</span>
+        ${detalheDesig}
       `;
       div.addEventListener('click', () => abrirCorte(c.id));
       lista.appendChild(div);
@@ -219,13 +253,24 @@ function buildCol(tam, itens) {
 
   col.querySelector('[data-total]').textContent = totalCol;
 
-  // Botão TODOS: marca tudo
+  // Botão TODOS: alterna marcar tudo / desmarcar tudo
   col.querySelector('[data-todos]').addEventListener('click', () => {
-    col.querySelectorAll('.cor-linha').forEach(e => {
+    const linhas = col.querySelectorAll('.cor-linha');
+    const algumMarcado = [...linhas].some(e => (parseInt(e.querySelector('.q').textContent) || 0) > 0);
+    linhas.forEach(e => {
       const max = parseInt(e.dataset.max);
-      e.querySelector('.q').textContent = String(max);
-      e.querySelector('.chk').checked = true;
-      e.classList.remove('desmarcada', 'parcial');
+      if (algumMarcado) {
+        // Desmarcar tudo
+        e.querySelector('.q').textContent = '0';
+        e.querySelector('.chk').checked = false;
+        e.classList.add('desmarcada');
+        e.classList.remove('parcial');
+      } else {
+        // Marcar tudo
+        e.querySelector('.q').textContent = String(max);
+        e.querySelector('.chk').checked = true;
+        e.classList.remove('desmarcada', 'parcial');
+      }
     });
     recalc();
   });
@@ -249,6 +294,9 @@ function recalc() {
     document.querySelector(`.ct[data-ct="${tam}"] b`).textContent = saiu;
     totalGeral += saiu;
     sobraGeral += (total - saiu);
+    // Atualiza texto do botão TODOS/LIMPAR
+    const btn = col.querySelector('[data-todos]');
+    if (btn) btn.textContent = saiu > 0 ? 'LIMPAR' : 'TODOS';
   });
   document.getElementById('lbl-designando').textContent = totalGeral;
   const sobra = document.getElementById('lbl-sobra');
@@ -292,38 +340,30 @@ function recalcValor() {
   document.getElementById('valor-total').textContent = formatBRL(valor);
 }
 
-function mostrarPrevia() {
-  const previa = document.getElementById('previa-nota');
-  const nNota = document.getElementById('num-nota').textContent.replace('Nota #', '');
-  const totalPecas = parseInt(document.getElementById('lbl-designando').textContent) || 0;
-  const preco = parseFloat(document.getElementById('preco').value) || 0;
-  const valor = totalPecas * preco;
-  const costureira = document.getElementById('costureira').value.trim().toUpperCase() || '—';
-  const data = document.getElementById('data-designacao').value;
+function mostrarModalNota(numero, itens, totalPecas, preco, valor, costureira, data) {
   const refsTxt = corteAtual.refs.join(' + ');
 
-  // Coletar quantidades por tam
+  // Agrupar por tamanho e cores
   const qtds = {};
-  const itensPorTam = {};
-  TAMS.forEach(tam => {
-    qtds[tam] = 0;
-    itensPorTam[tam] = [];
-    document.querySelectorAll(`.col[data-tam="${tam}"] .cor-linha`).forEach(e => {
-      const v = parseInt(e.querySelector('.q').textContent) || 0;
-      if (v > 0) {
-        qtds[tam] += v;
-        itensPorTam[tam].push({ cor: e.dataset.cor, qtd: v });
-      }
-    });
+  const coresPorTam = {};
+  TAMS.forEach(t => { qtds[t] = 0; coresPorTam[t] = []; });
+  itens.forEach(i => {
+    qtds[i.tam] += i.qtd;
+    coresPorTam[i.tam].push(`${i.cor} ${i.qtd}`);
   });
 
-  // Cores enviadas (agrupadas)
+  // Cores agrupadas (todas cores enviadas)
   const cores = new Set();
-  Object.values(itensPorTam).forEach(arr => arr.forEach(i => cores.add(i.cor)));
+  itens.forEach(i => cores.add(i.cor));
   const coresTxt = [...cores].join(', ');
 
-  previa.innerHTML = `
-    <div class="tit-nota">Nota <b>#${nNota}</b> · BAMBAM BABY</div>
+  const caixa = document.getElementById('caixa-nota');
+  caixa.innerHTML = `
+    <div class="cabecalho-nota">
+      <h2>BAMBAM BABY</h2>
+      <div class="num">Nota #${numero}</div>
+    </div>
+
     <table>
       <thead>
         <tr>
@@ -331,54 +371,69 @@ function mostrarPrevia() {
         </tr>
       </thead>
       <tbody>
-        <tr>
-          <td style="text-align:center;font-weight:700">${qtds.RN}</td>
-          <td style="text-align:center;font-weight:700">${qtds.P}</td>
-          <td style="text-align:center;font-weight:700">${qtds.M}</td>
-          <td style="text-align:center;font-weight:700">${qtds.G}</td>
-          <td style="text-align:center;font-weight:700">${qtds.GG}</td>
-          <td style="text-align:center;font-weight:800;background:#eef">${totalPecas}</td>
+        <!-- SAÍDA (peças enviadas) -->
+        <tr class="destaque">
+          <td class="tam-cel">${qtds.RN}</td>
+          <td class="tam-cel">${qtds.P}</td>
+          <td class="tam-cel">${qtds.M}</td>
+          <td class="tam-cel">${qtds.G}</td>
+          <td class="tam-cel">${qtds.GG}</td>
+          <td class="tam-cel">${totalPecas}</td>
         </tr>
         <tr>
-          <td>Data</td>
-          <td colspan="2">Lote <b>${corteAtual.lote}</b></td>
-          <td>Ref <b>${refsTxt}</b></td>
-          <td colspan="2">Preço/peça <b>${formatBRL(preco)}</b></td>
+          <td colspan="6" class="cores-linha"><b>Cores:</b> ${coresTxt}</td>
         </tr>
         <tr>
-          <td>${formatDataBR(data)}</td>
-          <td colspan="3">Costureira <b>${costureira}</b></td>
-          <td colspan="2" style="text-align:right">Total <b style="color:#080">${formatBRL(valor)}</b></td>
+          <td class="esq">${formatDataBR(data)}</td>
+          <td colspan="2" class="esq">Lote <b>${corteAtual.lote}</b></td>
+          <td class="esq">Ref <b>${refsTxt}</b></td>
+          <td colspan="2" class="esq">Preço/peça <b>${formatBRL(preco)}</b></td>
         </tr>
         <tr>
-          <td colspan="6"><b>Cores:</b> ${coresTxt || '—'}</td>
+          <td colspan="4" class="esq">Costureira <b style="font-size:14px">${costureira}</b></td>
+          <td colspan="2" class="valor-total-cel">Total ${formatBRL(valor)}</td>
         </tr>
+
+        <!-- 1ª CHEGADA -->
         <tr>
-          <td colspan="6" style="background:#000;color:white;text-align:center;padding:6px">1ª CHEGADA — data ___/___/______</td>
-        </tr>
-        <tr>
-          <th>RN</th><th>P</th><th>M</th><th>G</th><th>GG</th><th>TOTAL</th>
-        </tr>
-        <tr>
-          <td style="height:34px">&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
-        </tr>
-        <tr>
-          <td colspan="6" style="background:#000;color:white;text-align:center;padding:6px">2ª CHEGADA — data ___/___/______</td>
+          <td colspan="6" class="barra-preta">1ª CHEGADA — data ___/___/________</td>
         </tr>
         <tr>
           <th>RN</th><th>P</th><th>M</th><th>G</th><th>GG</th><th>TOTAL</th>
         </tr>
+        <tr class="row-vazio">
+          <td></td><td></td><td></td><td></td><td></td><td></td>
+        </tr>
+
+        <!-- 2ª CHEGADA -->
         <tr>
-          <td style="height:34px">&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
+          <td colspan="6" class="barra-preta">2ª CHEGADA — data ___/___/________</td>
+        </tr>
+        <tr>
+          <th>RN</th><th>P</th><th>M</th><th>G</th><th>GG</th><th>TOTAL</th>
+        </tr>
+        <tr class="row-vazio">
+          <td></td><td></td><td></td><td></td><td></td><td></td>
         </tr>
       </tbody>
     </table>
-    <div style="text-align:center;margin-top:10px">
-      <button onclick="window.print()" style="padding:6px 16px;font-size:12px;background:#000;color:white;border:none;border-radius:4px;cursor:pointer">🖨 Imprimir</button>
+
+    <div class="botoes">
+      <button class="btn-imp" onclick="window.print()">🖨 Imprimir nota</button>
+      <button class="btn-cont" id="btn-continuar">✓ Continuar</button>
     </div>
   `;
-  previa.classList.add('visivel');
-  previa.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  document.getElementById('modal-nota').classList.add('visivel');
+
+  // Handler do continuar (recarrega pra próxima designação)
+  document.getElementById('btn-continuar').addEventListener('click', () => {
+    if (window._sobrouAlgo) {
+      window.location.href = 'designacao.html?corte=' + corteAtual.id;
+    } else {
+      window.location.href = 'designacao.html';
+    }
+  });
 }
 
 async function gerarNota() {
@@ -448,16 +503,11 @@ async function gerarNota() {
     const novoStatus = sobrouAlgo ? 'designado_parcial' : 'designado_total';
     await colCortes().doc(corteAtual.id).update({ status: novoStatus });
 
-    toast(`✓ Nota #${numero} gerada — ${totalSaida} peças pra ${nome}`, 'ok');
-    setTimeout(() => {
-      if (sobrouAlgo) {
-        // Recarrega o mesmo corte com o que sobrou
-        window.location.href = 'designacao.html?corte=' + corteAtual.id;
-      } else {
-        // Volta pra seleção
-        window.location.href = 'designacao.html';
-      }
-    }, 1500);
+    // Guarda pra decidir onde ir depois do modal
+    window._sobrouAlgo = sobrouAlgo;
+
+    // Abre o modal da nota gerada (com botões IMPRIMIR / CONTINUAR)
+    mostrarModalNota(numero, itens, totalSaida, preco, valorNota, nome, data);
   } catch (e) {
     console.error('Erro ao gerar nota:', e);
     toast('Erro ao gerar nota: ' + e.message, 'err');
