@@ -55,11 +55,19 @@ function sanitizarQtd(el, max) {
   return v;
 }
 
-// Toast (mensagem no canto)
+// Toast (mensagem na tela)
+// tipo: '' (info), 'ok', 'err', 'ok grande', 'err grande'
 function toast(msg, tipo = '') {
   const t = document.createElement('div');
   t.className = 'toast ' + tipo;
+  t.style.whiteSpace = 'pre-line';  // respeita quebras de linha \n
   t.textContent = msg;
   document.body.appendChild(t);
-  setTimeout(() => t.remove(), 3500);
+  // Toast grande fica mais tempo visível (é o "salvo com sucesso" grande)
+  const tempo = tipo.includes('grande') ? 2500 : 3500;
+  setTimeout(() => {
+    t.style.transition = 'opacity 0.3s';
+    t.style.opacity = '0';
+    setTimeout(() => t.remove(), 300);
+  }, tempo);
 }
