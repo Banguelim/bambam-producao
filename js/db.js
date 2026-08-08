@@ -84,13 +84,15 @@ async function listarCortesRecentes(limite = 20) {
 }
 
 // ============ NOTAS ============
-async function proximoNumeroNota() {
+async function proximoNumeroNota(peek = false) {
   // Contador simples — pega o maior numero atual e +1
-  // Pra produção pesada, migrar pra transaction; funciona bem pra volume da BAMBAM
+  // Se peek=true, só retorna o próximo sem incrementar (pra mostrar preview)
   const meta = await PRODUCAO.doc('meta').get();
   const atual = meta.exists ? (meta.data().ultimo_num_nota || 0) : 0;
   const proximo = atual + 1;
-  await PRODUCAO.doc('meta').set({ ultimo_num_nota: proximo }, { merge: true });
+  if (!peek) {
+    await PRODUCAO.doc('meta').set({ ultimo_num_nota: proximo }, { merge: true });
+  }
   return String(proximo).padStart(4, '0');
 }
 async function salvarNota(nota) {
