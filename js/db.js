@@ -109,6 +109,18 @@ async function notasEmAbertoDaCostureira(costureira) {
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
+async function listarNotasDoCorte(corteId) {
+  const snap = await colNotas().where('corte_id', '==', corteId).get();
+  const notas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  // Ordena por número (asc)
+  notas.sort((a, b) => (a.numero || '').localeCompare(b.numero || ''));
+  return notas;
+}
+
+async function deletarNota(numero) {
+  await colNotas().doc(numero).delete();
+}
+
 // ============ ADIANTAMENTOS ============
 async function saldoAdiantamento(costureira) {
   const snap = await colAdiants()
