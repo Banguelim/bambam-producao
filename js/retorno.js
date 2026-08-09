@@ -39,8 +39,12 @@ async function init() {
 }
 
 async function carregarNotasAbertas() {
+  const chips = document.getElementById('chips-notas');
+  chips.innerHTML = '<span style="color:var(--text-muted);font-size:12px">carregando notas em aberto...</span>';
   try {
+    console.log('[retorno] buscando notas em aberto...');
     todasNotasAbertas = await listarTodasNotasEmAberto();
+    console.log('[retorno] notas encontradas:', todasNotasAbertas.length, todasNotasAbertas);
     // Popular datalist de lotes (formato "lote/ref")
     const dlLotes = document.getElementById('lotes-list');
     dlLotes.innerHTML = '';
@@ -55,8 +59,9 @@ async function carregarNotasAbertas() {
     });
     renderChips();
   } catch (e) {
-    console.error('Erro carregando notas:', e);
-    toast('Erro ao carregar notas', 'err');
+    console.error('[retorno] ERRO carregando notas:', e);
+    chips.innerHTML = `<span style="color:var(--text-danger);font-size:12px">Erro: ${e.message}</span>`;
+    toast('Erro ao carregar notas: ' + e.message, 'err');
   }
 }
 
