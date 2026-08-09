@@ -2,9 +2,262 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BAMBAM · Retorno</title>
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/forms.css">
+<link rel="stylesheet" href="css/grade5.css">
+<style>
+  /* Busca cruzada no topo */
+  .busca-cruzada {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .busca-cruzada .campo {
+    position: relative;
+  }
+  .busca-cruzada input {
+    width: 100%;
+    padding: 10px 34px 10px 12px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .busca-cruzada .lbl { margin-bottom: 4px; }
+  .busca-cruzada .x-campo {
+    position: absolute;
+    right: 10px;
+    top: calc(50% + 8px);
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 4px;
+    display: none;
+  }
+  .busca-cruzada .x-campo.visivel { display: block; }
+
+  /* Chips das notas */
+  .chips-notas {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 10px;
+    background: var(--surface-2);
+    border: 0.5px dashed var(--border);
+    border-radius: 8px;
+    min-height: 46px;
+    margin-bottom: 12px;
+  }
+  .chip-nota {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: 0.3px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .chip-nota:hover {
+    border-color: var(--border-accent);
+    background: color-mix(in srgb, var(--bg-accent) 30%, var(--surface-1));
+  }
+  .chip-nota .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-accent);
+    flex-shrink: 0;
+  }
+  .chip-nota .dot.parcial { background: var(--warning); }
+  .chip-nota .meta {
+    color: var(--text-secondary);
+    font-weight: 500;
+    font-size: 11px;
+  }
+
+  /* Painel da nota selecionada */
+  .painel-nota {
+    background: var(--surface-1);
+    border: 1px solid var(--border-accent);
+    border-radius: 10px;
+    padding: 14px;
+    display: none;
+  }
+  .painel-nota.visivel { display: block; }
+
+  .cabec-nota {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    padding-bottom: 12px;
+    border-bottom: 0.5px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .cabec-nota .num-nota {
+    background: var(--bg-accent);
+    color: var(--text-accent);
+    padding: 5px 12px;
+    border-radius: 5px;
+    font-weight: 800;
+    font-size: 15px;
+  }
+  .cabec-nota .cost {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--text-primary);
+    letter-spacing: 0.3px;
+  }
+  .cabec-nota .lote-info {
+    color: var(--text-secondary);
+    font-size: 13px;
+  }
+  .cabec-nota .lote-info b { color: var(--text-primary); font-weight: 700; }
+  .cabec-nota .valor {
+    color: var(--success);
+    font-weight: 800;
+    font-size: 14px;
+    margin-left: auto;
+  }
+
+  /* Config da chegada */
+  .config-chegada {
+    display: grid;
+    grid-template-columns: auto auto 1fr;
+    gap: 14px;
+    align-items: flex-end;
+    margin: 10px 0;
+    padding: 10px 12px;
+    background: var(--surface-2);
+    border-radius: 6px;
+  }
+  .config-chegada .campo-radio {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .config-chegada .campo-radio label {
+    padding: 6px 12px;
+    border: 0.5px solid var(--border);
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: var(--surface-1);
+  }
+  .config-chegada .campo-radio label:has(input:checked) {
+    border-color: var(--text-accent);
+    background: var(--bg-accent);
+    color: var(--text-accent);
+  }
+  .config-chegada .campo-radio input { display: none; }
+  .config-chegada .aviso {
+    color: var(--text-muted);
+    font-size: 11px;
+    font-style: italic;
+    text-align: right;
+  }
+
+  /* Grade personalizada da tela de retorno */
+  .grade5 .col-h .pendente {
+    font-size: 9px;
+    color: var(--text-secondary);
+    font-weight: 600;
+  }
+  .grade5 .col-h .pendente b { color: var(--warning); font-weight: 800; font-size: 11px; }
+
+  .entrada-chegada {
+    display: flex;
+    gap: 4px;
+    padding: 6px 4px;
+    align-items: center;
+  }
+  .entrada-chegada .chegou-input {
+    flex: 1;
+    padding: 6px;
+    border: 0.5px solid var(--border);
+    border-radius: 4px;
+    background: var(--surface-2);
+    font-size: 14px;
+    font-weight: 800;
+    text-align: center;
+    color: var(--text-primary);
+    box-sizing: border-box;
+    font-variant-numeric: tabular-nums;
+  }
+  .entrada-chegada .chegou-input:focus {
+    outline: none;
+    border-color: var(--text-accent);
+    background: white;
+    color: #000;
+  }
+  .entrada-chegada .btn-tudo {
+    padding: 6px 8px;
+    background: none;
+    border: 0.5px dashed var(--text-accent);
+    border-radius: 4px;
+    color: var(--text-accent);
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 700;
+    white-space: nowrap;
+    letter-spacing: 0.3px;
+  }
+  .entrada-chegada .btn-tudo:hover { background: var(--bg-accent); }
+
+  .cores-enviadas {
+    padding: 4px 6px;
+    font-size: 10px;
+    color: var(--text-muted);
+    max-height: 60px;
+    overflow-y: auto;
+    line-height: 1.5;
+    border-top: 0.5px dashed var(--border);
+    margin-top: 4px;
+  }
+  .cores-enviadas b { color: var(--text-secondary); font-weight: 700; }
+
+  .subtot-col .cell.saiu b { color: var(--text-primary); }
+  .subtot-col .cell.chegou b { color: var(--text-accent); }
+  .subtot-col .cell.fora b { color: var(--warning); }
+
+  /* Ações do painel */
+  .acoes-nota {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 12px;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .acoes-nota .esq {
+    display: flex;
+    gap: 6px;
+  }
+  .acoes-nota .dir {
+    display: flex;
+    gap: 6px;
+  }
+
+  /* Cabeçalho de estado */
+  .estado-vazio {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-muted);
+    background: var(--surface-1);
+    border: 0.5px dashed var(--border);
+    border-radius: 10px;
+  }
+  .estado-vazio .icone { font-size: 32px; margin-bottom: 8px; }
+</style>
 </head>
 <body>
   <div class="topbar">
@@ -12,11 +265,11 @@
     <nav class="nav">
       <a href="index.html">Painel</a>
       <a href="novo-corte.html">Novo corte</a>
-      <a href="designacao.html" class="TELA_DESIG">Designação</a>
+      <a href="designacao.html">Designação</a>
       <a href="retorno.html" class="ativo">Retorno</a>
-      <a href="pagamento.html" class="TELA_PAG">Pagamento</a>
-      <a href="estoque-entrada.html" class="TELA_EST">Estoque</a>
-      <a href="cadastros.html" class="TELA_CAD">Cadastros</a>
+      <a href="pagamento.html">Pagamento</a>
+      <a href="estoque-entrada.html">Estoque</a>
+      <a href="cadastros.html">Cadastros</a>
     </nav>
     <div class="user">
       <span id="user-email">—</span>
@@ -24,13 +277,117 @@
     </div>
   </div>
 
+  <datalist id="costureiras-list"></datalist>
+  <datalist id="lotes-list"></datalist>
+  <datalist id="trocar-cost-list"></datalist>
+
   <div class="wrap">
-    <h1>Retorno</h1>
-    <div style="background:var(--surface-1);border:0.5px dashed var(--border);border-radius:10px;padding:40px 20px;text-align:center;margin-top:20px">
-      <div style="font-size:32px;margin-bottom:10px">🚧</div>
-      <div style="font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:6px">Em construção</div>
-      <div style="font-size:13px;color:var(--text-secondary)">Essa tela será implementada na próxima etapa.<br>Você já pode usar o <b>Novo corte</b> pra registrar cortes de tecido.</div>
-      <a href="index.html" class="btn btn-secondary" style="margin-top:14px;display:inline-block">Voltar ao painel</a>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px">
+      <h1 style="margin:0">Retorno</h1>
+      <span class="hint" id="hint">Escolha costureira ou lote pra ver as notas em aberto</span>
+    </div>
+
+    <!-- Busca cruzada -->
+    <div class="busca-cruzada">
+      <div class="campo">
+        <label class="lbl">Costureira</label>
+        <input list="costureiras-list" id="filtro-cost" placeholder="digite ou escolha">
+        <button class="x-campo" id="x-cost">×</button>
+      </div>
+      <div class="campo">
+        <label class="lbl">Lote / Ref</label>
+        <input list="lotes-list" id="filtro-lote" placeholder="ex: 2041A/205">
+        <button class="x-campo" id="x-lote">×</button>
+      </div>
+    </div>
+
+    <!-- Chips das notas em aberto -->
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;padding:0 4px">
+      <div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;font-weight:700">
+        Notas em aberto <span id="contador-chips" style="color:var(--text-muted);font-weight:500;margin-left:4px">(0)</span>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted)">clica no chip pra abrir</div>
+    </div>
+    <div class="chips-notas" id="chips-notas">
+      <span style="color:var(--text-muted);font-size:12px">carregando...</span>
+    </div>
+
+    <!-- Painel da nota selecionada -->
+    <div class="painel-nota" id="painel-nota">
+      <div class="cabec-nota">
+        <span class="num-nota" id="p-num">#—</span>
+        <span class="cost" id="p-cost">—</span>
+        <span class="lote-info">Lote <b id="p-lote">—</b> · Ref <b id="p-ref">—</b> · <b id="p-total">0</b> peças saíram em <span id="p-data">—</span></span>
+        <span class="valor" id="p-valor">R$ 0,00</span>
+      </div>
+
+      <div class="config-chegada">
+        <div>
+          <label class="lbl">Data chegada</label>
+          <input type="date" id="p-data-chegada" class="data-in">
+        </div>
+        <div>
+          <label class="lbl">Qual chegada</label>
+          <div class="campo-radio">
+            <label><input type="radio" name="qual-chegada" value="1" checked> 1ª chegada</label>
+            <label><input type="radio" name="qual-chegada" value="2"> 2ª chegada</label>
+          </div>
+        </div>
+        <div class="aviso">
+          1ª = só costura pronta (aguarda arremate)<br>2ª = arremate concluído (vira estoque)
+        </div>
+      </div>
+
+      <div class="grade5" id="grade"></div>
+
+      <div class="rodape-tot">
+        <div class="col-totais" id="col-totais">
+          <span class="ct" data-ct="RN">RN <b>0</b></span>
+          <span class="ct" data-ct="P">P <b>0</b></span>
+          <span class="ct" data-ct="M">M <b>0</b></span>
+          <span class="ct" data-ct="G">G <b>0</b></span>
+          <span class="ct" data-ct="GG">GG <b>0</b></span>
+        </div>
+        <div class="total-geral">
+          <div>Chegando agora <b id="lbl-chegando">0</b> peças <small id="lbl-fora">—</small></div>
+        </div>
+      </div>
+
+      <div class="acoes-nota">
+        <div class="esq">
+          <button class="btn btn-secondary" id="btn-fechar">← Fechar</button>
+          <button class="btn btn-secondary" id="btn-trocar">↷ Trocar costureira</button>
+          <button class="btn btn-danger" id="btn-devolver">↶ Devolver pra designação</button>
+        </div>
+        <div class="dir">
+          <button class="btn btn-primary" id="btn-registrar">✓ Registrar chegada</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="estado-vazio" id="estado-vazio" style="display:none">
+      <div class="icone">📭</div>
+      <div><b>Nenhuma nota em aberto</b></div>
+      <div style="font-size:12px;margin-top:4px">Todas as notas foram entregues ou não há designação ativa.</div>
+    </div>
+  </div>
+
+  <!-- Modal Trocar Costureira -->
+  <div class="modal-nota" id="modal-trocar" style="background:rgba(0,0,0,0.75)">
+    <div class="caixa" style="max-width:420px;font-family:inherit;background:var(--surface-1);color:var(--text-primary)">
+      <h3 style="margin-bottom:12px">Trocar costureira</h3>
+      <div style="font-size:12px;color:var(--text-secondary);margin-bottom:14px">
+        Essa nota vai passar da costureira <b id="trocar-cost-atual" style="color:var(--text-primary)">?</b>
+        pra outra. A nota mantém o número e as peças.
+      </div>
+      <label class="lbl">Nova costureira</label>
+      <input list="trocar-cost-list" id="trocar-cost-nova" placeholder="digite ou escolha" style="width:100%;padding:9px 12px;margin-bottom:12px">
+      <label class="lbl">Novo preço/peça (R$) — <span style="color:var(--text-muted);text-transform:none">deixa vazio pra buscar da matriz</span></label>
+      <input type="number" id="trocar-preco" step="0.01" placeholder="0,00" style="width:100%;padding:9px 12px;margin-bottom:16px">
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-secondary" onclick="document.getElementById('modal-trocar').classList.remove('visivel')">Cancelar</button>
+        <button class="btn btn-primary" id="btn-confirmar-troca">✓ Trocar</button>
+      </div>
     </div>
   </div>
 
@@ -39,6 +396,8 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/auth.js"></script>
-  <script>protegerRota();</script>
+  <script src="js/utils.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/retorno.js"></script>
 </body>
 </html>
