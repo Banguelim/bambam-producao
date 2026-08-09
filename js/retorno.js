@@ -36,6 +36,8 @@ async function init() {
   document.getElementById('btn-trocar').addEventListener('click', abrirModalTrocar);
   document.getElementById('btn-devolver').addEventListener('click', devolverParaDesignacao);
   document.getElementById('btn-confirmar-troca').addEventListener('click', confirmarTroca);
+  document.getElementById('trocar-cost-nova').addEventListener('input', atualizarBtnTroca);
+  document.getElementById('trocar-cost-nova').addEventListener('change', atualizarBtnTroca);
 }
 
 async function carregarNotasAbertas() {
@@ -108,13 +110,11 @@ function renderChips() {
     const isParcial = totalChegou > 0 && totalChegou < n.total_saida;
     const chip = document.createElement('div');
     chip.className = 'chip-nota';
-    const meta = c
-      ? `${n.lote}/${n.ref} · ${n.total_saida}pç`
-      : `${n.costureira} · ${n.total_saida}pç`;
+    // Destaque: LOTE/REF sempre em primeiro. Cost e nota como meta
     chip.innerHTML = `
       <span class="dot ${isParcial ? 'parcial' : ''}"></span>
-      <span>#${n.numero}</span>
-      <span class="meta">${meta}</span>
+      <span>${n.lote}/${n.ref}</span>
+      <span class="meta">${n.costureira} · ${n.total_saida}pç · #${n.numero}</span>
     `;
     chip.addEventListener('click', () => abrirNota(n));
     chips.appendChild(chip);
@@ -160,10 +160,10 @@ function coresEnviadasPorTam(n) {
 function abrirNota(n) {
   notaAtual = n;
   document.getElementById('painel-nota').classList.add('visivel');
-  document.getElementById('p-num').textContent = `#${n.numero}`;
-  document.getElementById('p-cost').textContent = n.costureira || '?';
   document.getElementById('p-lote').textContent = n.lote;
   document.getElementById('p-ref').textContent = n.ref;
+  document.getElementById('p-cost').textContent = n.costureira || '?';
+  document.getElementById('p-num').textContent = `#${n.numero}`;
   document.getElementById('p-total').textContent = n.total_saida;
   document.getElementById('p-data').textContent = formatDataBR(n.data_saida);
   document.getElementById('p-valor').textContent = formatBRL(n.valor_nota || 0);
@@ -234,10 +234,17 @@ function renderizarGrade() {
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === 'Tab') {
         e.preventDefault();
-        // Pula pra próxima coluna
-        const inputs = document.querySelectorAll('.chegou-input');
-        const idx = [...inputs].indexOf(input);
-        if (idx < inputs.length - 1) inputs[idx + 1].focus();
+        // Pula pro próximo input HABILITADO (ignora colunas com pendente=0)
+        const inputs = [...document.querySelectorAll('.chegou-input')];
+        const idx = inputs.indexOf(input);
+        for (let i = idx + 1; i < inputs.length; i++) {
+          if (!inputs[i].disabled) {
+            inputs[i].focus();
+            return;
+          }
+        }
+        // Não achou próximo habilitado → foca no botão Registrar
+        document.getElementById('btn-registrar').focus();
       }
     });
 
@@ -356,26 +363,42 @@ async function registrarChegada() {
 function abrirModalTrocar() {
   if (!notaAtual) return;
   document.getElementById('trocar-cost-atual').textContent = notaAtual.costureira || '?';
-  document.getElementById('trocar-cost-nova').value = '';
+  const inputCost = document.getElementById('trocar-cost-nova');
+  inputCost.value = '';
   document.getElementById('trocar-preco').value = '';
   document.getElementById('modal-trocar').classList.add('visivel');
+  atualizarBtnTroca();
+  // Foca no campo pra facilitar
+  setTimeout(() => inputCost.focus(), 100);
+}
+
+function atualizarBtnTroca() {
+  const nova = document.getElementById('trocar-cost-nova').value.trim().toUpperCase();
+  const btn = document.getElementById('btn-confirmar-troca');
+  if (!nova) {
+    btn.disabled = true;
+    btn.textContent = '✓ Trocar';
+    return;
+  }
+  if (nova === notaAtual.costureira) {
+    btn.disabled = true;
+    btn.textContent = '⚠ Mesma costureira';
+    return;
+  }
+  btn.disabled = false;
+  btn.textContent = `✓ Trocar pra ${nova}`;
 }
 
 async function confirmarTroca() {
   const novaCost = document.getElementById('trocar-cost-nova').value.trim().toUpperCase();
   let novoPreco = parseFloat(document.getElementById('trocar-preco').value);
 
-  if (!novaCost) {
-    toast('Escolha a nova costureira', 'err');
-    return;
-  }
-  if (novaCost === notaAtual.costureira) {
-    toast('É a mesma costureira', 'err');
-    return;
-  }
+  if (!novaCost) return;
+  if (novaCost === notaAtual.costureira) return;
 
   const btn = document.getElementById('btn-confirmar-troca');
   btn.disabled = true;
+  btn.textContent = '⏳ Trocando...';
 
   try {
     // Se não informou preço novo, tenta buscar da matriz
@@ -383,7 +406,7 @@ async function confirmarTroca() {
       novoPreco = await precoDe(notaAtual.ref, novaCost);
       if (!novoPreco || novoPreco <= 0) {
         toast(`${novaCost} não tem preço cadastrado pra ref ${notaAtual.ref}. Digite o preço.`, 'err');
-        btn.disabled = false;
+        atualizarBtnTroca();
         return;
       }
     } else {
@@ -404,12 +427,11 @@ async function confirmarTroca() {
     setTimeout(async () => {
       await carregarNotasAbertas();
       fecharPainel();
-      btn.disabled = false;
     }, 1200);
   } catch (e) {
     console.error('Erro na troca:', e);
     toast('Erro: ' + e.message, 'err');
-    btn.disabled = false;
+    atualizarBtnTroca();
   }
 }
 
