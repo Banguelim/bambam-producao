@@ -102,13 +102,15 @@
     border-bottom: 0.5px solid var(--border);
     flex-wrap: wrap;
   }
-  .cabec-nota .num-nota {
-    background: var(--bg-accent);
-    color: var(--text-accent);
-    padding: 5px 12px;
-    border-radius: 5px;
-    font-weight: 800;
-    font-size: 15px;
+  .cabec-nota .lote-destaque {
+    background: var(--bg-accent-strong);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 900;
+    font-size: 22px;
+    letter-spacing: 1px;
+    font-family: 'Courier New', ui-monospace, monospace;
   }
   .cabec-nota .cost {
     font-size: 16px;
@@ -116,11 +118,11 @@
     color: var(--text-primary);
     letter-spacing: 0.3px;
   }
-  .cabec-nota .lote-info {
+  .cabec-nota .info-extra {
     color: var(--text-secondary);
-    font-size: 13px;
+    font-size: 12px;
   }
-  .cabec-nota .lote-info b { color: var(--text-primary); font-weight: 700; }
+  .cabec-nota .info-extra b { color: var(--text-primary); font-weight: 700; }
   .cabec-nota .valor {
     color: var(--success);
     font-weight: 800;
@@ -315,9 +317,9 @@
     <!-- Painel da nota selecionada -->
     <div class="painel-nota" id="painel-nota">
       <div class="cabec-nota">
-        <span class="num-nota" id="p-num">#—</span>
+        <span class="lote-destaque"><span id="p-lote">—</span>/<span id="p-ref">—</span></span>
         <span class="cost" id="p-cost">—</span>
-        <span class="lote-info">Lote <b id="p-lote">—</b> · Ref <b id="p-ref">—</b> · <b id="p-total">0</b> peças saíram em <span id="p-data">—</span></span>
+        <span class="info-extra">Nota <b id="p-num">#—</b> · <b id="p-total">0</b> peças saíram em <span id="p-data">—</span></span>
         <span class="valor" id="p-valor">R$ 0,00</span>
       </div>
 
