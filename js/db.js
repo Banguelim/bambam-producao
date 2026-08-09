@@ -139,10 +139,8 @@ async function deletarNota(numero) {
 
 // ============ ADIANTAMENTOS ============
 async function saldoAdiantamento(costureira) {
-  const snap = await colAdiants()
-    .where('costureira', '==', costureira)
-    .where('saldo', '>', 0)
-    .get();
+  // Busca tudo e filtra no cliente (evita índice composto)
+  const snap = await colAdiants().where('costureira', '==', costureira).get();
   let total = 0;
   snap.forEach(d => total += (d.data().saldo || 0));
   return total;
@@ -152,6 +150,44 @@ async function registrarAdiantamento(costureira, valor, data) {
     costureira, valor: Number(valor), saldo: Number(valor),
     data, criado_em: firebase.firestore.FieldValue.serverTimestamp()
   });
+}
+
+async function listarAdiantamentosDisponiveis(costureira) {
+  const snap = await colAdiants().where('costureira', '==', costureira).get();
+  return snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .filter(a => (a.saldo || 0) > 0)
+    .sort((a, b) => (a.data || '').localeCompare(b.data || ''));  // FIFO — os mais antigos primeiro
+}
+
+// Consome saldo de adiantamentos (FIFO) até totalizar o valor pedido
+// Retorna array com os ids/valores consumidos: [{id, consumido}]
+async function consumirAdiantamentos(costureira, valorTotal) {
+  const adiants = await listarAdiantamentosDisponiveis(costureira);
+  const consumidos = [];
+  let restante = valorTotal;
+  for (const a of adiants) {
+    if (restante <= 0) break;
+    const saldo = a.saldo || 0;
+    const usar = Math.min(saldo, restante);
+    if (usar > 0) {
+      const novoSaldo = saldo - usar;
+      await colAdiants().doc(a.id).update({ saldo: novoSaldo });
+      consumidos.push({ id: a.id, consumido: usar });
+      restante -= usar;
+    }
+  }
+  return { consumidos, faltou: restante };
+}
+
+// ============ PAGAMENTOS ============
+const colPagamentos = () => PRODUCAO.doc('op').collection('pagamentos');
+
+async function salvarPagamento(pag) {
+  pag.criado_em = firebase.firestore.FieldValue.serverTimestamp();
+  pag.criado_por = auth.currentUser?.uid || 'anon';
+  const doc = await colPagamentos().add(pag);
+  return doc.id;
 }
 
 // ============ ESTOQUE ============
