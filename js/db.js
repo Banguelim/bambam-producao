@@ -102,19 +102,19 @@ async function salvarNota(nota) {
   return nota.numero;
 }
 async function notasEmAbertoDaCostureira(costureira) {
-  const snap = await colNotas()
-    .where('costureira', '==', costureira)
-    .where('status', 'in', ['aberta', 'paga_parcial'])
-    .get();
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const snap = await colNotas().where('costureira', '==', costureira).get();
+  return snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .filter(n => !n.status || n.status === 'aberta' || n.status === 'paga_parcial');
 }
 
 // Lista TODAS as notas em aberto/paga_parcial (pra tela de retorno)
+// Busca tudo e filtra no cliente (evita problema de índice composto no Firestore)
 async function listarTodasNotasEmAberto() {
-  const snap = await colNotas()
-    .where('status', 'in', ['aberta', 'paga_parcial'])
-    .get();
-  const notas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const snap = await colNotas().get();
+  const notas = snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .filter(n => !n.status || n.status === 'aberta' || n.status === 'paga_parcial');
   // Ordena por data_saida desc
   notas.sort((a, b) => (b.data_saida || '').localeCompare(a.data_saida || ''));
   return notas;
