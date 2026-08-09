@@ -109,6 +109,22 @@ async function notasEmAbertoDaCostureira(costureira) {
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
+// Lista TODAS as notas em aberto/paga_parcial (pra tela de retorno)
+async function listarTodasNotasEmAberto() {
+  const snap = await colNotas()
+    .where('status', 'in', ['aberta', 'paga_parcial'])
+    .get();
+  const notas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  // Ordena por data_saida desc
+  notas.sort((a, b) => (b.data_saida || '').localeCompare(a.data_saida || ''));
+  return notas;
+}
+
+// Atualiza campos específicos de uma nota (ex: chegada_1, chegada_2, costureira)
+async function atualizarNota(numero, campos) {
+  await colNotas().doc(numero).update(campos);
+}
+
 async function listarNotasDoCorte(corteId) {
   const snap = await colNotas().where('corte_id', '==', corteId).get();
   const notas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
