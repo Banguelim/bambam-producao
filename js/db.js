@@ -52,6 +52,29 @@ async function listarCostureiras() {
 async function salvarCostureira(c) {
   await colCostureiras().doc(c.nome).set({ ...c, atualizado_em: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
 }
+async function deletarCostureira(nome) {
+  await colCostureiras().doc(nome).delete();
+}
+// Verifica se a costureira tem notas associadas (pra bloquear delete)
+async function costureiraTemNotas(nome) {
+  const snap = await colNotas().where('costureira', '==', nome).limit(1).get();
+  return !snap.empty;
+}
+async function deletarRef(ref) {
+  await colRefs().doc(ref).delete();
+}
+async function deletarCor(cor) {
+  await colCores().doc(cor).delete();
+}
+// Verifica se ref tem cortes/notas
+async function refTemUso(ref) {
+  const cortesSnap = await colCortes().limit(1).get();
+  for (const doc of cortesSnap.docs) {
+    if ((doc.data().refs || []).includes(ref)) return true;
+  }
+  const notasSnap = await colNotas().where('ref', '==', ref).limit(1).get();
+  return !notasSnap.empty;
+}
 
 // ============ PREÇOS ============
 async function precoDe(ref, costureira) {
