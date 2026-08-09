@@ -2,9 +2,187 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BAMBAM · Cadastros</title>
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/forms.css">
+<style>
+  /* Abas */
+  .abas {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 14px;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .abas button {
+    padding: 10px 18px;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -0.5px;
+  }
+  .abas button:hover { color: var(--text-primary); }
+  .abas button.ativa {
+    color: var(--text-accent);
+    border-bottom-color: var(--text-accent);
+  }
+
+  /* Painel de conteúdo */
+  .painel {
+    display: none;
+  }
+  .painel.ativo { display: block; }
+
+  /* Bloco de adicionar */
+  .form-add {
+    background: var(--surface-2);
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 14px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: flex-end;
+  }
+  .form-add .campos {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .form-add .campo {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-width: 180px;
+  }
+  .form-add input {
+    padding: 9px 12px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .form-add .btn-add {
+    padding: 9px 20px;
+    background: var(--bg-accent-strong);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .form-add .btn-add:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  /* Lista */
+  .lista-cad {
+    background: var(--surface-1);
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .lista-cad .titulo {
+    padding: 10px 14px;
+    background: var(--surface-2);
+    border-bottom: 0.5px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .lista-cad .titulo .rot {
+    font-size: 11px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+  }
+  .lista-cad .titulo .contagem {
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-left: 4px;
+  }
+  .lista-cad .busca-filtro {
+    padding: 10px 14px;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .lista-cad .busca-filtro input {
+    width: 100%;
+    padding: 7px 12px;
+    font-size: 13px;
+  }
+  .lista-cad .itens {
+    max-height: 500px;
+    overflow-y: auto;
+  }
+  .item-cad {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    gap: 10px;
+    padding: 10px 14px;
+    border-bottom: 0.5px dashed var(--border);
+    align-items: center;
+    font-size: 13px;
+  }
+  .item-cad:last-child { border-bottom: none; }
+  .item-cad:hover { background: color-mix(in srgb, var(--bg-accent) 15%, transparent); }
+  .item-cad.inativa {
+    opacity: 0.5;
+  }
+  .item-cad .nome-cad {
+    font-weight: 700;
+    color: var(--text-primary);
+    font-size: 14px;
+  }
+  .item-cad .badge {
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .item-cad .badge.ativa { background: color-mix(in srgb, var(--success) 20%, transparent); color: var(--success); }
+  .item-cad .badge.inativa { background: color-mix(in srgb, var(--text-muted) 20%, transparent); color: var(--text-muted); }
+  .item-cad .info-extra {
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+  .item-cad .acoes-btn {
+    display: flex;
+    gap: 4px;
+  }
+  .item-cad .btn-mini {
+    padding: 4px 9px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    border: 0.5px solid var(--border);
+    background: none;
+    color: var(--text-secondary);
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+  }
+  .item-cad .btn-mini:hover { color: var(--text-primary); border-color: var(--border-accent); }
+  .item-cad .btn-mini.danger:hover { color: var(--text-danger); border-color: var(--text-danger); }
+  .item-cad .btn-mini.success:hover { color: var(--success); border-color: var(--success); }
+
+  /* Estado vazio */
+  .vazio {
+    padding: 30px 20px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+</style>
 </head>
 <body>
   <div class="topbar">
@@ -12,10 +190,10 @@
     <nav class="nav">
       <a href="index.html">Painel</a>
       <a href="novo-corte.html">Novo corte</a>
-      <a href="designacao.html" class="TELA_DESIG">Designação</a>
-      <a href="retorno.html" class="TELA_RET">Retorno</a>
-      <a href="pagamento.html" class="TELA_PAG">Pagamento</a>
-      <a href="estoque-entrada.html" class="TELA_EST">Estoque</a>
+      <a href="designacao.html">Designação</a>
+      <a href="retorno.html">Retorno</a>
+      <a href="pagamento.html">Pagamento</a>
+      <a href="estoque-entrada.html">Estoque</a>
       <a href="cadastros.html" class="ativo">Cadastros</a>
     </nav>
     <div class="user">
@@ -25,12 +203,164 @@
   </div>
 
   <div class="wrap">
-    <h1>Cadastros</h1>
-    <div style="background:var(--surface-1);border:0.5px dashed var(--border);border-radius:10px;padding:40px 20px;text-align:center;margin-top:20px">
-      <div style="font-size:32px;margin-bottom:10px">🚧</div>
-      <div style="font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:6px">Em construção</div>
-      <div style="font-size:13px;color:var(--text-secondary)">Essa tela será implementada na próxima etapa.<br>Você já pode usar o <b>Novo corte</b> pra registrar cortes de tecido.</div>
-      <a href="index.html" class="btn btn-secondary" style="margin-top:14px;display:inline-block">Voltar ao painel</a>
+    <h1 style="margin-bottom:10px">Cadastros</h1>
+
+    <div class="abas">
+      <button class="ativa" data-aba="costureiras">Costureiras</button>
+      <button data-aba="refs">Referências</button>
+      <button data-aba="cores">Cores</button>
+      <button data-aba="precos">Preços</button>
+      <button data-aba="backup">Backup</button>
+    </div>
+
+    <!-- ========== ABA COSTUREIRAS ========== -->
+    <div class="painel ativo" data-painel="costureiras">
+      <div class="form-add">
+        <div class="campos">
+          <div class="campo">
+            <label class="lbl">Nome da nova costureira</label>
+            <input id="cost-nome" placeholder="ex: MARIA JOSÉ" style="text-transform:uppercase">
+          </div>
+        </div>
+        <button class="btn-add" id="btn-cost-add" disabled>+ Cadastrar</button>
+      </div>
+
+      <div class="lista-cad">
+        <div class="titulo">
+          <span class="rot">Costureiras cadastradas <span class="contagem" id="cost-contagem">(0)</span></span>
+        </div>
+        <div class="busca-filtro">
+          <input id="cost-busca" placeholder="🔎 buscar por nome">
+        </div>
+        <div class="itens" id="cost-lista"></div>
+      </div>
+    </div>
+
+    <!-- ========== ABA REFERÊNCIAS ========== -->
+    <div class="painel" data-painel="refs">
+      <div class="form-add">
+        <div class="campos">
+          <div class="campo">
+            <label class="lbl">Nova referência</label>
+            <input id="ref-nome" placeholder="ex: 205, 205MT, 001PC" style="text-transform:uppercase">
+          </div>
+        </div>
+        <button class="btn-add" id="btn-ref-add" disabled>+ Cadastrar</button>
+      </div>
+
+      <div class="lista-cad">
+        <div class="titulo">
+          <span class="rot">Referências cadastradas <span class="contagem" id="ref-contagem">(0)</span></span>
+        </div>
+        <div class="busca-filtro">
+          <input id="ref-busca" placeholder="🔎 buscar por código">
+        </div>
+        <div class="itens" id="ref-lista"></div>
+      </div>
+    </div>
+
+    <!-- ========== ABA CORES ========== -->
+    <div class="painel" data-painel="cores">
+      <div class="form-add">
+        <div class="campos">
+          <div class="campo">
+            <label class="lbl">Nova cor</label>
+            <input id="cor-nome" placeholder="ex: TURQUESA, PINK" style="text-transform:uppercase">
+          </div>
+        </div>
+        <button class="btn-add" id="btn-cor-add" disabled>+ Cadastrar</button>
+      </div>
+
+      <div class="lista-cad">
+        <div class="titulo">
+          <span class="rot">Cores cadastradas <span class="contagem" id="cor-contagem">(0)</span></span>
+        </div>
+        <div class="busca-filtro">
+          <input id="cor-busca" placeholder="🔎 buscar por nome">
+        </div>
+        <div class="itens" id="cor-lista"></div>
+      </div>
+    </div>
+
+    <!-- ========== ABA PREÇOS ========== -->
+    <div class="painel" data-painel="precos">
+      <div style="background:var(--surface-1);border:0.5px solid var(--border);border-radius:8px;padding:16px">
+        <div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px">
+          Consulta e edição da matriz de preços (custo por peça) — <b style="color:var(--text-primary)">costureira × referência</b>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:flex-end;margin-bottom:14px">
+          <div>
+            <label class="lbl">Costureira</label>
+            <input list="cost-preco-list" id="preco-cost" placeholder="digite ou escolha">
+          </div>
+          <div>
+            <label class="lbl">Referência</label>
+            <input list="ref-preco-list" id="preco-ref" placeholder="digite ou escolha">
+          </div>
+          <button class="btn btn-secondary" id="btn-buscar-preco">🔎 Buscar</button>
+        </div>
+        <datalist id="cost-preco-list"></datalist>
+        <datalist id="ref-preco-list"></datalist>
+
+        <div id="painel-preco-result" style="display:none;padding:14px;background:var(--surface-2);border-radius:6px">
+          <div style="margin-bottom:10px;font-size:13px" id="preco-info">—</div>
+          <div style="display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center">
+            <label class="lbl" style="margin:0">Novo preço:</label>
+            <input type="number" id="preco-valor" step="0.01" min="0" placeholder="0,00" style="padding:9px 12px">
+            <button class="btn btn-primary" id="btn-salvar-preco">✓ Salvar preço</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== ABA BACKUP ========== -->
+    <div class="painel" data-painel="backup">
+      <div style="background:var(--surface-1);border:0.5px solid var(--border);border-radius:8px;padding:20px">
+        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:14px;line-height:1.6">
+          Baixe uma cópia completa dos dados do sistema em formato Excel (.xlsx).<br>
+          Recomendado fazer <b style="color:var(--text-primary)">1 vez por semana</b> — guarde no computador ou OneDrive.<br>
+          Contém: cortes, notas, pagamentos, adiantamentos, costureiras, refs, preços e estoque.
+        </div>
+        <button class="btn btn-primary" id="btn-backup" style="padding:12px 24px;font-size:14px">
+          📥 Gerar backup Excel agora
+        </button>
+        <div id="backup-status" style="margin-top:12px;font-size:12px;color:var(--text-muted)"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal duplicidade detectada -->
+  <div class="modal-nota" id="modal-duplicidade">
+    <div class="caixa" style="max-width:460px;background:var(--surface-1);color:var(--text-primary);font-family:inherit">
+      <h3 style="margin-bottom:12px;color:var(--warning)">⚠ Nome parecido encontrado</h3>
+      <div style="font-size:13px;color:var(--text-secondary);margin-bottom:14px">
+        Você tá tentando cadastrar <b id="dup-novo" style="color:var(--text-primary);font-size:15px">?</b>,
+        mas já existe <b id="dup-existente" style="color:var(--text-primary);font-size:15px">?</b> cadastrado.
+      </div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">
+        Isso pode ser um erro de digitação. O que você quer fazer?
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn btn-primary" id="dup-usar-existente">Usar <b id="dup-usar-nome">?</b> (que já existe)</button>
+        <button class="btn btn-secondary" id="dup-cadastrar-novo">Cadastrar <b id="dup-cad-nome">?</b> como novo mesmo assim</button>
+        <button class="btn btn-secondary" id="dup-cancelar">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal editar item -->
+  <div class="modal-nota" id="modal-editar">
+    <div class="caixa" style="max-width:420px;background:var(--surface-1);color:var(--text-primary);font-family:inherit">
+      <h3 style="margin-bottom:12px" id="edit-titulo">Editar</h3>
+      <div style="font-size:12px;color:var(--text-secondary);margin-bottom:14px" id="edit-aviso">
+        ⚠ Renomear pode afetar registros antigos que usam esse nome.
+      </div>
+      <label class="lbl">Novo nome</label>
+      <input id="edit-nome" style="width:100%;padding:9px 12px;margin-bottom:16px;text-transform:uppercase">
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-secondary" onclick="document.getElementById('modal-editar').classList.remove('visivel')">Cancelar</button>
+        <button class="btn btn-primary" id="btn-confirmar-editar">✓ Salvar</button>
+      </div>
     </div>
   </div>
 
@@ -39,6 +369,8 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/auth.js"></script>
-  <script>protegerRota();</script>
+  <script src="js/utils.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/cadastros.js"></script>
 </body>
 </html>
