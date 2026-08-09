@@ -36,6 +36,84 @@
     letter-spacing: 0.5px;
   }
 
+  /* Painel de notas já geradas do corte */
+  .notas-existentes {
+    background: var(--surface-2);
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-top: 8px;
+  }
+  .notas-titulo {
+    font-size: 11px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .notas-titulo span {
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-left: 4px;
+  }
+  .notas-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .nota-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 10px;
+    background: var(--surface-1);
+    border: 0.5px solid var(--border);
+    border-radius: 5px;
+    font-size: 12px;
+  }
+  .nota-item .num {
+    font-weight: 800;
+    color: var(--text-accent);
+    font-size: 13px;
+    min-width: 55px;
+  }
+  .nota-item .cost {
+    font-weight: 700;
+    color: var(--text-primary);
+    min-width: 100px;
+  }
+  .nota-item .detalhes {
+    flex: 1;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .nota-item .valor {
+    font-weight: 700;
+    color: var(--success);
+    min-width: 85px;
+    text-align: right;
+  }
+  .nota-item .acoes {
+    display: flex;
+    gap: 4px;
+  }
+  .nota-item .btn-mini {
+    padding: 4px 9px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    border: 0.5px solid var(--border);
+    background: none;
+    color: var(--text-secondary);
+    letter-spacing: 0.3px;
+  }
+  .nota-item .btn-mini:hover { color: var(--text-primary); border-color: var(--border-accent); }
+  .nota-item .btn-mini.danger:hover { color: var(--text-danger); border-color: var(--text-danger); }
+
   /* Estado da linha na designação: checkbox + cor + qtd editável */
   .cor-linha .chk {
     width: 14px;
@@ -333,6 +411,12 @@
       <div class="info-corte" id="info-corte">
         <span class="num-nota" id="num-nota">Nota #—</span>
         <span id="info-txt">—</span>
+      </div>
+
+      <!-- Notas já geradas deste corte -->
+      <div class="notas-existentes" id="notas-existentes" style="display:none">
+        <div class="notas-titulo">Notas já geradas <span id="notas-contador"></span></div>
+        <div class="notas-lista" id="notas-lista"></div>
       </div>
 
       <div class="grade5" id="grade" style="margin-top:10px"></div>
