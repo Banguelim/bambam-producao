@@ -24,7 +24,7 @@ async function init() {
   document.getElementById('costureira').addEventListener('change', onMudarCostureira);
   document.getElementById('costureira').addEventListener('blur', onMudarCostureira);
   document.getElementById('preco').addEventListener('input', recalcValor);
-  document.getElementById('btn-voltar').addEventListener('click', () => { window.location.href = 'index.html'; });
+  document.getElementById('btn-voltar').addEventListener('click', () => { window.location.href = 'designacao.html'; });
   document.getElementById('btn-gerar').addEventListener('click', gerarNota);
 
   // Ver se veio corte pela URL
@@ -131,10 +131,83 @@ async function abrirCorte(id) {
     // Descobre o que ainda pode ser designado (subtrai o que já foi)
     const restante = await calcularRestante(corteAtual);
     renderizarGrade(restante);
+
+    // Carrega e mostra as notas já geradas desse corte
+    await mostrarNotasExistentes(id);
+
     recalc();
   } catch (e) {
     console.error('Erro abrindo corte:', e);
     toast('Erro ao abrir corte: ' + e.message, 'err');
+  }
+}
+
+async function mostrarNotasExistentes(corteId) {
+  const painel = document.getElementById('notas-existentes');
+  const lista = document.getElementById('notas-lista');
+  const contador = document.getElementById('notas-contador');
+  try {
+    const notas = await listarNotasDoCorte(corteId);
+    if (notas.length === 0) {
+      painel.style.display = 'none';
+      return;
+    }
+    painel.style.display = 'block';
+    contador.textContent = `(${notas.length})`;
+    lista.innerHTML = '';
+    notas.forEach(n => {
+      // Detalhes: RN 30 P 20 (por tamanho)
+      const porTam = {};
+      TAMS.forEach(t => porTam[t] = 0);
+      (n.itens || []).forEach(i => { porTam[i.tam] += i.qtd; });
+      const detTxt = TAMS.filter(t => porTam[t]).map(t => `${t}${porTam[t]}`).join(' ');
+
+      const item = document.createElement('div');
+      item.className = 'nota-item';
+      item.innerHTML = `
+        <span class="num">#${n.numero}</span>
+        <span class="cost">${n.costureira || '?'}</span>
+        <span class="detalhes">${detTxt} · ${n.total_saida || 0}pç · ${formatDataBR(n.data_saida)}</span>
+        <span class="valor">${formatBRL(n.valor_nota || 0)}</span>
+        <div class="acoes">
+          <button class="btn-mini" data-acao="reimprimir">🖨 imprimir</button>
+          <button class="btn-mini danger" data-acao="cancelar">✗ cancelar</button>
+        </div>
+      `;
+      item.querySelector('[data-acao="reimprimir"]').addEventListener('click', () => reimprimirNota(n));
+      item.querySelector('[data-acao="cancelar"]').addEventListener('click', () => cancelarNota(n));
+      lista.appendChild(item);
+    });
+  } catch (e) {
+    console.error('Erro listando notas:', e);
+  }
+}
+
+function reimprimirNota(n) {
+  // Reabre o modal da nota com os dados originais
+  mostrarModalNota(
+    n.numero,
+    n.itens || [],
+    n.total_saida || 0,
+    n.preco_peca || 0,
+    n.valor_nota || 0,
+    n.costureira || '?',
+    n.data_saida
+  );
+}
+
+async function cancelarNota(n) {
+  if (!confirm(`Cancelar a nota #${n.numero} de ${n.costureira}?\n\nAs ${n.total_saida} peças voltam pra designar de novo.\n\n[OK] cancela · [Cancelar] volta`)) return;
+  try {
+    await deletarNota(n.numero);
+    toast(`Nota #${n.numero} cancelada — peças liberadas`, 'ok');
+    // Recarrega a tela pra atualizar tudo
+    setTimeout(() => {
+      window.location.href = 'designacao.html?corte=' + corteAtual.id;
+    }, 800);
+  } catch (e) {
+    console.error('Erro cancelando nota:', e);
+    toast('Erro ao cancelar: ' + e.message, 'err');
   }
 }
 
