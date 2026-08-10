@@ -311,10 +311,21 @@ async function salvarCorteBtn() {
     return;
   }
 
-  // Colher itens (confirmadas + pending com qtd > 0)
+  // Verifica pendências não confirmadas — avisa e descarta
+  const totalPending = document.querySelectorAll('.cor-linha.pending .q');
+  let pendCount = 0;
+  totalPending.forEach(q => { if ((parseInt(q.textContent) || 0) > 0) pendCount++; });
+  if (pendCount > 0) {
+    if (!confirm(`⚠ Você tem ${pendCount} entradas pendentes (borda tracejada) que ainda não foram confirmadas.\n\nElas NÃO vão entrar no corte. Só as CONFIRMADAS (fundo azulado, com ✓) serão salvas.\n\nContinuar assim ou cancelar pra confirmar as pendentes primeiro?`)) {
+      btn.disabled = false;
+      return;
+    }
+  }
+
+  // Colher SÓ os itens confirmados (não pending)
   const itensBase = [];
   TAMS.forEach(tam => {
-    document.querySelectorAll(`.col[data-tam="${tam}"] .cor-linha`).forEach(e => {
+    document.querySelectorAll(`.col[data-tam="${tam}"] .cor-linha:not(.pending)`).forEach(e => {
       const cor = e.querySelector('.cor').title || e.querySelector('.cor').textContent;
       const q = parseInt(e.querySelector('.q').textContent) || 0;
       if (q > 0) itensBase.push({ cor, tam, qtd: q });
@@ -322,12 +333,35 @@ async function salvarCorteBtn() {
   });
 
   if (itensBase.length === 0) {
-    toast('Adicione ao menos uma cor + quantidade', 'err');
+    toast('Adicione ao menos uma cor + quantidade CONFIRMADA', 'err');
     btn.disabled = false;
     return;
   }
 
   const refs = [refPrincipal, ...refsExtras];
+
+  // Valida duplicidade: Lote+Ref já existe?
+  try {
+    const cortesExistentes = await colCortes().where('lote', '==', lote).get();
+    const conflitantes = [];
+    cortesExistentes.forEach(doc => {
+      const c = doc.data();
+      const refsExistentes = c.refs || [];
+      refs.forEach(r => {
+        if (refsExistentes.includes(r)) conflitantes.push(r);
+      });
+    });
+    if (conflitantes.length > 0) {
+      const conflict = [...new Set(conflitantes)].join(', ');
+      toast(`Já existe um corte com Lote ${lote} e Ref ${conflict}. Não dá pra duplicar.`, 'err');
+      btn.disabled = false;
+      return;
+    }
+  } catch (e) {
+    console.warn('Erro validando duplicidade:', e);
+    // Continua mesmo assim (se a query falhar, salva; o backend pode filtrar depois)
+  }
+
   // Duplica os itens por ref
   const itens = [];
   refs.forEach(r => {
