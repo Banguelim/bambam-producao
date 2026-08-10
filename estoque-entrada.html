@@ -2,149 +2,170 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=1200">
-<title>Entrada no Estoque · BAMBAM PRODUÇÃO</title>
-<link rel="stylesheet" href="base.css">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BAMBAM · Estoque</title>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/forms.css">
+<link rel="stylesheet" href="css/grade5.css">
 <style>
-  /* ====== Cabeçalho da página ====== */
-  .topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#fff;border-bottom:1px solid #e5e7eb}
-  .topbar h1{font-size:18px;margin:0;font-weight:600;color:#111}
-  .topbar .voltar{color:#2563eb;text-decoration:none;font-weight:600}
+  .busca-lote { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
+  .busca-lote input { padding:10px 12px; font-size:14px; font-weight:600; }
 
-  /* ====== TELA 1 · lista de lotes aguardando estoque ====== */
-  .painel-lotes{padding:16px}
-  .painel-lotes h2{font-size:15px;color:#374151;margin:0 0 10px 0;font-weight:600}
-  .chip-lote{
-    display:inline-flex;align-items:center;gap:6px;
-    background:#fff;border:1px solid #d1d5db;border-radius:999px;
-    padding:6px 12px;margin:4px;font-size:13px;font-weight:600;color:#111;
-    cursor:pointer;transition:.15s
+  .chips-lotes {
+    display:flex; gap:6px; flex-wrap:wrap; padding:10px;
+    background:var(--surface-2); border:0.5px dashed var(--border);
+    border-radius:8px; min-height:46px; margin-bottom:12px;
   }
-  .chip-lote:hover{border-color:#16a34a;background:#f0fdf4}
-  .chip-lote .bolinha{width:8px;height:8px;border-radius:50%;background:#f59e0b}
-  .chip-lote .qtd{color:#6b7280;font-weight:500;margin-left:4px}
-  .vazio{color:#6b7280;font-style:italic;padding:20px}
+  .chip-lote {
+    background:var(--surface-1); border:1px solid var(--warning);
+    border-radius:6px; padding:7px 12px; cursor:pointer;
+    font-size:13px; font-weight:700; color:var(--text-primary);
+    display:flex; align-items:center; gap:8px;
+  }
+  .chip-lote:hover { background:color-mix(in srgb,var(--warning) 15%,var(--surface-1)); }
+  .chip-lote .dot { width:8px; height:8px; border-radius:50%; background:var(--warning); flex-shrink:0; }
+  .chip-lote .meta { color:var(--text-secondary); font-weight:500; font-size:11px; }
 
-  /* ====== TELA 2 · painel de entrada no estoque ====== */
-  .painel-entrada{display:none;padding:12px 16px}
-  .cab-painel{display:flex;align-items:center;gap:16px;background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:10px 14px;margin-bottom:10px}
-  .cab-painel .campo{display:flex;flex-direction:column;gap:2px}
-  .cab-painel label{font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.3px;font-weight:600}
-  .cab-painel input[type=date]{border:1px solid #d1d5db;border-radius:6px;padding:6px 8px;font-size:14px}
-  .cab-painel .info-lote{font-size:16px;font-weight:700;color:#111}
-  .cab-painel .info-ref{font-size:13px;color:#6b7280;margin-top:2px}
-  .cab-painel .aguard-total{margin-left:auto;text-align:right;font-size:13px;color:#374151}
-  .cab-painel .aguard-total b{font-size:20px;color:#f59e0b;display:block}
+  .painel-estoque { background:var(--surface-1); border:1px solid var(--success); border-radius:10px; padding:14px; display:none; }
+  .painel-estoque.visivel { display:block; }
 
-  .grade-tam{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
-  .col-tam{
-    background:#fff;border:1px solid #e5e7eb;border-radius:8px;
-    display:flex;flex-direction:column;overflow:hidden;min-height:400px
+  .cabec-estoque {
+    display:flex; gap:14px; align-items:center;
+    padding-bottom:12px; border-bottom:0.5px solid var(--border);
+    flex-wrap:wrap; margin-bottom:10px;
   }
-  .col-tam .cab{
-    background:#f3f4f6;padding:8px;text-align:center;font-size:15px;font-weight:700;
-    color:#111;border-bottom:1px solid #e5e7eb;position:relative
+  .cabec-estoque .lote-destaque {
+    background:var(--success); color:white; padding:8px 16px;
+    border-radius:6px; font-weight:900; font-size:22px;
+    letter-spacing:1px; font-family:'Courier New',monospace;
   }
-  .col-tam .check-all{position:absolute;left:6px;top:8px}
-  .col-tam .lista{flex:1;padding:6px;display:flex;flex-direction:column;gap:4px}
-  .item-cor{
-    display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px;
-    background:#f9fafb;border:1px solid #f3f4f6;transition:.15s
-  }
-  .item-cor.marcado{background:#dcfce7;border-color:#86efac}
-  .item-cor.esgotado{opacity:.35;background:#f9fafb}
-  .item-cor input[type=checkbox]{width:16px;height:16px;cursor:pointer}
-  .item-cor .cor{flex:1;font-size:12px;font-weight:600;color:#111;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .item-cor .qtd{
-    font-size:14px;font-weight:800;color:#111;
-    min-width:40px;text-align:right;
-    background:transparent;border:none;padding:2px 4px;outline:none
-  }
-  .item-cor .qtd:focus{background:#fff;border:1px solid #16a34a;border-radius:4px}
-  .item-cor .max{font-size:10px;color:#6b7280;margin-left:2px}
+  .cabec-estoque .info { font-size:13px; color:var(--text-secondary); }
+  .cabec-estoque .info b { color:var(--text-primary); font-weight:700; }
 
-  .col-tam .rodape{
-    background:#fafafa;padding:6px 8px;border-top:1px solid #e5e7eb;
-    font-size:11px;color:#6b7280;line-height:1.6
-  }
-  .col-tam .rodape .linha{display:flex;justify-content:space-between}
-  .col-tam .rodape .num-aguard{color:#f59e0b;font-weight:700}
-  .col-tam .rodape .num-entra{color:#16a34a;font-weight:700}
-  .col-tam .rodape .num-resta{color:#111;font-weight:700}
+  .config-data { display:flex; gap:14px; align-items:flex-end; margin-bottom:10px; padding:10px 12px; background:var(--surface-2); border-radius:6px; }
 
-  /* ====== Rodapé geral ====== */
-  .rodape-geral{
-    display:flex;align-items:center;gap:14px;
-    background:#fff;border:1px solid #e5e7eb;border-radius:8px;
-    padding:12px 16px;margin-top:12px
-  }
-  .rodape-geral .totais{flex:1;font-size:13px;color:#374151}
-  .rodape-geral .totais b{color:#16a34a;font-size:18px}
-  .btn{padding:10px 18px;border-radius:6px;font-weight:700;font-size:14px;cursor:pointer;border:none;transition:.15s}
-  .btn-cancelar{background:#f3f4f6;color:#374151}
-  .btn-cancelar:hover{background:#e5e7eb}
-  .btn-confirmar{background:#16a34a;color:#fff}
-  .btn-confirmar:hover:not(:disabled){background:#15803d}
-  .btn-confirmar:disabled{background:#9ca3af;cursor:not-allowed}
+  .acoes-estoque { display:flex; justify-content:space-between; margin-top:12px; gap:8px; }
 
-  /* Loading */
-  .loading{text-align:center;padding:40px;color:#6b7280}
+  .estado-vazio { padding:40px 20px; text-align:center; color:var(--text-muted); background:var(--surface-1); border:0.5px dashed var(--border); border-radius:10px; }
+  .estado-vazio .icone { font-size:32px; margin-bottom:8px; }
+
+  .bloco-consulta { background:var(--surface-1); border:0.5px solid var(--border); border-radius:8px; padding:14px; margin-top:14px; }
+  .bloco-consulta .rot { font-size:11px; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; font-weight:700; margin-bottom:10px; }
+  .estoque-item { display:grid; grid-template-columns:auto auto auto 1fr auto; gap:10px; padding:8px 12px; border-bottom:0.5px dashed var(--border); font-size:13px; align-items:center; }
+  .estoque-item:last-child { border-bottom:none; }
+  .estoque-item .ref-est { font-weight:800; color:var(--text-primary); font-size:14px; }
+  .estoque-item .cor-est { color:var(--text-secondary); }
+  .estoque-item .tam-est { background:var(--surface-2); padding:2px 8px; border-radius:4px; font-weight:700; font-size:11px; }
+  .estoque-item .qtd-est { font-weight:800; color:var(--success); font-size:16px; text-align:right; }
+
+  .cores-ref { padding:4px 6px; font-size:10px; color:var(--text-muted); border-top:0.5px dashed var(--border); margin-top:4px; }
 </style>
 </head>
 <body>
-
-<header class="topbar">
-  <h1>📦 Entrada no Estoque</h1>
-  <a href="index.html" class="voltar">← Menu</a>
-</header>
-
-<!-- TELA 1: lista de lotes aguardando -->
-<section class="painel-lotes" id="tela-lotes">
-  <h2>Lotes aguardando entrada no estoque</h2>
-  <div id="lista-lotes" class="loading">Carregando...</div>
-</section>
-
-<!-- TELA 2: painel de entrada -->
-<section class="painel-entrada" id="tela-painel">
-  <div class="cab-painel">
-    <div class="campo">
-      <label>Data</label>
-      <input type="date" id="data-entrada">
+  <div class="topbar">
+    <span class="logo">BAMBAM <b>BABY</b></span>
+    <nav class="nav">
+      <a href="index.html">Painel</a>
+      <a href="novo-corte.html">Novo corte</a>
+      <a href="designacao.html">Designação</a>
+      <a href="retorno.html">Retorno</a>
+      <a href="pagamento.html">Pagamento</a>
+      <a href="estoque-entrada.html" class="ativo">Estoque</a>
+      <a href="cadastros.html">Cadastros</a>
+    </nav>
+    <div class="user">
+      <span id="user-email">—</span>
+      <button class="logout" onclick="logout()">sair</button>
     </div>
-    <div class="campo">
-      <label>Lote / Ref</label>
-      <div>
-        <span class="info-lote" id="info-lote">—</span>
-        <div class="info-ref" id="info-ref">—</div>
+  </div>
+
+  <datalist id="lotes-list"></datalist>
+  <datalist id="refs-list"></datalist>
+
+  <div class="wrap">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px">
+      <h1 style="margin:0">Estoque</h1>
+      <span class="hint">Confirma a entrada das peças que chegaram do retorno</span>
+    </div>
+
+    <div class="busca-lote">
+      <div><label class="lbl">Lote</label><input list="lotes-list" id="filtro-lote" placeholder="ex: 2041A"></div>
+      <div><label class="lbl">Referência</label><input list="refs-list" id="filtro-ref" placeholder="ex: 205"></div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;padding:0 4px">
+      <div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;font-weight:700">
+        Notas com retorno
+        <span id="contador-chips" style="color:var(--text-muted);font-weight:500;margin-left:4px">(0)</span>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted)">● laranja = só 1ª chegada · ● verde = 1ª+2ª chegada</div>
+    </div>
+    <div class="chips-lotes" id="chips-lotes">
+      <span style="color:var(--text-muted);font-size:12px">carregando...</span>
+    </div>
+
+    <div class="painel-estoque" id="painel-estoque">
+      <div class="cabec-estoque">
+        <span class="lote-destaque"><span id="p-lote">—</span>/<span id="p-ref">—</span></span>
+        <span class="info">
+          Nota <b id="p-num">#—</b> · <b id="p-cost">—</b> ·
+          <b id="p-chegou" style="color:var(--success)">0</b> peças chegaram (<span id="p-chegada-tipo">—</span>)
+        </span>
+      </div>
+
+      <div class="config-data">
+        <div>
+          <label class="lbl">Data entrada estoque</label>
+          <input type="date" id="p-data" class="data-in">
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);font-style:italic;line-height:1.6">
+          As quantidades abaixo são o total que chegou<br>
+          (1ª + 2ª chegada combinadas)
+        </div>
+      </div>
+
+      <div class="grade5" id="grade"></div>
+
+      <div class="rodape-tot">
+        <div class="col-totais" id="col-totais">
+          <span class="ct" data-ct="RN">RN <b>0</b></span>
+          <span class="ct" data-ct="P">P <b>0</b></span>
+          <span class="ct" data-ct="M">M <b>0</b></span>
+          <span class="ct" data-ct="G">G <b>0</b></span>
+          <span class="ct" data-ct="GG">GG <b>0</b></span>
+        </div>
+        <div class="total-geral">
+          <div>Entrando no estoque: <b id="lbl-entrando">0</b> peças</div>
+        </div>
+      </div>
+
+      <div class="acoes-estoque">
+        <button class="btn btn-secondary" id="btn-fechar">← Fechar</button>
+        <button class="btn btn-primary" id="btn-confirmar" style="background:var(--success);border-color:var(--success)">
+          ✓ Confirmar entrada no estoque
+        </button>
       </div>
     </div>
-    <div class="aguard-total">
-      Aguardando arremate:
-      <b id="total-aguardando">0</b>
-      peças
+
+    <div class="estado-vazio" id="estado-vazio" style="display:none">
+      <div class="icone">📦</div>
+      <div><b>Nenhuma nota com retorno ainda</b></div>
+      <div style="font-size:12px;margin-top:4px">Quando a costureira devolver peças no Retorno, elas aparecem aqui pra você confirmar a entrada no estoque.</div>
+    </div>
+
+    <div class="bloco-consulta" id="bloco-consulta" style="display:none">
+      <div class="rot">Estoque atual <span id="est-contagem" style="color:var(--text-muted);font-weight:500"></span></div>
+      <div id="est-lista"></div>
     </div>
   </div>
 
-  <div class="grade-tam" id="grade"></div>
-
-  <div class="rodape-geral">
-    <div class="totais">
-      Vai entrar no estoque:
-      <b id="total-entra">0</b>
-      peças de <span id="total-refs">0</span> cores
-    </div>
-    <button class="btn btn-cancelar" onclick="voltarLista()">Cancelar</button>
-    <button class="btn btn-confirmar" id="btn-confirmar" onclick="confirmarEntrada()" disabled>
-      ✓ Confirmar entrada no estoque
-    </button>
-  </div>
-</section>
-
-<!-- Firebase compat SDKs -->
-<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
-<script src="firebase-config.js"></script>
-<script src="entrada-estoque.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/estoque.js"></script>
 </body>
 </html>
