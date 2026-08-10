@@ -82,16 +82,23 @@ function buildCol(tam) {
     if (e.key === 'Enter') { e.preventDefault(); salvarEntradaNovaEmCol(col); }
   });
 
-  // Ligar confirmar/reabrir — clica confirma, clica de novo reabre. Simples.
+  // Botão desabilitar/habilitar
   col.querySelector('.confirmar-btn').addEventListener('click', () => {
-    if (col.classList.contains('confirmada') && col.querySelectorAll('.cor-linha.pending').length === 0) {
-      // Reabrir: só remove a marca de confirmada, mantém as entradas
-      col.classList.remove('confirmada');
-      atualizarBtnCol(col);
-      recalc();
+    if (col.classList.contains('desabilitada')) {
+      // Habilitar: volta as entradas
+      col.classList.remove('desabilitada');
+      col.querySelector('.entradas').style.opacity = '1';
+      col.querySelector('.cor-input').disabled = false;
+      col.querySelector('.qty-input').disabled = false;
     } else {
-      confirmarPendentes(col);
+      // Desabilitar: mantém entradas mas marca como fora do corte
+      col.classList.add('desabilitada');
+      col.querySelector('.entradas').style.opacity = '0.3';
+      col.querySelector('.cor-input').disabled = true;
+      col.querySelector('.qty-input').disabled = true;
     }
+    atualizarBtnCol(col);
+    recalc();
   });
 
   atualizarBtnCol(col);
@@ -108,26 +115,22 @@ function salvarEntradaNovaEmCol(col) {
   // Verifica se é cor nova ou erro de digitação
   const corFinal = verificarCorNova(cor);
   if (!corFinal) {
-    // Usuário cancelou — deixa o input focado pra corrigir
     corInput.focus();
     corInput.select();
     return;
   }
 
-  // Adiciona confirmada nessa col
-  addEntrada(col, corFinal, q, false);
-
-  // Adiciona pending nas outras
+  // Adiciona CONFIRMADA em TODAS as colunas (não só na que digitou)
   document.querySelectorAll('.col').forEach(outra => {
-    if (outra === col) return;
-    addEntrada(outra, corFinal, q, true);
+    // Se a coluna estiver desabilitada, não adiciona
+    if (outra.classList.contains('desabilitada')) return;
+    addEntrada(outra, corFinal, q);
     atualizarBtnCol(outra);
   });
 
   corInput.value = '';
   qtyInput.value = '';
   corInput.focus();
-  atualizarBtnCol(col);
   recalc();
 }
 
@@ -176,30 +179,10 @@ function distancia(a, b) {
   return dp[a.length][b.length];
 }
 
-function addEntrada(col, cor, q, isPending) {
+function addEntrada(col, cor, q) {
   const e = document.createElement('div');
-  e.className = 'cor-linha' + (isPending ? ' pending' : '');
-  if (isPending) {
-    e.innerHTML = `<span class="cor" title="${cor}">${abrevCor(cor)}</span><span class="q" contenteditable="true" spellcheck="false" inputmode="numeric">${q}</span><button class="x">×</button>`;
-    const qe = e.querySelector('.q');
-    qe.addEventListener('focus', () => selecionarTudo(qe));
-    qe.addEventListener('input', () => {
-      sanitizarQtd(qe);
-      atualizarBtnCol(col);
-      recalc();
-    });
-    qe.addEventListener('keydown', ev => {
-      if (ev.key === 'Enter' || ev.key === 'Tab') {
-        ev.preventDefault();
-        // Pula pra próxima pendente da mesma coluna
-        const qs = col.querySelectorAll('.cor-linha.pending .q');
-        const idx = Array.from(qs).indexOf(qe);
-        if (idx >= 0 && idx < qs.length - 1) qs[idx + 1].focus();
-      }
-    });
-  } else {
-    e.innerHTML = `<span class="cor" title="${cor}">${abrevCor(cor)}</span><span class="q">${q}</span><button class="x">×</button>`;
-  }
+  e.className = 'cor-linha';
+  e.innerHTML = `<span class="cor" title="${cor}">${abrevCor(cor)}</span><span class="q">${q}</span><button class="x">×</button>`;
   e.querySelector('.x').addEventListener('click', () => {
     e.remove();
     atualizarBtnCol(col);
@@ -209,44 +192,24 @@ function addEntrada(col, cor, q, isPending) {
 }
 
 function atualizarBtnCol(col) {
-  const pend = col.querySelectorAll('.cor-linha.pending').length;
-  const conf = col.querySelectorAll('.cor-linha:not(.pending)').length;
   const btn = col.querySelector('.confirmar-btn');
-  if (pend > 0) {
-    col.classList.add('tem-pendente');
-    col.classList.remove('confirmada');
-    btn.innerHTML = `confirmar ${col.dataset.tam} <span class="badge">${pend}</span>`;
-    btn.disabled = false;
-  } else {
-    col.classList.remove('tem-pendente');
-    btn.disabled = false;  // Sempre reabilita quando não tem pending
-    if (col.classList.contains('confirmada')) {
-      btn.textContent = 'reabrir ' + col.dataset.tam;
-    } else if (conf > 0) {
-      btn.textContent = 'confirmar ' + col.dataset.tam;
-    } else {
-      btn.textContent = 'confirmar ' + col.dataset.tam;
-      btn.disabled = true;  // Só desabilita quando coluna tá vazia mesmo
-    }
-  }
-}
+  const tam = col.dataset.tam;
+  const temEntradas = col.querySelectorAll('.cor-linha').length > 0;
+  const desabilitada = col.classList.contains('desabilitada');
 
-function confirmarPendentes(col) {
-  col.querySelectorAll('.cor-linha.pending').forEach(e => {
-    const abr = e.querySelector('.cor').textContent;
-    const cor = e.querySelector('.cor').title || abr;
-    const q = parseInt(e.querySelector('.q').textContent) || 0;
-    if (q === 0) { e.remove(); return; }
-    e.classList.remove('pending');
-    e.innerHTML = `<span class="cor" title="${cor}">${abr}</span><span class="q">${q}</span><button class="x">×</button>`;
-    e.querySelector('.x').addEventListener('click', () => {
-      e.remove(); atualizarBtnCol(col); recalc();
-    });
-  });
-  col.classList.remove('tem-pendente');
-  col.classList.add('confirmada');
-  atualizarBtnCol(col);
-  recalc();
+  if (desabilitada) {
+    btn.textContent = `habilitar ${tam}`;
+    btn.disabled = false;
+    btn.style.opacity = '0.6';
+  } else if (temEntradas) {
+    btn.textContent = `desabilitar ${tam}`;
+    btn.disabled = false;
+    btn.style.opacity = '1';
+  } else {
+    btn.textContent = `desabilitar ${tam}`;
+    btn.disabled = true;
+    btn.style.opacity = '0.4';
+  }
 }
 
 function adicionarRefExtra() {
@@ -276,23 +239,25 @@ function redesenharRefsExtras() {
 }
 
 function recalc() {
-  let totConf = 0, totPend = 0;
+  let totConf = 0;
   TAMS.forEach(tam => {
     const col = document.querySelector(`.col[data-tam="${tam}"]`);
-    let c = 0, p = 0;
-    col.querySelectorAll('.cor-linha:not(.pending) .q').forEach(q => c += parseInt(q.textContent) || 0);
-    col.querySelectorAll('.cor-linha.pending .q').forEach(q => p += parseInt(q.textContent) || 0);
-    col.querySelector('[data-conf]').textContent = c;
-    col.querySelector('[data-pend]').textContent = p;
-    col.querySelector('[data-total]').textContent = c + p;
+    const desabilitada = col.classList.contains('desabilitada');
+    let c = 0;
+    if (!desabilitada) {
+      col.querySelectorAll('.cor-linha .q').forEach(q => c += parseInt(q.textContent) || 0);
+    }
+    col.querySelector('[data-conf]').textContent = desabilitada ? '—' : c;
+    col.querySelector('[data-pend]').textContent = '';
+    col.querySelector('[data-total]').textContent = desabilitada ? '—' : c;
     const ct = document.querySelector(`.ct[data-ct="${tam}"]`);
-    ct.querySelector('b').textContent = c + p;
-    ct.querySelector('em').textContent = p ? `(${p} pend)` : '';
-    totConf += c; totPend += p;
+    ct.querySelector('b').textContent = desabilitada ? '—' : c;
+    if (ct.querySelector('em')) ct.querySelector('em').textContent = '';
+    totConf += desabilitada ? 0 : c;
   });
   const refPrincipal = document.getElementById('ref-principal').value.trim();
   const nRef = (refPrincipal ? 1 : 0) + refsExtras.length || 1;
-  const total = (totConf + totPend) * nRef;
+  const total = totConf * nRef;
   document.getElementById('lbl-t').textContent = total;
   document.getElementById('lbl-t-sub').textContent = nRef > 1 ? `× ${nRef} refs` : '';
 }
@@ -311,21 +276,12 @@ async function salvarCorteBtn() {
     return;
   }
 
-  // Verifica pendências não confirmadas — avisa e descarta
-  const totalPending = document.querySelectorAll('.cor-linha.pending .q');
-  let pendCount = 0;
-  totalPending.forEach(q => { if ((parseInt(q.textContent) || 0) > 0) pendCount++; });
-  if (pendCount > 0) {
-    if (!confirm(`⚠ Você tem ${pendCount} entradas pendentes (borda tracejada) que ainda não foram confirmadas.\n\nElas NÃO vão entrar no corte. Só as CONFIRMADAS (fundo azulado, com ✓) serão salvas.\n\nContinuar assim ou cancelar pra confirmar as pendentes primeiro?`)) {
-      btn.disabled = false;
-      return;
-    }
-  }
-
-  // Colher SÓ os itens confirmados (não pending)
+  // Colher SÓ itens de colunas HABILITADAS
   const itensBase = [];
   TAMS.forEach(tam => {
-    document.querySelectorAll(`.col[data-tam="${tam}"] .cor-linha:not(.pending)`).forEach(e => {
+    const col = document.querySelector(`.col[data-tam="${tam}"]`);
+    if (col.classList.contains('desabilitada')) return;
+    col.querySelectorAll('.cor-linha').forEach(e => {
       const cor = e.querySelector('.cor').title || e.querySelector('.cor').textContent;
       const q = parseInt(e.querySelector('.q').textContent) || 0;
       if (q > 0) itensBase.push({ cor, tam, qtd: q });
