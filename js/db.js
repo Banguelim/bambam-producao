@@ -219,11 +219,26 @@ async function estoqueSKU(ref, cor, tam) {
   const doc = await colEstoque().doc(id).get();
   return doc.exists ? doc.data() : { ref, cor, tam, qtd: 0, qtd_aguardando: 0 };
 }
-async function adicionarAoEstoque(ref, cor, tam, qtd) {
+async function adicionarAoEstoque(ref, cor, tam, qtd, data) {
   const id = `${ref}_${cor}_${tam}`;
   await colEstoque().doc(id).set({
     ref, cor, tam,
     qtd: firebase.firestore.FieldValue.increment(Number(qtd)),
-    ultima_entrada: hojeISO()
+    ultima_entrada: data || hojeISO()
   }, { merge: true });
+}
+async function listarEstoque() {
+  const snap = await colEstoque().get();
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => a.ref.localeCompare(b.ref) || a.cor.localeCompare(b.cor));
+}
+// Notas com 1ª chegada mas pendentes de 2ª chegada (aguardando arremate pra entrar no estoque)
+async function listarNotasAguardandoArremate() {
+  const snap = await colNotas().get();
+  const notas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  return notas.filter(n => {
+    const chegou1 = Object.values(n.chegada_1?.qtds || {}).reduce((a, v) => a + v, 0);
+    const chegou2 = Object.values(n.chegada_2?.qtds || {}).reduce((a, v) => a + v, 0);
+    return chegou1 > 0 && chegou2 < chegou1;
+  });
 }
