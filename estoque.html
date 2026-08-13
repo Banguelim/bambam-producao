@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BAMBAM · Estoque</title>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/forms.css">
+<style>
+  .busca-est { display:grid; grid-template-columns:1fr 1fr auto; gap:12px; margin-bottom:14px; align-items:flex-end; }
+  .busca-est input { padding:9px 12px; font-size:14px; font-weight:600; }
+
+  .tabela-est { width:100%; border-collapse:collapse; }
+  .tabela-est th {
+    background:var(--surface-2); padding:9px 14px;
+    text-align:left; font-size:11px; text-transform:uppercase;
+    letter-spacing:0.5px; color:var(--text-secondary); font-weight:700;
+    border-bottom:1px solid var(--border);
+  }
+  .tabela-est td {
+    padding:10px 14px; border-bottom:0.5px dashed var(--border);
+    font-size:13px;
+  }
+  .tabela-est tr:last-child td { border-bottom:none; }
+  .tabela-est tr:hover td { background:color-mix(in srgb,var(--bg-accent) 10%,transparent); }
+  .tabela-est .ref { font-weight:800; color:var(--text-primary); font-size:14px; font-family:'Courier New',monospace; }
+  .tabela-est .cor { color:var(--text-secondary); }
+  .tabela-est .tam { background:var(--surface-2); padding:2px 8px; border-radius:4px; font-weight:700; font-size:11px; }
+  .tabela-est .qtd { font-weight:900; color:var(--success); font-size:18px; font-variant-numeric:tabular-nums; text-align:right; }
+  .tabela-est .data { color:var(--text-muted); font-size:11px; text-align:right; }
+
+  .resumo-topo {
+    display:grid; grid-template-columns:repeat(3,1fr); gap:10px;
+    margin-bottom:14px;
+  }
+  .resumo-topo .card {
+    background:var(--surface-2); border:0.5px solid var(--border);
+    border-radius:8px; padding:12px 16px; text-align:center;
+  }
+  .resumo-topo .card .num { font-size:24px; font-weight:900; color:var(--success); }
+  .resumo-topo .card .rot { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; }
+
+  .vazio { padding:40px; text-align:center; color:var(--text-muted); }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <span class="logo">BAMBAM <b>BABY</b></span>
+    <nav class="nav">
+      <a href="index.html">Painel</a>
+      <a href="novo-corte.html">Novo corte</a>
+      <a href="designacao.html">Designação</a>
+      <a href="retorno.html">Retorno</a>
+      <a href="pagamento.html">Pagamento</a>
+      <a href="arremate.html">Arremate</a>
+      <a href="estoque.html" class="ativo">Estoque</a>
+      <a href="cadastros.html">Cadastros</a>
+    </nav>
+    <div class="user">
+      <span id="user-email">—</span>
+      <button class="logout" onclick="logout()">sair</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px">
+      <h1 style="margin:0">Estoque</h1>
+      <span class="hint" id="hint-total">carregando...</span>
+    </div>
+
+    <div class="resumo-topo">
+      <div class="card">
+        <div class="num" id="tot-skus">—</div>
+        <div class="rot">SKUs diferentes</div>
+      </div>
+      <div class="card">
+        <div class="num" id="tot-pecas">—</div>
+        <div class="rot">Total de peças</div>
+      </div>
+      <div class="card">
+        <div class="num" id="tot-refs">—</div>
+        <div class="rot">Referências</div>
+      </div>
+    </div>
+
+    <div class="busca-est">
+      <div>
+        <label class="lbl">Referência</label>
+        <input id="f-ref" placeholder="ex: 205">
+      </div>
+      <div>
+        <label class="lbl">Cor</label>
+        <input id="f-cor" placeholder="ex: AZUL">
+      </div>
+      <button class="btn btn-secondary" id="btn-limpar">✕ Limpar</button>
+    </div>
+
+    <div style="background:var(--surface-1);border:0.5px solid var(--border);border-radius:8px;overflow:hidden">
+      <table class="tabela-est">
+        <thead>
+          <tr>
+            <th>Ref</th>
+            <th>Cor</th>
+            <th>Tam</th>
+            <th style="text-align:right">Qtd</th>
+            <th style="text-align:right">Última entrada</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-est">
+          <tr><td colspan="5" class="vazio">carregando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/estoque.js"></script>
+</body>
+</html>
