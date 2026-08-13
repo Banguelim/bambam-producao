@@ -120,6 +120,6 @@
   <script src="js/auth.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/db.js"></script>
-  <script src="js/estoque-consulta.js"></script>
+  <script src="js/estoque.js"></script>
 </body>
 </html>
