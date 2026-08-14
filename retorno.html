@@ -174,8 +174,23 @@
     font-size: 9px;
     color: var(--text-secondary);
     font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
   }
   .grade5 .col-h .pendente b { color: var(--warning); font-weight: 800; font-size: 11px; }
+  .btn-defeito {
+    padding: 2px 6px;
+    background: none;
+    border: 0.5px solid var(--text-danger);
+    border-radius: 4px;
+    color: var(--text-danger);
+    cursor: pointer;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+  .btn-defeito:hover { background: color-mix(in srgb, var(--text-danger) 15%, transparent); }
 
   .entrada-chegada {
     display: flex;
@@ -390,6 +405,29 @@
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button class="btn btn-secondary" onclick="document.getElementById('modal-trocar').classList.remove('visivel')">Cancelar</button>
         <button class="btn btn-primary" id="btn-confirmar-troca">✓ Trocar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Registrar Defeito -->
+  <div class="modal-nota" id="modal-defeito">
+    <div class="caixa" style="max-width:440px;background:var(--surface-1);color:var(--text-primary);font-family:inherit">
+      <h3 style="margin-bottom:8px;color:var(--text-danger)">⚠ Registrar Defeito</h3>
+      <div style="font-size:12px;color:var(--text-secondary);margin-bottom:14px">
+        Tamanho <b id="def-tam" style="color:var(--text-primary)">?</b> ·
+        <b id="def-pendente" style="color:var(--warning)">0</b> peças pendentes
+      </div>
+      <label class="lbl">Quantidade com defeito</label>
+      <input type="number" id="def-qtd" min="1" placeholder="0" style="width:100%;padding:9px 12px;margin-bottom:12px;color:var(--text-primary);background:var(--surface-2)">
+      <label class="lbl">Cor (opcional)</label>
+      <input list="costureiras-list" id="def-cor" placeholder="selecione a cor" style="width:100%;padding:9px 12px;margin-bottom:16px;color:var(--text-primary);background:var(--surface-2)">
+      <datalist id="def-cores-list"></datalist>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:14px;font-style:italic">
+        As peças com defeito serão descontadas do pendente e o pagamento poderá ser concluído.
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-secondary" onclick="document.getElementById('modal-defeito').classList.remove('visivel')">Cancelar</button>
+        <button class="btn btn-primary" id="btn-confirmar-defeito" style="background:var(--text-danger);border-color:var(--text-danger)">✓ Registrar defeito</button>
       </div>
     </div>
   </div>
