@@ -182,7 +182,28 @@ function distancia(a, b) {
 function addEntrada(col, cor, q) {
   const e = document.createElement('div');
   e.className = 'cor-linha';
-  e.innerHTML = `<span class="cor" title="${cor}">${abrevCor(cor)}</span><span class="q">${q}</span><button class="x">×</button>`;
+  e.innerHTML = `
+    <span class="cor" title="${cor}">${abrevCor(cor)}</span>
+    <span class="q" contenteditable="true" spellcheck="false" inputmode="numeric" 
+          style="min-width:28px;text-align:right;cursor:text;border-bottom:1px dashed var(--border-accent)">${q}</span>
+    <button class="x">×</button>
+  `;
+  const qEl = e.querySelector('.q');
+  qEl.addEventListener('focus', () => {
+    // Seleciona tudo ao focar
+    const range = document.createRange();
+    range.selectNodeContents(qEl);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+  });
+  qEl.addEventListener('input', () => {
+    sanitizarQtd(qEl);
+    atualizarBtnCol(col);
+    recalc();
+  });
+  qEl.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter') { ev.preventDefault(); qEl.blur(); }
+  });
   e.querySelector('.x').addEventListener('click', () => {
     e.remove();
     atualizarBtnCol(col);
