@@ -38,6 +38,14 @@ async function init() {
   document.getElementById('btn-confirmar-troca').addEventListener('click', confirmarTroca);
   document.getElementById('trocar-cost-nova').addEventListener('input', atualizarBtnTroca);
   document.getElementById('trocar-cost-nova').addEventListener('change', atualizarBtnTroca);
+  document.getElementById('btn-confirmar-defeito').addEventListener('click', confirmarDefeito);
+
+  // Botões de defeito são adicionados dinamicamente — usar delegação
+  document.getElementById('grade').addEventListener('click', (e) => {
+    const btn = e.target.closest('.btn-defeito');
+    if (!btn) return;
+    abrirModalDefeito(btn.dataset.tam, parseInt(btn.dataset.max));
+  });
 }
 
 async function carregarNotasAbertas() {
@@ -205,7 +213,10 @@ function renderizarGrade() {
     col.innerHTML = `
       <div class="col-h">
         <span>${tam}</span>
-        <span class="pendente">pendente <b>${pendente}</b></span>
+        <span class="pendente">
+          pendente <b>${pendente}</b>
+          ${pendente > 0 ? `<button class="btn-defeito" data-tam="${tam}" data-max="${pendente}" title="Registrar defeito neste tamanho">⚠ defeito</button>` : ''}
+        </span>
       </div>
       <div class="entrada-chegada">
         <input type="number" class="chegou-input" placeholder="0" min="0" max="${pendente}" value="0" ${pendente === 0 ? 'disabled' : ''}>
@@ -432,6 +443,78 @@ async function confirmarTroca() {
     console.error('Erro na troca:', e);
     toast('Erro: ' + e.message, 'err');
     atualizarBtnTroca();
+  }
+}
+
+// ==== DEFEITO ====
+function abrirModalDefeito(tam, pendente) {
+  document.getElementById('def-tam').textContent = tam;
+  document.getElementById('def-pendente').textContent = pendente;
+  document.getElementById('def-qtd').value = '';
+  document.getElementById('def-qtd').max = pendente;
+  document.getElementById('def-cor').value = '';
+
+  // Popular cores da nota atual
+  const dl = document.getElementById('def-cores-list');
+  dl.innerHTML = '';
+  if (notaAtual) {
+    const coresDoTam = new Set();
+    (notaAtual.itens || []).forEach(i => {
+      if (i.tam === tam) coresDoTam.add(i.cor);
+    });
+    coresDoTam.forEach(cor => {
+      const opt = document.createElement('option');
+      opt.value = cor;
+      dl.appendChild(opt);
+    });
+    document.getElementById('def-cor').setAttribute('list', 'def-cores-list');
+  }
+
+  document.getElementById('modal-defeito').classList.add('visivel');
+  setTimeout(() => document.getElementById('def-qtd').focus(), 100);
+}
+
+async function confirmarDefeito() {
+  const tam = document.getElementById('def-tam').textContent;
+  const qtd = parseInt(document.getElementById('def-qtd').value);
+  const cor = document.getElementById('def-cor').value.trim().toUpperCase() || 'GERAL';
+  const pendente = parseInt(document.getElementById('def-pendente').textContent);
+
+  if (!qtd || qtd <= 0) { toast('Digite a quantidade com defeito', 'err'); return; }
+  if (qtd > pendente) { toast(`Máximo é ${pendente} peças pendentes`, 'err'); return; }
+
+  const btn = document.getElementById('btn-confirmar-defeito');
+  btn.disabled = true;
+
+  try {
+    // Registra o defeito como uma chegada especial (qtd negativa não — usa campo defeito)
+    const defeitosExistentes = notaAtual.defeitos || {};
+    const chave = `${tam}_${cor}`;
+    defeitosExistentes[chave] = (defeitosExistentes[chave] || 0) + qtd;
+
+    // Também registra na chegada_1 pra fechar o pendente
+    const chegadaCampo = 'chegada_1';
+    const chegadaExistente = notaAtual[chegadaCampo] || { data: '', qtds: {} };
+    const novasQtds = { ...(chegadaExistente.qtds || {}) };
+    novasQtds[tam] = (novasQtds[tam] || 0) + qtd;
+
+    await atualizarNota(notaAtual.numero, {
+      defeitos: defeitosExistentes,
+      [chegadaCampo]: { data: chegadaExistente.data || hojeISO(), qtds: novasQtds }
+    });
+
+    toast(`✓ ${qtd} peças com defeito registradas no ${tam} — pendente atualizado`, 'ok');
+    document.getElementById('modal-defeito').classList.remove('visivel');
+
+    setTimeout(async () => {
+      await carregarNotasAbertas();
+      fecharPainel();
+      btn.disabled = false;
+    }, 1200);
+  } catch (e) {
+    console.error('Erro registrando defeito:', e);
+    toast('Erro: ' + e.message, 'err');
+    btn.disabled = false;
   }
 }
 
