@@ -248,6 +248,15 @@
   .item-corte .status.cortado { background: color-mix(in srgb, var(--text-accent) 20%, transparent); color: var(--text-accent); }
   .item-corte .status.parcial { background: color-mix(in srgb, var(--warning) 20%, transparent); color: var(--warning); }
   .item-corte .status.total { background: color-mix(in srgb, var(--success) 20%, transparent); color: var(--success); }
+  .btn-excluir-corte {
+    padding: 3px 8px; background: none;
+    border: 0.5px solid var(--border); border-radius: 4px;
+    color: var(--text-muted); cursor: pointer;
+    font-size: 11px; font-weight: 700;
+  }
+  .btn-excluir-corte:hover { color: var(--text-danger); border-color: var(--text-danger); }
+  .item-corte .status.parcial { background: color-mix(in srgb, var(--warning) 20%, transparent); color: var(--warning); }
+  .item-corte .status.total { background: color-mix(in srgb, var(--success) 20%, transparent); color: var(--success); }
 
   /* Modal da nota gerada — aparece depois de designar */
   .modal-nota {
@@ -401,7 +410,11 @@
 
     <!-- Tela 1: Seleção do corte (aparece se não veio da URL) -->
     <div id="tela-selecao" class="selecao-corte" style="display:none">
-      <h3>Cortes pendentes de designação</h3>
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px">
+        <h3 style="margin:0;flex:1">Cortes pendentes de designação</h3>
+        <input id="busca-corte" placeholder="🔎 buscar lote, ref ou data..."
+               style="padding:7px 12px;font-size:13px;border-radius:6px;border:0.5px solid var(--border);background:var(--surface-2);color:var(--text-primary);width:260px">
+      </div>
       <div class="lista-cortes" id="lista-cortes">
         <div style="color:var(--text-muted);text-align:center;padding:20px">carregando...</div>
       </div>
