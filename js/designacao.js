@@ -27,6 +27,13 @@ async function init() {
   document.getElementById('btn-voltar').addEventListener('click', () => { window.location.href = 'designacao.html'; });
   document.getElementById('btn-gerar').addEventListener('click', gerarNota);
 
+  // Busca de cortes
+  document.getElementById('busca-corte')?.addEventListener('input', (e) => {
+    if (window._cortesCache) {
+      renderListaCortes(window._cortesCache, window._infosCache, e.target.value);
+    }
+  });
+
   // Ver se veio corte pela URL
   const params = new URLSearchParams(window.location.search);
   const corteId = params.get('corte');
@@ -43,17 +50,14 @@ async function mostrarSelecao() {
   document.getElementById('hint-tela').textContent = 'Escolha um corte pra designar';
 
   try {
-    const cortes = await listarCortesRecentes(30);
-    const lista = document.getElementById('lista-cortes');
-    // Filtra só os que não estão totalmente designados
+    const cortes = await listarCortesRecentes(200);
     const pendentes = cortes.filter(c => c.status !== 'designado_total');
     if (pendentes.length === 0) {
-      lista.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:20px">Nenhum corte pendente. Crie um novo em <a href="novo-corte.html">Novo corte</a></div>';
+      document.getElementById('lista-cortes').innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:20px">Nenhum corte pendente. Crie um novo em <a href="novo-corte.html">Novo corte</a></div>';
       return;
     }
-    lista.innerHTML = '';
 
-    // Buscar quantas peças já foram designadas de cada corte (em paralelo)
+    // Buscar infos de designação de cada corte
     const infos = await Promise.all(pendentes.map(async c => {
       try {
         const snap = await colNotas().where('corte_id', '==', c.id).get();
@@ -74,38 +78,81 @@ async function mostrarSelecao() {
       } catch (e) { return { designado: 0, numNotas: 0, porCostureira: {} }; }
     }));
 
-    pendentes.forEach((c, idx) => {
-      const info = infos[idx];
-      const div = document.createElement('div');
-      div.className = 'item-corte';
-      const statusClass = c.status === 'designado_parcial' ? 'parcial' : 'cortado';
-      const statusTxt = c.status === 'designado_parcial' ? 'parcial' : 'aguardando';
-
-      // Detalhe compacto por costureira: NOME: RN 30 P 20 (50)
-      let detalheDesig = '';
-      if (info.numNotas > 0) {
-        const partes = Object.entries(info.porCostureira).map(([nome, d]) => {
-          const tamsStr = TAMS.filter(t => d.tams[t]).map(t => `${t}${d.tams[t]}`).join(' ');
-          return `<b>${nome}:</b> ${tamsStr} <span style="color:var(--text-muted)">(${d.total})</span>`;
-        });
-        detalheDesig = `<div class="detalhe-linha">${partes.join(' · ')}</div>`;
-      }
-
-      div.innerHTML = `
-        <span class="lote">${c.lote}</span>
-        <span class="ref">${(c.refs || []).join(' + ')}</span>
-        <span class="info">${formatDataBR(c.data_corte)}</span>
-        <span class="pecas">${c.total_pecas} peças</span>
-        <span class="status ${statusClass}">${statusTxt}</span>
-        ${detalheDesig}
-      `;
-      div.addEventListener('click', () => abrirCorte(c.id));
-      lista.appendChild(div);
-    });
+    // Armazena pra busca filtrar sem rebuscar
+    window._cortesCache = pendentes;
+    window._infosCache = infos;
+    renderListaCortes(pendentes, infos, '');
   } catch (e) {
     console.error('Erro carregando cortes:', e);
     document.getElementById('lista-cortes').innerHTML = '<div style="color:var(--text-danger)">Erro carregando cortes</div>';
   }
+}
+
+function renderListaCortes(pendentes, infos, filtro) {
+  const lista = document.getElementById('lista-cortes');
+  const f = filtro.trim().toUpperCase();
+  const filtradas = f
+    ? pendentes.filter(c =>
+        c.lote?.toUpperCase().includes(f) ||
+        (c.refs || []).some(r => r.toUpperCase().includes(f)) ||
+        (c.data_corte || '').includes(f)
+      )
+    : pendentes;
+
+  lista.innerHTML = '';
+  if (filtradas.length === 0) {
+    lista.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:20px">Nenhum corte encontrado</div>';
+    return;
+  }
+
+  filtradas.forEach(c => {
+    const idx = pendentes.indexOf(c);
+    const info = infos[idx] || { designado: 0, numNotas: 0, porCostureira: {} };
+    const div = document.createElement('div');
+    div.className = 'item-corte';
+    const statusClass = c.status === 'designado_parcial' ? 'parcial' : 'cortado';
+    const statusTxt = c.status === 'designado_parcial' ? 'parcial' : 'aguardando';
+
+    let detalheDesig = '';
+    if (info.numNotas > 0) {
+      const partes = Object.entries(info.porCostureira).map(([nome, d]) => {
+        const tamsStr = TAMS.filter(t => d.tams[t]).map(t => `${t}${d.tams[t]}`).join(' ');
+        return `<b>${nome}:</b> ${tamsStr} <span style="color:var(--text-muted)">(${d.total})</span>`;
+      });
+      detalheDesig = `<div class="detalhe-linha">${partes.join(' · ')}</div>`;
+    }
+
+    div.innerHTML = `
+      <span class="lote">${c.lote}</span>
+      <span class="ref">${(c.refs || []).join(' + ')}</span>
+      <span class="info">${formatDataBR(c.data_corte)}</span>
+      <span class="pecas">${c.total_pecas} peças</span>
+      <span class="status ${statusClass}">${statusTxt}</span>
+      <button class="btn-excluir-corte" title="Excluir este corte">✕</button>
+      ${detalheDesig}
+    `;
+
+    // Clique na linha abre o corte (exceto no botão excluir)
+    div.addEventListener('click', (e) => {
+      if (e.target.classList.contains('btn-excluir-corte')) return;
+      abrirCorte(c.id);
+    });
+
+    // Botão excluir
+    div.querySelector('.btn-excluir-corte').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (!confirm(`Excluir o corte ${c.lote}/${(c.refs||[]).join('+')}?\n\nIsso remove o corte permanentemente. As notas já geradas NÃO são apagadas.`)) return;
+      try {
+        await colCortes().doc(c.id).delete();
+        toast(`Corte ${c.lote} excluído`, 'ok');
+        await mostrarSelecao();
+      } catch (err) {
+        toast('Erro ao excluir: ' + err.message, 'err');
+      }
+    });
+
+    lista.appendChild(div);
+  });
 }
 
 async function abrirCorte(id) {
@@ -451,15 +498,15 @@ function mostrarModalNota(numero, itens, totalPecas, preco, valor, costureira, d
         </tr>
         <!-- Data / Lote / Ref / Preço -->
         <tr>
-          <td class="esq">${formatDataBR(data)}</td>
-          <td colspan="2" class="esq">Lote <b>${corteAtual.lote}</b></td>
-          <td class="esq">Ref <b>${refsTxt}</b></td>
-          <td colspan="2" class="esq">Preço ${formatBRL(preco)}</td>
+          <td class="esq"><b>${formatDataBR(data)}</b></td>
+          <td colspan="2" class="esq">Lote <b style="font-size:16px;letter-spacing:1px">${corteAtual.lote}</b></td>
+          <td class="esq">Ref <b style="font-size:15px">${refsTxt}</b></td>
+          <td colspan="2" class="esq">Preço <b>${formatBRL(preco)}</b></td>
         </tr>
         <!-- Costureira + Total -->
         <tr>
-          <td colspan="4" class="esq"><b style="font-size:13px">${costureira}</b></td>
-          <td colspan="2" class="esq">Total <b>${formatBRL(valor)}</b></td>
+          <td colspan="4" class="esq"><b style="font-size:17px;letter-spacing:0.5px">${costureira}</b></td>
+          <td colspan="2" class="esq">Total <b style="font-size:14px">${formatBRL(valor)}</b></td>
         </tr>
 
         <!-- 1ª CHEGADA -->
