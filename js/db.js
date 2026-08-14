@@ -101,9 +101,17 @@ async function buscarCorte(id) {
   const doc = await colCortes().doc(id).get();
   return doc.exists ? { id: doc.id, ...doc.data() } : null;
 }
-async function listarCortesRecentes(limite = 20) {
-  const snap = await colCortes().orderBy('criado_em', 'desc').limit(limite).get();
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+async function listarCortesRecentes(limite = 100) {
+  // Busca todos e ordena no cliente (evita problema com cortes migrados sem criado_em)
+  const snap = await colCortes().get();
+  const cortes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  // Ordena por data_corte desc, depois por criado_em se tiver
+  cortes.sort((a, b) => {
+    const da = a.data_corte || a.criado_em || '';
+    const db2 = b.data_corte || b.criado_em || '';
+    return db2.localeCompare(da);
+  });
+  return cortes.slice(0, limite);
 }
 
 // ============ NOTAS ============
