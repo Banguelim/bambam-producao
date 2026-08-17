@@ -115,7 +115,10 @@ function renderChips() {
       <span style="font-size:15px;font-weight:900;font-family:monospace">${g.ref}</span>
       <span class="meta">${totalChegou}pç · ${g.notas.length} nota${g.notas.length>1?'s':''} · ${costsStr}</span>
     `;
-    chip.addEventListener('click', () => abrirRef(g));
+    chip.addEventListener('click', () => {
+      console.log('[arremate] clicou na ref:', g.ref, g);
+      abrirRef(g);
+    });
     chips.appendChild(chip);
   });
 }
@@ -125,7 +128,6 @@ function abrirRef(g) {
   dadosRefAtual = g;
   const totalChegou = Object.values(g.totalChegouPorTam).reduce((a, v) => a + v, 0);
   document.getElementById('p-lote').textContent = g.ref;
-  document.getElementById('p-ref').textContent = '';
   document.getElementById('p-num').textContent = `${g.notas.length} nota${g.notas.length>1?'s':''}`;
   document.getElementById('p-cost').textContent = [...g.costureiras].join(', ');
   document.getElementById('p-chegou').textContent = totalChegou;
