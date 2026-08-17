@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BAMBAM · Relatórios</title>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/forms.css">
+<style>
+  /* Abas */
+  .abas {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 14px;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .abas button {
+    padding: 10px 18px;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -0.5px;
+  }
+  .abas button:hover { color: var(--text-primary); }
+  .abas button.ativa { color: var(--text-accent); border-bottom-color: var(--text-accent); }
+
+  .painel { display: none; }
+  .painel.ativo { display: block; }
+
+  /* Filtros */
+  .filtros-rel {
+    background: var(--surface-2);
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 14px;
+    display: grid;
+    grid-template-columns: 1fr 1fr auto auto auto;
+    gap: 12px;
+    align-items: flex-end;
+  }
+  .filtros-rel .campo label { font-size:11px; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; font-weight:700; display:block; margin-bottom:4px; }
+  .filtros-rel input, .filtros-rel select { padding:9px 12px; font-size:13px; width:100%; }
+  .filtros-rel .btn-buscar { padding:9px 20px; font-size:13px; font-weight:700; background:var(--bg-accent-strong); color:white; border:none; border-radius:var(--radius); cursor:pointer; white-space:nowrap; }
+  .filtros-rel .btn-buscar:hover { opacity:0.9; }
+  .filtros-rel .btn-excel { padding:9px 14px; font-size:13px; font-weight:700; background:none; border:0.5px solid var(--success); color:var(--success); border-radius:var(--radius); cursor:pointer; white-space:nowrap; }
+  .filtros-rel .btn-excel:hover { background:color-mix(in srgb,var(--success) 10%,transparent); }
+  .filtros-rel .btn-imprimir { padding:9px 14px; font-size:13px; font-weight:700; background:none; border:0.5px solid var(--border); color:var(--text-secondary); border-radius:var(--radius); cursor:pointer; }
+  .filtros-rel .btn-imprimir:hover { border-color:var(--border-accent); color:var(--text-primary); }
+
+  /* Tabela */
+  .tabela-rel { width:100%; border-collapse:collapse; font-size:13px; }
+  .tabela-rel th {
+    background:var(--surface-2); padding:8px 12px;
+    text-align:left; font-size:11px; text-transform:uppercase;
+    letter-spacing:0.5px; color:var(--text-secondary); font-weight:700;
+    border-bottom:1px solid var(--border); white-space:nowrap;
+  }
+  .tabela-rel td { padding:9px 12px; border-bottom:0.5px dashed var(--border); }
+  .tabela-rel tr:last-child td { border-bottom:none; }
+  .tabela-rel tr:hover td { background:color-mix(in srgb,var(--bg-accent) 8%,transparent); }
+  .tabela-rel .num { font-variant-numeric:tabular-nums; text-align:right; }
+  .tabela-rel .destaque { font-weight:800; color:var(--text-primary); }
+  .tabela-rel .verde { color:var(--success); font-weight:700; }
+  .tabela-rel .laranja { color:var(--warning); font-weight:700; }
+  .tabela-rel .azul { color:var(--text-accent); font-weight:700; }
+  .tabela-rel .muted { color:var(--text-muted); font-size:11px; }
+  .tabela-rel tfoot td {
+    background:var(--surface-2); font-weight:800;
+    border-top:2px solid var(--border); font-size:14px;
+  }
+
+  /* Cards de totais */
+  .cards-total {
+    display:grid; grid-template-columns:repeat(4,1fr);
+    gap:10px; margin-bottom:14px;
+  }
+  .card-total {
+    background:var(--surface-2); border:0.5px solid var(--border);
+    border-radius:8px; padding:12px 16px; text-align:center;
+  }
+  .card-total .num { font-size:22px; font-weight:900; font-variant-numeric:tabular-nums; }
+  .card-total .rot { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-top:2px; }
+  .card-total.verde .num { color:var(--success); }
+  .card-total.azul .num { color:var(--text-accent); }
+  .card-total.laranja .num { color:var(--warning); }
+
+  .bloco-tabela {
+    background:var(--surface-1); border:0.5px solid var(--border);
+    border-radius:8px; overflow:hidden;
+  }
+
+  .vazio { padding:40px; text-align:center; color:var(--text-muted); font-size:13px; }
+
+  @media print {
+    .topbar, .abas, .filtros-rel .btn-buscar,
+    .filtros-rel .btn-excel, .filtros-rel .btn-imprimir { display:none !important; }
+    .painel { display:block !important; }
+    body { background:white; color:black; }
+    .bloco-tabela { border:1px solid #ccc; }
+    .tabela-rel th { background:#eee; color:black; }
+  }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <span class="logo">BAMBAM <b>BABY</b></span>
+    <nav class="nav">
+      <a href="index.html">Painel</a>
+      <a href="novo-corte.html">Novo corte</a>
+      <a href="designacao.html">Designação</a>
+      <a href="retorno.html">Retorno</a>
+      <a href="pagamento.html">Pagamento</a>
+      <a href="arremate.html">Arremate</a>
+      <a href="estoque.html">Estoque</a>
+      <a href="cadastros.html">Cadastros</a>
+      <a href="relatorios.html" class="ativo">Relatórios</a>
+    </nav>
+    <div class="user">
+      <span id="user-email">—</span>
+      <button class="logout" onclick="logout()">sair</button>
+    </div>
+  </div>
+
+  <datalist id="costureiras-list"></datalist>
+
+  <div class="wrap">
+    <h1 style="margin-bottom:10px">Relatórios</h1>
+
+    <div class="abas">
+      <button class="ativa" data-aba="fora">O que está fora</button>
+      <button data-aba="para-mandar">O que tem pra mandar</button>
+      <button data-aba="pagamentos">Histórico de pagamentos</button>
+      <button data-aba="retornos">Histórico de retornos</button>
+    </div>
+
+    <!-- ========== ABA: O QUE ESTÁ FORA ========== -->
+    <div class="painel ativo" data-painel="fora">
+      <div class="filtros-rel">
+        <div class="campo">
+          <label>Costureira</label>
+          <input list="costureiras-list" id="fora-cost" placeholder="todas">
+        </div>
+        <div class="campo">
+          <label>Referência</label>
+          <input id="fora-ref" placeholder="todas">
+        </div>
+        <button class="btn-buscar" onclick="buscarFora()">🔎 Buscar</button>
+        <button class="btn-excel" onclick="exportarExcel('fora')">📥 Excel</button>
+        <button class="btn-imprimir" onclick="window.print()">🖨 Imprimir</button>
+      </div>
+      <div class="cards-total" id="fora-cards" style="display:none">
+        <div class="card-total azul"><div class="num" id="fora-tot-notas">0</div><div class="rot">Notas em aberto</div></div>
+        <div class="card-total laranja"><div class="num" id="fora-tot-pecas">0</div><div class="rot">Peças fora</div></div>
+        <div class="card-total laranja"><div class="num" id="fora-tot-pend">0</div><div class="rot">Ainda pendentes</div></div>
+        <div class="card-total verde"><div class="num" id="fora-tot-valor">R$ 0</div><div class="rot">Valor total a pagar</div></div>
+      </div>
+      <div class="bloco-tabela">
+        <table class="tabela-rel">
+          <thead>
+            <tr>
+              <th>#</th><th>Costureira</th><th>Lote/Ref</th>
+              <th>Data saída</th><th class="num">Saiu</th>
+              <th class="num">Chegou</th><th class="num">Pendente</th>
+              <th class="num">Valor nota</th>
+            </tr>
+          </thead>
+          <tbody id="fora-tbody">
+            <tr><td colspan="8" class="vazio">Clique em Buscar pra carregar</td></tr>
+          </tbody>
+          <tfoot id="fora-tfoot" style="display:none">
+            <tr>
+              <td colspan="4">TOTAL</td>
+              <td class="num" id="fora-sum-saiu">0</td>
+              <td class="num" id="fora-sum-chegou">0</td>
+              <td class="num laranja" id="fora-sum-pend">0</td>
+              <td class="num verde" id="fora-sum-valor">R$ 0,00</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- ========== ABA: O QUE TEM PRA MANDAR ========== -->
+    <div class="painel" data-painel="para-mandar">
+      <div class="filtros-rel">
+        <div class="campo">
+          <label>Referência</label>
+          <input id="pman-ref" placeholder="todas">
+        </div>
+        <div class="campo">
+          <label>Status</label>
+          <select id="pman-status">
+            <option value="todos">Todos</option>
+            <option value="cortado">Aguardando designação</option>
+            <option value="designado_parcial">Designado parcialmente</option>
+          </select>
+        </div>
+        <button class="btn-buscar" onclick="buscarParaMandar()">🔎 Buscar</button>
+        <button class="btn-excel" onclick="exportarExcel('para-mandar')">📥 Excel</button>
+        <button class="btn-imprimir" onclick="window.print()">🖨 Imprimir</button>
+      </div>
+      <div class="cards-total" id="pman-cards" style="display:none">
+        <div class="card-total azul"><div class="num" id="pman-tot-cortes">0</div><div class="rot">Cortes pendentes</div></div>
+        <div class="card-total laranja"><div class="num" id="pman-tot-pecas">0</div><div class="rot">Peças a designar</div></div>
+      </div>
+      <div class="bloco-tabela">
+        <table class="tabela-rel">
+          <thead>
+            <tr>
+              <th>Lote</th><th>Ref</th><th>Data corte</th>
+              <th class="num">Total peças</th><th>Status</th><th>Tamanhos</th>
+            </tr>
+          </thead>
+          <tbody id="pman-tbody">
+            <tr><td colspan="6" class="vazio">Clique em Buscar pra carregar</td></tr>
+          </tbody>
+          <tfoot id="pman-tfoot" style="display:none">
+            <tr>
+              <td colspan="3">TOTAL</td>
+              <td class="num" id="pman-sum-pecas">0</td>
+              <td colspan="2"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- ========== ABA: HISTÓRICO DE PAGAMENTOS ========== -->
+    <div class="painel" data-painel="pagamentos">
+      <div class="filtros-rel">
+        <div class="campo">
+          <label>Costureira</label>
+          <input list="costureiras-list" id="pag-cost" placeholder="todas">
+        </div>
+        <div class="campo">
+          <label>Período</label>
+          <input type="date" id="pag-de">
+        </div>
+        <div class="campo">
+          <label>Até</label>
+          <input type="date" id="pag-ate">
+        </div>
+        <button class="btn-buscar" onclick="buscarPagamentos()">🔎 Buscar</button>
+        <button class="btn-excel" onclick="exportarExcel('pagamentos')">📥 Excel</button>
+        <button class="btn-imprimir" onclick="window.print()">🖨 Imprimir</button>
+      </div>
+      <div class="cards-total" id="pag-cards" style="display:none">
+        <div class="card-total azul"><div class="num" id="pag-tot-pags">0</div><div class="rot">Pagamentos</div></div>
+        <div class="card-total verde"><div class="num" id="pag-tot-valor">R$ 0,00</div><div class="rot">Total pago</div></div>
+        <div class="card-total laranja"><div class="num" id="pag-tot-adiant">R$ 0,00</div><div class="rot">Adiantamentos usados</div></div>
+      </div>
+      <div class="bloco-tabela">
+        <table class="tabela-rel">
+          <thead>
+            <tr>
+              <th>Data</th><th>Costureira</th><th>Forma</th>
+              <th class="num">Notas pagas</th>
+              <th class="num">Valor bruto</th>
+              <th class="num">Adiantamento</th>
+              <th class="num">Total pago</th>
+              <th>Obs</th>
+            </tr>
+          </thead>
+          <tbody id="pag-tbody">
+            <tr><td colspan="8" class="vazio">Clique em Buscar pra carregar</td></tr>
+          </tbody>
+          <tfoot id="pag-tfoot" style="display:none">
+            <tr>
+              <td colspan="4">TOTAL</td>
+              <td class="num" id="pag-sum-bruto">R$ 0,00</td>
+              <td class="num" id="pag-sum-adiant">R$ 0,00</td>
+              <td class="num verde" id="pag-sum-liq">R$ 0,00</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- ========== ABA: HISTÓRICO DE RETORNOS ========== -->
+    <div class="painel" data-painel="retornos">
+      <div class="filtros-rel">
+        <div class="campo">
+          <label>Costureira</label>
+          <input list="costureiras-list" id="ret-cost" placeholder="todas">
+        </div>
+        <div class="campo">
+          <label>Referência</label>
+          <input id="ret-ref" placeholder="todas">
+        </div>
+        <button class="btn-buscar" onclick="buscarRetornos()">🔎 Buscar</button>
+        <button class="btn-excel" onclick="exportarExcel('retornos')">📥 Excel</button>
+        <button class="btn-imprimir" onclick="window.print()">🖨 Imprimir</button>
+      </div>
+      <div class="bloco-tabela">
+        <table class="tabela-rel">
+          <thead>
+            <tr>
+              <th>#</th><th>Costureira</th><th>Lote/Ref</th>
+              <th>Data saída</th><th>1ª chegada</th><th>2ª chegada</th>
+              <th class="num">Saiu</th><th class="num">Chegou</th>
+              <th class="num">Pendente</th>
+            </tr>
+          </thead>
+          <tbody id="ret-tbody">
+            <tr><td colspan="9" class="vazio">Clique em Buscar pra carregar</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/relatorios.js"></script>
+</body>
+</html>
