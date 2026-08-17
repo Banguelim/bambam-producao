@@ -265,6 +265,56 @@
   }
 
   /* Cabeçalho de estado */
+
+  /* Notas finalizadas */
+  .bloco-finalizadas {
+    margin-top: 16px;
+    background: var(--surface-1);
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .bloco-finalizadas .titulo-fin {
+    padding: 10px 14px;
+    background: var(--surface-2);
+    border-bottom: 0.5px solid var(--border);
+    font-size: 11px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+  }
+  .bloco-finalizadas .titulo-fin:hover { color: var(--text-primary); }
+  .lista-finalizadas { padding: 6px; }
+  .nota-finalizada {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    font-size: 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    opacity: 0.7;
+  }
+  .nota-finalizada:hover { background: var(--surface-2); opacity: 1; }
+  .nota-finalizada .dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+  .btn-reabilitar {
+    margin-left: auto;
+    padding: 3px 8px;
+    background: none;
+    border: 0.5px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .btn-reabilitar:hover { color: var(--text-accent); border-color: var(--text-accent); }
   .estado-vazio {
     padding: 40px 20px;
     text-align: center;
@@ -379,10 +429,20 @@
         </div>
         <div class="dir">
           <button class="btn btn-primary" id="btn-registrar">✓ Registrar chegada</button>
+          <button class="btn btn-success" id="btn-finalizar" style="background:var(--success);border-color:var(--success)">✓✓ Finalizar retorno</button>
         </div>
       </div>
     </div>
 
+
+    <!-- Bloco de notas finalizadas (retorno completo) -->
+    <div class="bloco-finalizadas" id="bloco-finalizadas" style="display:none">
+      <div class="titulo-fin" onclick="document.getElementById('lista-finalizadas').style.display = document.getElementById('lista-finalizadas').style.display === 'none' ? 'block' : 'none'">
+        <span>✓ Retornos finalizados <span id="contador-finalizadas" style="color:var(--text-muted);font-weight:500">(0)</span></span>
+        <span style="font-size:10px">▼ expandir / recolher</span>
+      </div>
+      <div class="lista-finalizadas" id="lista-finalizadas" style="display:none"></div>
+    </div>
     <div class="estado-vazio" id="estado-vazio" style="display:none">
       <div class="icone">📭</div>
       <div><b>Nenhuma nota em aberto</b></div>
