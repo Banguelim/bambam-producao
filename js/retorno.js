@@ -1,6 +1,7 @@
 // Tela de Retorno — costureira volta com peças
 
 let todasNotasAbertas = [];  // cache das notas em aberto
+let notasFinalizadas = [];    // notas com retorno 100% completo
 let notaAtual = null;         // nota selecionada
 
 async function init() {
@@ -50,28 +51,43 @@ async function init() {
 
 async function carregarNotasAbertas() {
   const chips = document.getElementById('chips-notas');
-  chips.innerHTML = '<span style="color:var(--text-muted);font-size:12px">carregando notas em aberto...</span>';
+  chips.innerHTML = '<span style="color:var(--text-muted);font-size:12px">carregando...</span>';
   try {
-    console.log('[retorno] buscando notas em aberto...');
-    todasNotasAbertas = await listarTodasNotasEmAberto();
-    console.log('[retorno] notas encontradas:', todasNotasAbertas.length, todasNotasAbertas);
-    // Popular datalist de lotes (formato "lote/ref")
+    // Buscar TODAS as notas (abertas + finalizadas)
+    const snap = await colNotas().get();
+    const todas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    todas.sort((a, b) => (b.data_saida || '').localeCompare(a.data_saida || ''));
+
+    // Separar: finalizada = retorno 100% completo (totalChegou >= total_saida) E não reaberta
+    todasNotasAbertas = todas.filter(n => {
+      if (n.retorno_finalizado) return false; // marcada como finalizada manualmente
+      const chegou = calcularTotalChegou(n);
+      return chegou < (n.total_saida || 0); // ainda tem pendente
+    });
+
+    notasFinalizadas = todas.filter(n => {
+      if (n.retorno_finalizado) return true; // marcada manualmente
+      const chegou = calcularTotalChegou(n);
+      return chegou >= (n.total_saida || 0) && chegou > 0; // 100% chegou
+    });
+
+    // Popular datalist de lotes
     const dlLotes = document.getElementById('lotes-list');
     dlLotes.innerHTML = '';
     const lotesUnicos = new Set();
-    todasNotasAbertas.forEach(n => {
-      lotesUnicos.add(`${n.lote}/${n.ref}`);
-    });
+    todasNotasAbertas.forEach(n => lotesUnicos.add(`${n.lote}/${n.ref}`));
     [...lotesUnicos].sort().forEach(l => {
       const opt = document.createElement('option');
       opt.value = l;
       dlLotes.appendChild(opt);
     });
+
     renderChips();
+    renderFinalizadas();
   } catch (e) {
-    console.error('[retorno] ERRO carregando notas:', e);
+    console.error('[retorno] ERRO:', e);
     chips.innerHTML = `<span style="color:var(--text-danger);font-size:12px">Erro: ${e.message}</span>`;
-    toast('Erro ao carregar notas: ' + e.message, 'err');
+    toast('Erro ao carregar: ' + e.message, 'err');
   }
 }
 
@@ -126,6 +142,58 @@ function renderChips() {
     `;
     chip.addEventListener('click', () => abrirNota(n));
     chips.appendChild(chip);
+  });
+}
+
+function renderFinalizadas() {
+  const bloco = document.getElementById('bloco-finalizadas');
+  const lista = document.getElementById('lista-finalizadas');
+  const contador = document.getElementById('contador-finalizadas');
+
+  if (!bloco) return;
+
+  const c = document.getElementById('filtro-cost').value.trim().toUpperCase();
+  const l = document.getElementById('filtro-lote').value.trim().toUpperCase();
+  let filtradas = notasFinalizadas;
+  if (c) filtradas = filtradas.filter(n => (n.costureira || '').toUpperCase().includes(c));
+  if (l) filtradas = filtradas.filter(n => `${n.lote}/${n.ref}`.toUpperCase().includes(l));
+
+  if (filtradas.length === 0) {
+    bloco.style.display = 'none';
+    return;
+  }
+
+  bloco.style.display = 'block';
+  contador.textContent = `(${filtradas.length})`;
+  lista.innerHTML = '';
+
+  filtradas.forEach(n => {
+    const totalChegou = calcularTotalChegou(n);
+    const item = document.createElement('div');
+    item.className = 'nota-finalizada';
+    item.innerHTML = `
+      <span class="dot" style="background:var(--success)"></span>
+      <span style="font-weight:800">${n.lote}/${n.ref}</span>
+      <span style="color:var(--text-secondary);font-size:11px">${n.costureira} · ${totalChegou}/${n.total_saida}pç · #${n.numero}</span>
+      <button class="btn-reabilitar" data-num="${n.numero}">↺ reabilitar</button>
+    `;
+    item.querySelector('.btn-reabilitar').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (!confirm(`Reabilitar a nota #${n.numero}? Ela vai voltar pra lista de ativas.`)) return;
+      try {
+        await atualizarNota(n.numero, { retorno_finalizado: false });
+        toast(`Nota #${n.numero} reabilitada`, 'ok');
+        await carregarNotasAbertas();
+      } catch (err) {
+        toast('Erro: ' + err.message, 'err');
+      }
+    });
+    // Clique abre a nota pra consulta
+    item.addEventListener('click', (e) => {
+      if (e.target.classList.contains('btn-reabilitar')) return;
+      abrirNota(n);
+    });
+    lista.appendChild(item);
   });
 }
 
@@ -307,6 +375,15 @@ function fecharPainel() {
   notaAtual = null;
 }
 
+// Calcula total chegado considerando uma nova chegada que ainda não foi salva
+function calcularTotalCheguoComQtds(nota, novaChegada, campoCampo) {
+  const c1 = campoCampo === 'chegada_1' ? novaChegada.qtds : (nota.chegada_1?.qtds || {});
+  const c2 = campoCampo === 'chegada_2' ? novaChegada.qtds : (nota.chegada_2?.qtds || {});
+  const por = {};
+  TAMS.forEach(t => por[t] = (c1[t] || 0) + (c2[t] || 0));
+  return por;
+}
+
 async function registrarChegada() {
   if (!notaAtual) return;
   const btn = document.getElementById('btn-registrar');
@@ -355,7 +432,17 @@ async function registrarChegada() {
     };
 
     await atualizarNota(notaAtual.numero, { [chegadaCampo]: novaChegada });
-    toast(`✓ ${total} peças registradas na ${qualChegada}ª chegada da nota #${notaAtual.numero}`, 'ok');
+    // Verificar se ficou com pendente zero → finalizar automaticamente
+    const chegouAtual = calcularTotalCheguoComQtds(notaAtual, novaChegada, chegadaCampo);
+    const totalChegouAgora = Object.values(chegouAtual).reduce((a, v) => a + v, 0);
+    const ficouCompleto = totalChegouAgora >= (notaAtual.total_saida || 0);
+
+    if (ficouCompleto) {
+      await atualizarNota(notaAtual.numero, { retorno_finalizado: true });
+      toast(`✓ ${total} peças registradas — retorno completo! Nota #${notaAtual.numero} finalizada.`, 'ok');
+    } else {
+      toast(`✓ ${total} peças registradas na ${qualChegada}ª chegada da nota #${notaAtual.numero}`, 'ok');
+    }
 
     // Recarrega tudo
     setTimeout(async () => {
@@ -515,6 +602,35 @@ async function confirmarDefeito() {
     console.error('Erro registrando defeito:', e);
     toast('Erro: ' + e.message, 'err');
     btn.disabled = false;
+  }
+}
+
+// ==== FINALIZAR RETORNO ====
+async function finalizarRetorno() {
+  if (!notaAtual) return;
+  const totalChegou = calcularTotalChegou(notaAtual);
+  const totalSaida = notaAtual.total_saida || 0;
+  const falta = totalSaida - totalChegou;
+
+  let msg = `Finalizar o retorno da nota #${notaAtual.numero}?
+
+Ela vai sair da lista de ativas e ficar disponível só pra consulta.`;
+  if (falta > 0) {
+    msg += `
+
+⚠ Ainda faltam ${falta} peças chegar. Confirma mesmo assim?`;
+  }
+  if (!confirm(msg)) return;
+
+  try {
+    await atualizarNota(notaAtual.numero, { retorno_finalizado: true });
+    toast(`✓ Retorno da nota #${notaAtual.numero} finalizado`, 'ok');
+    setTimeout(async () => {
+      await carregarNotasAbertas();
+      fecharPainel();
+    }, 1000);
+  } catch (e) {
+    toast('Erro: ' + e.message, 'err');
   }
 }
 
