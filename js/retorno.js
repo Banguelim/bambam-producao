@@ -103,6 +103,7 @@ function onFiltroChange() {
   document.getElementById('x-cost').classList.toggle('visivel', !!c);
   document.getElementById('x-lote').classList.toggle('visivel', !!l);
   renderChips();
+  renderFinalizadas(); // atualiza também o segundo plano
 }
 
 function renderChips() {
