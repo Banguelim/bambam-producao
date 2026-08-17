@@ -8,8 +8,16 @@
 <link rel="stylesheet" href="css/forms.css">
 <link rel="stylesheet" href="css/grade5.css">
 <style>
-  .busca-cruzada { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
-  .busca-cruzada input { padding:10px 12px; font-size:14px; font-weight:600; }
+  .busca-ref {
+    margin-bottom: 12px;
+  }
+  .busca-ref input {
+    padding: 10px 12px;
+    font-size: 14px;
+    font-weight: 600;
+    width: 100%;
+    max-width: 320px;
+  }
 
   .chips-notas {
     display:flex; gap:6px; flex-wrap:wrap; padding:10px;
@@ -24,7 +32,6 @@
   }
   .chip-nota:hover { border-color:var(--border-accent); background:color-mix(in srgb,var(--bg-accent) 20%,var(--surface-1)); }
   .chip-nota .dot { width:8px; height:8px; border-radius:50%; background:var(--warning); flex-shrink:0; }
-  .chip-nota .dot.ok { background:var(--success); }
   .chip-nota .meta { color:var(--text-secondary); font-weight:500; font-size:11px; }
 
   .painel-arremate {
@@ -40,8 +47,8 @@
   }
   .cabec-arremate .lote-destaque {
     background:var(--bg-accent-strong); color:white;
-    padding:8px 16px; border-radius:6px; font-weight:900;
-    font-size:22px; letter-spacing:1px;
+    padding:8px 20px; border-radius:6px; font-weight:900;
+    font-size:26px; letter-spacing:2px;
     font-family:'Courier New',monospace;
   }
   .cabec-arremate .info { font-size:13px; color:var(--text-secondary); }
@@ -53,19 +60,11 @@
     background:var(--surface-2); border-radius:6px;
   }
 
-  /* Três campos por coluna */
-  .entradas-arremate {
-    display:flex; flex-direction:column; gap:4px;
-    padding:6px 4px;
-  }
-  .campo-arremate {
-    display:grid; grid-template-columns:auto 1fr;
-    gap:4px; align-items:center;
-  }
+  .entradas-arremate { display:flex; flex-direction:column; gap:4px; padding:6px 4px; }
+  .campo-arremate { display:grid; grid-template-columns:auto 1fr; gap:4px; align-items:center; }
   .campo-arremate label {
     font-size:9px; font-weight:800; text-transform:uppercase;
-    letter-spacing:0.5px; width:50px; text-align:right;
-    padding-right:4px;
+    letter-spacing:0.5px; width:50px; text-align:right; padding-right:4px;
   }
   .campo-arremate label.ok { color:var(--success); }
   .campo-arremate label.def { color:var(--text-danger); }
@@ -75,37 +74,14 @@
     border:0.5px solid var(--border);
     background:var(--surface-2); font-size:13px;
     font-weight:800; text-align:center;
-    font-variant-numeric:tabular-nums; color:var(--text-primary);
-    width:100%; box-sizing:border-box;
+    color:var(--text-primary); width:100%; box-sizing:border-box;
   }
-  .campo-arremate input.ok:focus { border-color:var(--success); background:color-mix(in srgb,var(--success) 8%,white); color:#000; }
-  .campo-arremate input.def:focus { border-color:var(--text-danger); background:color-mix(in srgb,var(--text-danger) 8%,white); color:#000; }
-  .campo-arremate input.pend:focus { border-color:var(--warning); background:color-mix(in srgb,var(--warning) 8%,white); color:#000; }
-  .campo-arremate input:focus { outline:none; }
-
-  .col-status {
-    font-size:10px; text-align:center; margin-top:2px;
-  }
-  .col-status.ok { color:var(--success); }
-  .col-status.err { color:var(--text-danger); }
-
-  .cores-ref {
-    padding:4px 6px; font-size:10px; color:var(--text-muted);
-    max-height:52px; overflow-y:auto; line-height:1.5;
-    border-top:0.5px dashed var(--border); margin-top:4px;
-  }
-  .cores-ref b { color:var(--text-secondary); font-weight:700; }
-
-  .subtot-col .cell.chegou b { color:var(--text-primary); }
-  .subtot-col .cell.ok b { color:var(--success); }
-  .subtot-col .cell.def b { color:var(--text-danger); }
-  .subtot-col .cell.pend b { color:var(--warning); }
+  .campo-arremate input:focus { outline:none; border-color:var(--text-accent); background:white; color:#000; }
 
   .rodape-resumo {
     display:grid; grid-template-columns:repeat(3,1fr);
     gap:10px; margin-top:10px; padding:12px;
     background:var(--surface-2); border-radius:8px;
-    font-size:13px;
   }
   .rodape-resumo .bloco { text-align:center; }
   .rodape-resumo .bloco .num { font-size:24px; font-weight:900; font-variant-numeric:tabular-nums; }
@@ -117,13 +93,17 @@
   .rodape-resumo .bloco.pend .num { color:var(--warning); }
   .rodape-resumo .bloco.pend .rot { color:var(--warning); }
 
-  .acoes-arremate { display:flex; justify-content:space-between; margin-top:12px; gap:8px; flex-wrap:wrap; }
+  .acoes-arremate { display:flex; justify-content:space-between; margin-top:12px; gap:8px; }
 
   .estado-vazio {
     padding:40px 20px; text-align:center; color:var(--text-muted);
     background:var(--surface-1); border:0.5px dashed var(--border); border-radius:10px;
   }
   .estado-vazio .icone { font-size:32px; margin-bottom:8px; }
+
+  .subtot-col .cell.ok b { color:var(--success); }
+  .subtot-col .cell.def b { color:var(--text-danger); }
+  .subtot-col .cell.pend b { color:var(--warning); }
 </style>
 </head>
 <body>
@@ -145,32 +125,24 @@
     </div>
   </div>
 
-  <datalist id="lotes-list"></datalist>
-  <datalist id="costureiras-list"></datalist>
-
   <div class="wrap">
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px">
       <h1 style="margin:0">Arremate</h1>
-      <span class="hint">Distribui o que voltou da costureira: estoque / defeito / pendente</span>
+      <span class="hint">Clica na referência pra distribuir no estoque</span>
     </div>
 
-    <div class="busca-cruzada">
-      <div>
-        <label class="lbl">Lote / Ref</label>
-        <input list="lotes-list" id="filtro-lote" placeholder="ex: 3020/101">
-      </div>
-      <div>
-        <label class="lbl">Costureira</label>
-        <input list="costureiras-list" id="filtro-cost" placeholder="opcional">
-      </div>
+    <!-- Busca por referência -->
+    <div class="busca-ref">
+      <input id="filtro-ref" placeholder="🔎 buscar por referência...">
     </div>
 
+    <!-- Chips por referência -->
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;padding:0 4px">
       <div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;font-weight:700">
-        Notas com retorno aguardando arremate
+        Refs com retorno aguardando arremate
         <span id="contador-chips" style="color:var(--text-muted);font-weight:500;margin-left:4px">(0)</span>
       </div>
-      <div style="font-size:11px;color:var(--text-muted)">● laranja = pendente · ● verde = arremate ok</div>
+      <div style="font-size:11px;color:var(--text-muted)">● laranja = pendente · ● verde = completo</div>
     </div>
     <div class="chips-notas" id="chips-notas">
       <span style="color:var(--text-muted);font-size:12px">carregando...</span>
@@ -179,10 +151,12 @@
     <!-- Painel de arremate -->
     <div class="painel-arremate" id="painel-arremate">
       <div class="cabec-arremate">
-        <span class="lote-destaque"><span id="p-lote">—</span>/<span id="p-ref">—</span></span>
+        <span class="lote-destaque"><span id="p-lote">—</span></span>
         <span class="info">
-          Nota <b id="p-num">#—</b> · <b id="p-cost">—</b> ·
+          <b id="p-num">—</b> ·
+          <b id="p-cost">—</b> ·
           <b id="p-chegou" style="color:var(--text-accent)">0</b> peças no retorno
+          (<span id="p-chegada-tipo">—</span>)
         </span>
       </div>
 
@@ -192,7 +166,7 @@
           <input type="date" id="p-data" class="data-in">
         </div>
         <div style="font-size:11px;color:var(--text-muted);font-style:italic;line-height:1.6">
-          Para cada tamanho, distribua as peças em:<br>
+          Distribua as peças que chegaram:<br>
           <span style="color:var(--success)">✓ Estoque</span> ·
           <span style="color:var(--text-danger)">✗ Defeito</span> ·
           <span style="color:var(--warning)">⏳ Pendente</span>
@@ -201,7 +175,6 @@
 
       <div class="grade5" id="grade"></div>
 
-      <!-- Resumo geral -->
       <div class="rodape-resumo">
         <div class="bloco ok">
           <div class="num" id="tot-estoque">0</div>
@@ -226,7 +199,7 @@
     <div class="estado-vazio" id="estado-vazio" style="display:none">
       <div class="icone">🧵</div>
       <div><b>Nenhuma nota com retorno ainda</b></div>
-      <div style="font-size:12px;margin-top:4px">Quando a costureira devolver peças no Retorno, elas aparecem aqui pra arrematar.</div>
+      <div style="font-size:12px;margin-top:4px">Quando a costureira devolver peças no Retorno, as refs aparecem aqui pra arrematar.</div>
     </div>
   </div>
 
