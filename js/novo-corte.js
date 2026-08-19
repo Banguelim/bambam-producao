@@ -1,4 +1,7 @@
-// Novo Corte — cria um corte com uma ou mais refs, com entries de cor+qtd por tamanho
+// Novo Corte — cria UM corte separado por referência.
+// Se você aplica em mais de uma ref, salva vários cortes numa transação atômica
+// (batch): ou todos entram, ou nenhum. Assim cada ref pode ir pra costureira
+// diferente sem misturar destinos.
 
 let refsExtras = []; // refs adicionais além da principal
 
@@ -21,9 +24,7 @@ async function init() {
   try {
     const dl = document.getElementById('cores-list');
     const jaTem = new Set();
-    // Primeiro: as cores que já estão no HTML (pré-definidas)
     dl.querySelectorAll('option').forEach(o => jaTem.add(o.value.toUpperCase()));
-    // Depois: as salvas no Firestore
     const salvas = await listarCoresSalvas();
     salvas.forEach(nome => {
       if (!jaTem.has(nome.toUpperCase())) {
@@ -70,7 +71,6 @@ function buildCol(tam) {
     </div>
   `;
 
-  // Ligar inputs de nova entrada
   const corInput = col.querySelector('.cor-input');
   const qtyInput = col.querySelector('.qty-input');
   corInput.addEventListener('keydown', e => {
@@ -82,16 +82,13 @@ function buildCol(tam) {
     if (e.key === 'Enter') { e.preventDefault(); salvarEntradaNovaEmCol(col); }
   });
 
-  // Botão desabilitar/habilitar
   col.querySelector('.confirmar-btn').addEventListener('click', () => {
     if (col.classList.contains('desabilitada')) {
-      // Habilitar: volta as entradas
       col.classList.remove('desabilitada');
       col.querySelector('.entradas').style.opacity = '1';
       col.querySelector('.cor-input').disabled = false;
       col.querySelector('.qty-input').disabled = false;
     } else {
-      // Desabilitar: mantém entradas mas marca como fora do corte
       col.classList.add('desabilitada');
       col.querySelector('.entradas').style.opacity = '0.3';
       col.querySelector('.cor-input').disabled = true;
@@ -112,7 +109,6 @@ function salvarEntradaNovaEmCol(col) {
   const q = parseInt(qtyInput.value);
   if (!cor || !q) return;
 
-  // Verifica se é cor nova ou erro de digitação
   const corFinal = verificarCorNova(cor);
   if (!corFinal) {
     corInput.focus();
@@ -120,9 +116,7 @@ function salvarEntradaNovaEmCol(col) {
     return;
   }
 
-  // Adiciona CONFIRMADA em TODAS as colunas (não só na que digitou)
   document.querySelectorAll('.col').forEach(outra => {
-    // Se a coluna estiver desabilitada, não adiciona
     if (outra.classList.contains('desabilitada')) return;
     addEntrada(outra, corFinal, q);
     atualizarBtnCol(outra);
@@ -134,38 +128,26 @@ function salvarEntradaNovaEmCol(col) {
   recalc();
 }
 
-// Verifica se a cor existe. Se não, oferece correção ou cadastro.
-// Retorna a cor final a usar (pode ser a original, uma sugestão, ou null se cancelar)
 function verificarCorNova(cor) {
   const dl = document.getElementById('cores-list');
   const existentes = [...dl.querySelectorAll('option')].map(o => o.value.toUpperCase());
   const corUp = cor.toUpperCase();
-
-  // Se já existe, tudo certo
   if (existentes.includes(corUp)) return corUp;
-
-  // Procura cores parecidas (distância <= 2 letras)
   const parecidas = existentes.filter(e => distancia(corUp, e) <= 2).sort((a, b) => distancia(corUp, a) - distancia(corUp, b));
-
   if (parecidas.length > 0) {
-    // Achou parecida → sugere correção
     const sug = parecidas[0];
     const msg = `A cor "${corUp}" não existe ainda.\n\n` +
                 `Você quis dizer "${sug}"?\n\n` +
                 `[OK] usa "${sug}"\n` +
                 `[Cancelar] volta pra corrigir (ou cadastrar como nova)`;
     if (confirm(msg)) return sug;
-    // Cancelou → oferece cadastrar como nova
     if (confirm(`Cadastrar "${corUp}" como cor nova?\n\n[OK] cadastra\n[Cancelar] volta pra corrigir`)) return corUp;
     return null;
   }
-
-  // Cor totalmente nova, sem parecidas
   if (confirm(`Cor "${corUp}" não existe ainda. Cadastrar como cor nova?`)) return corUp;
   return null;
 }
 
-// Distância de Levenshtein — quantas edições de letras pra transformar a em b
 function distancia(a, b) {
   const dp = Array.from({length: a.length + 1}, () => new Array(b.length + 1).fill(0));
   for (let i = 0; i <= a.length; i++) dp[i][0] = i;
@@ -190,7 +172,6 @@ function addEntrada(col, cor, q) {
   `;
   const qEl = e.querySelector('.q');
   qEl.addEventListener('focus', () => {
-    // Seleciona tudo ao focar
     const range = document.createRange();
     range.selectNodeContents(qEl);
     window.getSelection().removeAllRanges();
@@ -217,7 +198,6 @@ function atualizarBtnCol(col) {
   const tam = col.dataset.tam;
   const temEntradas = col.querySelectorAll('.cor-linha').length > 0;
   const desabilitada = col.classList.contains('desabilitada');
-
   if (desabilitada) {
     btn.textContent = `habilitar ${tam}`;
     btn.disabled = false;
@@ -234,7 +214,7 @@ function atualizarBtnCol(col) {
 }
 
 function adicionarRefExtra() {
-  const ref = prompt('Qual outra ref? (ex: 205MT)');
+  const ref = prompt('Qual outra ref? (ex: 205MT)\n\nVai criar um corte separado com essa ref, com as mesmas cores/quantidades do principal.');
   if (!ref) return;
   const r = ref.trim().toUpperCase();
   if (!r) return;
@@ -278,9 +258,10 @@ function recalc() {
   });
   const refPrincipal = document.getElementById('ref-principal').value.trim();
   const nRef = (refPrincipal ? 1 : 0) + refsExtras.length || 1;
-  const total = totConf * nRef;
-  document.getElementById('lbl-t').textContent = total;
-  document.getElementById('lbl-t-sub').textContent = nRef > 1 ? `× ${nRef} refs` : '';
+  // AGORA cada ref é UM CORTE SEPARADO com essa qtd — não multiplica pra total
+  document.getElementById('lbl-t').textContent = totConf;
+  document.getElementById('lbl-t-sub').textContent =
+    nRef > 1 ? `× ${nRef} cortes (${totConf} pç cada, ${totConf * nRef} no total)` : '';
 }
 
 async function salvarCorteBtn() {
@@ -316,8 +297,9 @@ async function salvarCorteBtn() {
   }
 
   const refs = [refPrincipal, ...refsExtras];
+  const totalPecasPorRef = itensBase.reduce((a, i) => a + i.qtd, 0);
 
-  // Valida duplicidade: Lote+Ref já existe?
+  // Valida duplicidade de todas as refs de uma vez
   try {
     const cortesExistentes = await colCortes().where('lote', '==', lote).get();
     const conflitantes = [];
@@ -330,44 +312,54 @@ async function salvarCorteBtn() {
     });
     if (conflitantes.length > 0) {
       const conflict = [...new Set(conflitantes)].join(', ');
-      toast(`Já existe um corte com Lote ${lote} e Ref ${conflict}. Não dá pra duplicar.`, 'err');
+      toast(`Já existe corte com Lote ${lote} e Ref ${conflict}. Não dá pra duplicar.`, 'err');
       btn.disabled = false;
       return;
     }
   } catch (e) {
     console.warn('Erro validando duplicidade:', e);
-    // Continua mesmo assim (se a query falhar, salva; o backend pode filtrar depois)
   }
 
-  // Duplica os itens por ref
-  const itens = [];
-  refs.forEach(r => {
-    itensBase.forEach(i => itens.push({ ref: r, ...i }));
-  });
-  const totalPecas = itens.reduce((a, i) => a + i.qtd, 0);
-
-  const corte = {
-    lote,
-    refs,
-    data_corte: data,
-    itens,
-    total_pecas: totalPecas,
-    status: 'cortado'
-  };
-
+  // === CORREÇÃO 19/08/2026 ===
+  // Cria UM corte separado por ref, tudo dentro de um batch atômico.
+  // Antes: um único corte com refs: [X, Y, Z]. Agora: N cortes, cada um refs: [X].
   try {
-    const id = await salvarCorte(corte);
-    toast(`✓ Corte ${lote} / ${refPrincipal} salvo (${totalPecas} peças)`, 'ok');
+    const db = firebase.firestore();
+    const batch = db.batch();
+    const cortesCriados = [];
+
+    for (const ref of refs) {
+      const docRef = colCortes().doc(); // gera ID novo
+      const itens = itensBase.map(i => ({ ref, ...i })); // cada item ganha a ref deste corte
+      const corte = {
+        lote,
+        refs: [ref],           // array com uma ref só (mantém compat com o resto do sistema)
+        data_corte: data,
+        itens,
+        total_pecas: totalPecasPorRef,
+        status: 'cortado'
+      };
+      batch.set(docRef, corte);
+      cortesCriados.push({ id: docRef.id, ref });
+    }
+
+    await batch.commit();
+
+    const refsStr = refs.join(', ');
+    if (refs.length === 1) {
+      toast(`✓ Corte ${lote}/${refPrincipal} salvo (${totalPecasPorRef} peças)`, 'ok');
+    } else {
+      toast(`✓ ${refs.length} cortes do lote ${lote} salvos: ${refsStr} (${totalPecasPorRef} peças cada)`, 'ok');
+    }
 
     // Salva cores novas no Firestore pra próxima vez aparecerem no autocomplete
-    // (isolado num try/catch próprio pra não quebrar o limpar tela se der problema)
     try {
       const coresUnicas = [...new Set(itensBase.map(i => i.cor))];
       const dl = document.getElementById('cores-list');
       const jaTem = new Set([...dl.querySelectorAll('option')].map(o => o.value.toUpperCase()));
       for (const cor of coresUnicas) {
         if (!jaTem.has(cor.toUpperCase())) {
-          salvarCorSeNova(cor);  // salva async, sem esperar
+          salvarCorSeNova(cor);
           const opt = document.createElement('option');
           opt.value = cor;
           dl.appendChild(opt);
@@ -377,27 +369,21 @@ async function salvarCorteBtn() {
       console.warn('Falha ao registrar cores novas (não afeta o corte):', e);
     }
 
-    // Sempre limpa a tela, mesmo se der problema com as cores
     limparFormularioPraNovoCorte(lote);
     btn.disabled = false;
   } catch (e) {
-    console.error('Erro ao salvar corte:', e);
+    console.error('Erro ao salvar cortes:', e);
     toast('Erro ao salvar: ' + e.message, 'err');
     btn.disabled = false;
   }
 }
 
-// Limpa os campos e a grade, mantendo a data e sugerindo próximo lote
 function limparFormularioPraNovoCorte(loteAnterior) {
-  // Mantém data (você tá lançando vários no mesmo dia)
-  // Sugere próximo lote se for numérico com letra (ex: 2030B → 2030C)
   const proxLote = sugerirProximoLote(loteAnterior);
   document.getElementById('lote').value = proxLote;
   document.getElementById('ref-principal').value = '';
   refsExtras = [];
   redesenharRefsExtras();
-
-  // Limpa as 5 colunas
   document.querySelectorAll('.col').forEach(col => {
     col.querySelector('.entradas').innerHTML = '';
     col.querySelector('.cor-input').value = '';
@@ -406,20 +392,16 @@ function limparFormularioPraNovoCorte(loteAnterior) {
     atualizarBtnCol(col);
   });
   recalc();
-
-  // Foca no lote pra você já digitar o próximo (ou usa a sugestão + Tab)
   document.getElementById('lote').focus();
   document.getElementById('lote').select();
 }
 
-// Sugere próximo lote: 2030B → 2030C, 2030 → 2031, ABC → deixa vazio
 function sugerirProximoLote(lote) {
   if (!lote) return '';
   const m = lote.match(/^(\d+)([A-Z])?$/i);
   if (!m) return '';
   const [, num, letra] = m;
   if (letra) {
-    // Incrementa a letra: B → C, Z → volta A e incrementa número
     const proxLetra = String.fromCharCode(letra.toUpperCase().charCodeAt(0) + 1);
     if (proxLetra > 'Z') return String(parseInt(num) + 1) + 'A';
     return num + proxLetra;
@@ -427,7 +409,6 @@ function sugerirProximoLote(lote) {
   return String(parseInt(num) + 1);
 }
 
-// Recalcula quando ref principal muda
 document.addEventListener('DOMContentLoaded', () => {
   init();
   document.getElementById('ref-principal').addEventListener('input', recalc);
