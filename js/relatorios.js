@@ -125,12 +125,12 @@ function notasForaFiltradas() {
     n.retorno_finalizado !== true && pendenteTotalNotaR(n) > 0);
   if (fc) list = list.filter(n => (n.costureira || '').toUpperCase().includes(fc));
   if (fr) list = list.filter(n => (n.ref || '').toUpperCase().includes(fr));
-  // Ordenado por REF (menor pro maior), depois costureira, depois lote
+  // Ordenado por COSTUREIRA (A-Z), depois REF (menor pro maior), depois lote
   return list.sort((a, b) => {
+    const c = (a.costureira || '').localeCompare(b.costureira || '', 'pt-BR', { sensitivity: 'base' });
+    if (c !== 0) return c;
     const r = cmpRef(a.ref, b.ref);
     if (r !== 0) return r;
-    const c = (a.costureira || '').localeCompare(b.costureira || '');
-    if (c !== 0) return c;
     return (a.lote || '').localeCompare(b.lote || '');
   });
 }
