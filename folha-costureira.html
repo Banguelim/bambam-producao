@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BAMBAM · Folha de Conferência</title>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/forms.css">
+<style>
+  .controles {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    padding: 12px;
+    background: var(--surface-2);
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 12px;
+  }
+  .controles > div { display: flex; flex-direction: column; gap: 4px; }
+  .controles label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  .controles select, .controles input {
+    padding: 8px 10px;
+    font-size: 14px;
+    border-radius: 6px;
+    border: 0.5px solid var(--border);
+    background: var(--surface-1);
+    color: var(--text-primary);
+    min-height: 36px;
+  }
+  .controles button {
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 700;
+    border-radius: 6px;
+    border: 0.5px solid var(--border);
+    background: var(--surface-1);
+    color: var(--text-primary);
+    cursor: pointer;
+    min-height: 36px;
+  }
+  .controles button.primary {
+    background: var(--bg-accent-strong);
+    color: white;
+    border-color: var(--bg-accent-strong);
+  }
+  .controles button.excel {
+    background: var(--success);
+    color: white;
+    border-color: var(--success);
+  }
+  .controles button:hover { filter: brightness(1.1); }
+  .controles button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .controles .info {
+    margin-left: auto;
+    color: var(--text-muted);
+    font-size: 12px;
+    align-self: center;
+  }
+
+  /* Folha branca com texto preto pra impressão */
+  .folha {
+    background: white;
+    color: black;
+    padding: 20px 24px;
+    border-radius: 8px;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  .folha-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid black;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .folha-header .empresa { font-size: 22px; font-weight: 900; letter-spacing: 1px; }
+  .folha-header .info-cost { font-size: 15px; font-weight: 700; }
+  .folha-header .info-cost span { font-weight: 900; font-size: 17px; }
+  .folha-header .data { font-size: 14px; font-weight: 700; }
+
+  .folha-tabela {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    color: black;
+  }
+  .folha-tabela th, .folha-tabela td {
+    border: 1px solid #333;
+    padding: 5px 4px;
+    text-align: center;
+    vertical-align: middle;
+  }
+  .folha-tabela thead th {
+    background: #e5e5e5;
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+  }
+  .folha-tabela thead tr:nth-child(2) th {
+    font-size: 10px;
+    background: #f0f0f0;
+    font-weight: 600;
+  }
+  .folha-tabela td.ref {
+    font-family: 'Courier New', monospace;
+    font-weight: 900;
+    font-size: 13px;
+    background: #fafafa;
+  }
+  .folha-tabela td.lote {
+    font-family: 'Courier New', monospace;
+    font-weight: 700;
+    font-size: 12px;
+  }
+  .folha-tabela td.saida { font-size: 11px; color: #555; }
+  .folha-tabela td.sai {
+    background: #f5f5f5;
+    font-weight: 700;
+    font-size: 13px;
+  }
+  .folha-tabela td.rec {
+    background: white;
+    min-width: 32px;
+    height: 26px;
+  }
+  .folha-tabela td.obs {
+    background: white;
+    min-width: 60px;
+    font-size: 10px;
+    text-align: left;
+    padding-left: 6px;
+  }
+  .folha-tabela td.vazio { color: #ccc; }
+  .folha-tabela tfoot tr.total td {
+    background: #ffeb99;
+    font-weight: 900;
+    font-size: 13px;
+  }
+  .folha-tabela tfoot tr.total td.label {
+    text-align: right;
+    padding-right: 8px;
+  }
+
+  .assinaturas {
+    margin-top: 40px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+    font-size: 12px;
+  }
+  .assinatura {
+    border-top: 1px solid black;
+    padding-top: 6px;
+    text-align: center;
+  }
+
+  .vazio-msg {
+    background: white;
+    color: #666;
+    padding: 40px;
+    text-align: center;
+    border-radius: 8px;
+    font-size: 15px;
+  }
+
+  @media print {
+    @page { size: A4 portrait; margin: 10mm; }
+    body { background: white !important; }
+    .topbar, .controles { display: none !important; }
+    .wrap { padding: 0 !important; margin: 0 !important; max-width: none !important; }
+    .folha { padding: 0 !important; border-radius: 0; box-shadow: none; }
+    .folha-tabela { font-size: 10px; }
+    .folha-tabela th, .folha-tabela td { padding: 3px 3px; }
+    .folha-tabela td.rec { height: 22px; }
+    .assinaturas { margin-top: 24px; }
+  }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <span class="logo">BAMBAM <b>BABY</b></span>
+    <nav class="nav">
+      <a href="index.html">Painel</a>
+      <a href="novo-corte.html">Novo corte</a>
+      <a href="designacao.html">Designação</a>
+      <a href="retorno.html">Retorno</a>
+      <a href="pagamento.html">Pagamento</a>
+      <a href="arremate.html">Arremate</a>
+      <a href="estoque.html">Estoque</a>
+      <a href="cadastros.html">Cadastros</a>
+      <a href="relatorios.html">Relatórios</a>
+    </nav>
+    <div class="user">
+      <span id="user-email">—</span>
+      <button class="logout" onclick="logout()">sair</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px">
+      <h1 style="margin:0">Folha de Conferência</h1>
+      <span class="hint">Selecione a costureira · imprima ou exporte pra Excel</span>
+    </div>
+
+    <div class="controles">
+      <div>
+        <label>Costureira</label>
+        <select id="sel-costureira" style="min-width:240px">
+          <option value="">— carregando... —</option>
+        </select>
+      </div>
+      <div>
+        <label>Data</label>
+        <input type="date" id="p-data">
+      </div>
+      <div>
+        <button class="primary" id="btn-imprimir" disabled>🖨️ Imprimir</button>
+      </div>
+      <div>
+        <button class="excel" id="btn-excel" disabled>📥 Excel</button>
+      </div>
+      <div class="info" id="info">selecione uma costureira</div>
+    </div>
+
+    <div id="vazio" class="vazio-msg" style="display:none">
+      Selecione uma costureira acima pra ver a folha.
+    </div>
+    <div id="sem-notas" class="vazio-msg" style="display:none">
+      Essa costureira não tem notas em aberto no momento.
+    </div>
+
+    <div id="folha" class="folha" style="display:none">
+      <div class="folha-header">
+        <div class="empresa">BAMBAM BABY</div>
+        <div class="info-cost">Costureira: <span id="lbl-costureira">—</span></div>
+        <div class="data">Data: <span id="lbl-data">—</span></div>
+      </div>
+
+      <table class="folha-tabela">
+        <thead>
+          <tr>
+            <th rowspan="2" style="min-width:50px">REF</th>
+            <th rowspan="2" style="min-width:60px">LOTE</th>
+            <th rowspan="2" style="min-width:70px">SAÍDA</th>
+            <th colspan="2">RN</th>
+            <th colspan="2">P</th>
+            <th colspan="2">M</th>
+            <th colspan="2">G</th>
+            <th colspan="2">GG</th>
+            <th rowspan="2" style="min-width:60px">OBS</th>
+          </tr>
+          <tr>
+            <th>saí</th><th>rec</th>
+            <th>saí</th><th>rec</th>
+            <th>saí</th><th>rec</th>
+            <th>saí</th><th>rec</th>
+            <th>saí</th><th>rec</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-folha"></tbody>
+        <tfoot>
+          <tr class="total">
+            <td class="label" colspan="3">TOTAL A RECEBER</td>
+            <td id="t-rn"></td><td></td>
+            <td id="t-p"></td><td></td>
+            <td id="t-m"></td><td></td>
+            <td id="t-g"></td><td></td>
+            <td id="t-gg"></td><td></td>
+            <td id="t-geral" style="background:#fff3b0;font-size:14px"></td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <div class="assinaturas">
+        <div class="assinatura">Assinatura da Costureira</div>
+        <div class="assinatura">Assinatura da Empresa</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/folha-costureira.js"></script>
+</body>
+</html>
