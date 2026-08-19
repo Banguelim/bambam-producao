@@ -31,78 +31,200 @@
   .painel { display: none; }
   .painel.ativo { display: block; }
 
-  /* Filtros */
-  .filtros-rel {
+  /* Filtros e controles (some na impressão) */
+  .controles {
     background: var(--surface-2);
     border: 0.5px solid var(--border);
     border-radius: 8px;
-    padding: 14px 18px;
+    padding: 12px 16px;
     margin-bottom: 14px;
-    display: grid;
-    grid-template-columns: 1fr 1fr auto auto auto;
+    display: flex;
     gap: 12px;
     align-items: flex-end;
+    flex-wrap: wrap;
   }
-  .filtros-rel .campo label { font-size:11px; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; font-weight:700; display:block; margin-bottom:4px; }
-  .filtros-rel input, .filtros-rel select { padding:9px 12px; font-size:13px; width:100%; }
-  .filtros-rel .btn-buscar { padding:9px 20px; font-size:13px; font-weight:700; background:var(--bg-accent-strong); color:white; border:none; border-radius:var(--radius); cursor:pointer; white-space:nowrap; }
-  .filtros-rel .btn-buscar:hover { opacity:0.9; }
-  .filtros-rel .btn-excel { padding:9px 14px; font-size:13px; font-weight:700; background:none; border:0.5px solid var(--success); color:var(--success); border-radius:var(--radius); cursor:pointer; white-space:nowrap; }
-  .filtros-rel .btn-excel:hover { background:color-mix(in srgb,var(--success) 10%,transparent); }
-  .filtros-rel .btn-imprimir { padding:9px 14px; font-size:13px; font-weight:700; background:none; border:0.5px solid var(--border); color:var(--text-secondary); border-radius:var(--radius); cursor:pointer; }
-  .filtros-rel .btn-imprimir:hover { border-color:var(--border-accent); color:var(--text-primary); }
-
-  /* Tabela */
-  .tabela-rel { width:100%; border-collapse:collapse; font-size:13px; }
-  .tabela-rel th {
-    background:var(--surface-2); padding:8px 12px;
-    text-align:left; font-size:11px; text-transform:uppercase;
-    letter-spacing:0.5px; color:var(--text-secondary); font-weight:700;
-    border-bottom:1px solid var(--border); white-space:nowrap;
+  .controles .campo { display: flex; flex-direction: column; gap: 4px; }
+  .controles label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
   }
-  .tabela-rel td { padding:9px 12px; border-bottom:0.5px dashed var(--border); }
-  .tabela-rel tr:last-child td { border-bottom:none; }
-  .tabela-rel tr:hover td { background:color-mix(in srgb,var(--bg-accent) 8%,transparent); }
-  .tabela-rel .num { font-variant-numeric:tabular-nums; text-align:right; }
-  .tabela-rel .destaque { font-weight:800; color:var(--text-primary); }
-  .tabela-rel .verde { color:var(--success); font-weight:700; }
-  .tabela-rel .laranja { color:var(--warning); font-weight:700; }
-  .tabela-rel .azul { color:var(--text-accent); font-weight:700; }
-  .tabela-rel .muted { color:var(--text-muted); font-size:11px; }
-  .tabela-rel tfoot td {
-    background:var(--surface-2); font-weight:800;
-    border-top:2px solid var(--border); font-size:14px;
+  .controles input, .controles select {
+    padding: 8px 12px;
+    font-size: 13px;
+    border-radius: 6px;
+    border: 0.5px solid var(--border);
+    background: var(--surface-1);
+    color: var(--text-primary);
+    min-height: 34px;
   }
-
-  /* Cards de totais */
-  .cards-total {
-    display:grid; grid-template-columns:repeat(4,1fr);
-    gap:10px; margin-bottom:14px;
+  .controles .btn-buscar {
+    padding: 8px 18px;
+    font-size: 13px;
+    font-weight: 700;
+    background: var(--bg-accent-strong);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
   }
-  .card-total {
-    background:var(--surface-2); border:0.5px solid var(--border);
-    border-radius:8px; padding:12px 16px; text-align:center;
+  .controles .btn-buscar:hover { opacity: 0.9; }
+  .controles .btn-imprimir {
+    padding: 8px 18px;
+    font-size: 13px;
+    font-weight: 700;
+    background: none;
+    border: 0.5px solid var(--border);
+    color: var(--text-primary);
+    border-radius: 6px;
+    cursor: pointer;
   }
-  .card-total .num { font-size:22px; font-weight:900; font-variant-numeric:tabular-nums; }
-  .card-total .rot { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-top:2px; }
-  .card-total.verde .num { color:var(--success); }
-  .card-total.azul .num { color:var(--text-accent); }
-  .card-total.laranja .num { color:var(--warning); }
-
-  .bloco-tabela {
-    background:var(--surface-1); border:0.5px solid var(--border);
-    border-radius:8px; overflow:hidden;
+  .controles .btn-imprimir:hover { border-color: var(--border-accent); background: var(--surface-1); }
+  .controles .info {
+    margin-left: auto;
+    color: var(--text-muted);
+    font-size: 12px;
+    align-self: center;
   }
 
-  .vazio { padding:40px; text-align:center; color:var(--text-muted); font-size:13px; }
+  /* Folha branca — mesmo visual da folha de conferência */
+  .folha {
+    background: white;
+    color: black;
+    padding: 20px 24px;
+    border-radius: 8px;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  .folha-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid black;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .folha-header .empresa { font-size: 22px; font-weight: 900; letter-spacing: 1px; }
+  .folha-header .titulo { font-size: 15px; font-weight: 700; }
+  .folha-header .data { font-size: 14px; font-weight: 700; }
 
+  .folha-tabela {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    color: black;
+  }
+  .folha-tabela th, .folha-tabela td {
+    border: 1px solid #333;
+    padding: 5px 4px;
+    text-align: center;
+    vertical-align: middle;
+  }
+  .folha-tabela thead th {
+    background: #e5e5e5;
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+  }
+  .folha-tabela thead tr:nth-child(2) th {
+    font-size: 10px;
+    background: #f0f0f0;
+    font-weight: 600;
+  }
+  .folha-tabela td.ref {
+    font-family: 'Courier New', monospace;
+    font-weight: 900;
+    font-size: 13px;
+    background: #fafafa;
+  }
+  .folha-tabela td.lote {
+    font-family: 'Courier New', monospace;
+    font-weight: 700;
+    font-size: 12px;
+  }
+  .folha-tabela td.nome {
+    font-weight: 700;
+    text-align: left;
+    padding-left: 6px;
+  }
+  .folha-tabela td.saida { font-size: 11px; color: #555; }
+  .folha-tabela td.sai {
+    background: #f5f5f5;
+    font-weight: 700;
+    font-size: 13px;
+  }
+  .folha-tabela td.rec {
+    background: white;
+    min-width: 32px;
+    height: 26px;
+  }
+  .folha-tabela td.obs {
+    background: white;
+    min-width: 60px;
+    font-size: 10px;
+    text-align: left;
+    padding-left: 6px;
+  }
+  .folha-tabela td.vazio { color: #ccc; }
+  .folha-tabela tfoot tr.total td {
+    background: #ffeb99;
+    font-weight: 900;
+    font-size: 13px;
+  }
+  .folha-tabela tfoot tr.total td.label {
+    text-align: right;
+    padding-right: 8px;
+  }
+
+  /* Tabela simples pra abas Pagamentos e Retornos (histórico) */
+  .tabela-simples {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    color: black;
+  }
+  .tabela-simples th, .tabela-simples td {
+    border: 1px solid #333;
+    padding: 6px 8px;
+    text-align: left;
+  }
+  .tabela-simples th {
+    background: #e5e5e5;
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+  }
+  .tabela-simples td.num { text-align: right; font-family: 'Courier New', monospace; }
+  .tabela-simples td.data { font-size: 11px; color: #555; white-space: nowrap; }
+  .tabela-simples tfoot tr.total td {
+    background: #ffeb99;
+    font-weight: 900;
+  }
+
+  .vazio-msg {
+    background: white;
+    color: #666;
+    padding: 40px;
+    text-align: center;
+    border-radius: 8px;
+    font-size: 15px;
+  }
+
+  /* Impressão: folha limpa, sem menu nem controles */
   @media print {
-    .topbar, .abas, .filtros-rel .btn-buscar,
-    .filtros-rel .btn-excel, .filtros-rel .btn-imprimir { display:none !important; }
-    .painel { display:block !important; }
-    body { background:white; color:black; }
-    .bloco-tabela { border:1px solid #ccc; }
-    .tabela-rel th { background:#eee; color:black; }
+    @page { size: A4 portrait; margin: 10mm; }
+    body { background: white !important; }
+    .topbar, .abas, .controles { display: none !important; }
+    .wrap { padding: 0 !important; margin: 0 !important; max-width: none !important; }
+    .painel { display: none !important; }
+    .painel.ativo { display: block !important; }
+    .folha { padding: 0 !important; border-radius: 0; }
+    .folha-tabela { font-size: 10px; }
+    .folha-tabela th, .folha-tabela td { padding: 3px 3px; }
+    .folha-tabela td.rec { height: 22px; }
   }
 </style>
 </head>
@@ -110,16 +232,16 @@
   <div class="topbar">
     <span class="logo">BAMBAM <b>BABY</b></span>
     <nav class="nav">
-          <a href="index.html">Painel</a>
-          <a href="novo-corte.html">Novo corte</a>
-          <a href="designacao.html">Designação</a>
-          <a href="retorno.html">Retorno</a>
-          <a href="pagamento.html">Pagamento</a>
-          <a href="arremate.html">Arremate</a>
-          <a href="estoque-entrada.html">Estoque</a>
-          <a href="cadastros.html">Cadastros</a>
-          <a href="relatorios.html" class="ativo">Relatórios</a>
-        </nav>
+      <a href="index.html">Painel</a>
+      <a href="novo-corte.html">Novo corte</a>
+      <a href="designacao.html">Designação</a>
+      <a href="retorno.html">Retorno</a>
+      <a href="pagamento.html">Pagamento</a>
+      <a href="arremate.html">Arremate</a>
+      <a href="estoque.html">Estoque</a>
+      <a href="cadastros.html">Cadastros</a>
+      <a href="relatorios.html" class="ativo">Relatórios</a>
+    </nav>
     <div class="user">
       <span id="user-email">—</span>
       <button class="logout" onclick="logout()">sair</button>
@@ -138,9 +260,9 @@
       <button data-aba="retornos">Histórico de retornos</button>
     </div>
 
-    <!-- ========== ABA: O QUE ESTÁ FORA ========== -->
+    <!-- ========= ABA: O QUE ESTÁ FORA ========= -->
     <div class="painel ativo" data-painel="fora">
-      <div class="filtros-rel">
+      <div class="controles">
         <div class="campo">
           <label>Costureira</label>
           <input list="costureiras-list" id="fora-cost" placeholder="todas">
@@ -150,44 +272,61 @@
           <input id="fora-ref" placeholder="todas">
         </div>
         <button class="btn-buscar" onclick="buscarFora()">🔎 Buscar</button>
-        <button class="btn-excel" onclick="exportarExcel('fora')">📥 Excel</button>
-        <button class="btn-imprimir" onclick="window.print()">🖨 Imprimir</button>
+        <button class="btn-imprimir" onclick="window.print()">🖨️ Imprimir</button>
+        <span class="info" id="fora-info">clique em Buscar</span>
       </div>
-      <div class="cards-total" id="fora-cards" style="display:none">
-        <div class="card-total azul"><div class="num" id="fora-tot-notas">0</div><div class="rot">Notas em aberto</div></div>
-        <div class="card-total laranja"><div class="num" id="fora-tot-pecas">0</div><div class="rot">Peças fora</div></div>
-        <div class="card-total laranja"><div class="num" id="fora-tot-pend">0</div><div class="rot">Ainda pendentes</div></div>
-        <div class="card-total verde"><div class="num" id="fora-tot-valor">R$ 0</div><div class="rot">Valor total a pagar</div></div>
+
+      <div id="fora-vazio" class="vazio-msg" style="display:none">
+        Nenhuma peça está fora no momento.
       </div>
-      <div class="bloco-tabela">
-        <table class="tabela-rel">
+
+      <div class="folha" id="fora-folha" style="display:none">
+        <div class="folha-header">
+          <div class="empresa">BAMBAM BABY</div>
+          <div class="titulo">FORA — peças com costureiras</div>
+          <div class="data">Data: <span id="fora-data">—</span></div>
+        </div>
+        <table class="folha-tabela">
           <thead>
             <tr>
-              <th>#</th><th>Costureira</th><th>Lote/Ref</th>
-              <th>Data saída</th><th class="num">Saiu</th>
-              <th class="num">Chegou</th><th class="num">Pendente</th>
-              <th class="num">Valor nota</th>
+              <th rowspan="2" style="min-width:50px">REF</th>
+              <th rowspan="2" style="min-width:60px">LOTE</th>
+              <th rowspan="2" style="min-width:120px">COSTUREIRA</th>
+              <th rowspan="2" style="min-width:60px">SAÍDA</th>
+              <th colspan="2">RN</th>
+              <th colspan="2">P</th>
+              <th colspan="2">M</th>
+              <th colspan="2">G</th>
+              <th colspan="2">GG</th>
+              <th rowspan="2" style="min-width:60px">OBS</th>
+            </tr>
+            <tr>
+              <th>saí</th><th>rec</th>
+              <th>saí</th><th>rec</th>
+              <th>saí</th><th>rec</th>
+              <th>saí</th><th>rec</th>
+              <th>saí</th><th>rec</th>
             </tr>
           </thead>
-          <tbody id="fora-tbody">
-            <tr><td colspan="8" class="vazio">Clique em Buscar pra carregar</td></tr>
-          </tbody>
-          <tfoot id="fora-tfoot" style="display:none">
-            <tr>
-              <td colspan="4">TOTAL</td>
-              <td class="num" id="fora-sum-saiu">0</td>
-              <td class="num" id="fora-sum-chegou">0</td>
-              <td class="num laranja" id="fora-sum-pend">0</td>
-              <td class="num verde" id="fora-sum-valor">R$ 0,00</td>
+          <tbody id="fora-tbody"></tbody>
+          <tfoot>
+            <tr class="total">
+              <td class="label" colspan="4">TOTAL A RECEBER</td>
+              <td id="fora-t-rn"></td><td></td>
+              <td id="fora-t-p"></td><td></td>
+              <td id="fora-t-m"></td><td></td>
+              <td id="fora-t-g"></td><td></td>
+              <td id="fora-t-gg"></td><td></td>
+              <td id="fora-t-geral" style="background:#fff3b0;font-size:14px"></td>
             </tr>
           </tfoot>
         </table>
       </div>
     </div>
 
-    <!-- ========== ABA: O QUE TEM PRA MANDAR ========== -->
+    <!-- ========= ABA: PRA MANDAR ========= -->
     <div class="painel" data-painel="para-mandar">
-      <div class="filtros-rel">
+      <div class="controles">
         <div class="campo">
           <label>Referência</label>
           <input id="pman-ref" placeholder="todas">
@@ -201,44 +340,66 @@
           </select>
         </div>
         <button class="btn-buscar" onclick="buscarParaMandar()">🔎 Buscar</button>
-        <button class="btn-excel" onclick="exportarExcel('para-mandar')">📥 Excel</button>
-        <button class="btn-imprimir" onclick="window.print()">🖨 Imprimir</button>
+        <button class="btn-imprimir" onclick="window.print()">🖨️ Imprimir</button>
+        <span class="info" id="pman-info">clique em Buscar</span>
       </div>
-      <div class="cards-total" id="pman-cards" style="display:none">
-        <div class="card-total azul"><div class="num" id="pman-tot-cortes">0</div><div class="rot">Cortes pendentes</div></div>
-        <div class="card-total laranja"><div class="num" id="pman-tot-pecas">0</div><div class="rot">Peças a designar</div></div>
+
+      <div id="pman-vazio" class="vazio-msg" style="display:none">
+        Nenhum corte pendente pra designar.
       </div>
-      <div class="bloco-tabela">
-        <table class="tabela-rel">
+
+      <div class="folha" id="pman-folha" style="display:none">
+        <div class="folha-header">
+          <div class="empresa">BAMBAM BABY</div>
+          <div class="titulo">PRA MANDAR — cortes aguardando designação</div>
+          <div class="data">Data: <span id="pman-data">—</span></div>
+        </div>
+        <table class="folha-tabela">
           <thead>
             <tr>
-              <th>Lote</th><th>Ref</th><th>Data corte</th>
-              <th class="num">Total peças</th><th>Status</th><th>Tamanhos</th>
+              <th rowspan="2" style="min-width:60px">REF</th>
+              <th rowspan="2" style="min-width:70px">LOTE</th>
+              <th rowspan="2" style="min-width:70px">DATA</th>
+              <th colspan="2">RN</th>
+              <th colspan="2">P</th>
+              <th colspan="2">M</th>
+              <th colspan="2">G</th>
+              <th colspan="2">GG</th>
+              <th rowspan="2" style="min-width:110px">COSTUREIRA</th>
+            </tr>
+            <tr>
+              <th>qtd</th><th>ok</th>
+              <th>qtd</th><th>ok</th>
+              <th>qtd</th><th>ok</th>
+              <th>qtd</th><th>ok</th>
+              <th>qtd</th><th>ok</th>
             </tr>
           </thead>
-          <tbody id="pman-tbody">
-            <tr><td colspan="6" class="vazio">Clique em Buscar pra carregar</td></tr>
-          </tbody>
-          <tfoot id="pman-tfoot" style="display:none">
-            <tr>
-              <td colspan="3">TOTAL</td>
-              <td class="num" id="pman-sum-pecas">0</td>
-              <td colspan="2"></td>
+          <tbody id="pman-tbody"></tbody>
+          <tfoot>
+            <tr class="total">
+              <td class="label" colspan="3">TOTAL A DESIGNAR</td>
+              <td id="pman-t-rn"></td><td></td>
+              <td id="pman-t-p"></td><td></td>
+              <td id="pman-t-m"></td><td></td>
+              <td id="pman-t-g"></td><td></td>
+              <td id="pman-t-gg"></td><td></td>
+              <td id="pman-t-geral" style="background:#fff3b0;font-size:14px"></td>
             </tr>
           </tfoot>
         </table>
       </div>
     </div>
 
-    <!-- ========== ABA: HISTÓRICO DE PAGAMENTOS ========== -->
+    <!-- ========= ABA: PAGAMENTOS ========= -->
     <div class="painel" data-painel="pagamentos">
-      <div class="filtros-rel">
+      <div class="controles">
         <div class="campo">
           <label>Costureira</label>
           <input list="costureiras-list" id="pag-cost" placeholder="todas">
         </div>
         <div class="campo">
-          <label>Período</label>
+          <label>De</label>
           <input type="date" id="pag-de">
         </div>
         <div class="campo">
@@ -246,35 +407,40 @@
           <input type="date" id="pag-ate">
         </div>
         <button class="btn-buscar" onclick="buscarPagamentos()">🔎 Buscar</button>
-        <button class="btn-excel" onclick="exportarExcel('pagamentos')">📥 Excel</button>
-        <button class="btn-imprimir" onclick="window.print()">🖨 Imprimir</button>
+        <button class="btn-imprimir" onclick="window.print()">🖨️ Imprimir</button>
+        <span class="info" id="pag-info">clique em Buscar</span>
       </div>
-      <div class="cards-total" id="pag-cards" style="display:none">
-        <div class="card-total azul"><div class="num" id="pag-tot-pags">0</div><div class="rot">Pagamentos</div></div>
-        <div class="card-total verde"><div class="num" id="pag-tot-valor">R$ 0,00</div><div class="rot">Total pago</div></div>
-        <div class="card-total laranja"><div class="num" id="pag-tot-adiant">R$ 0,00</div><div class="rot">Adiantamentos usados</div></div>
+
+      <div id="pag-vazio" class="vazio-msg" style="display:none">
+        Nenhum pagamento no período.
       </div>
-      <div class="bloco-tabela">
-        <table class="tabela-rel">
+
+      <div class="folha" id="pag-folha" style="display:none">
+        <div class="folha-header">
+          <div class="empresa">BAMBAM BABY</div>
+          <div class="titulo">HISTÓRICO DE PAGAMENTOS</div>
+          <div class="data" id="pag-periodo">—</div>
+        </div>
+        <table class="tabela-simples">
           <thead>
             <tr>
-              <th>Data</th><th>Costureira</th><th>Forma</th>
-              <th class="num">Notas pagas</th>
-              <th class="num">Valor bruto</th>
-              <th class="num">Adiantamento</th>
-              <th class="num">Total pago</th>
-              <th>Obs</th>
+              <th>DATA</th>
+              <th>COSTUREIRA</th>
+              <th>FORMA</th>
+              <th>NOTAS PAGAS</th>
+              <th style="text-align:right">BRUTO</th>
+              <th style="text-align:right">ADIANT.</th>
+              <th style="text-align:right">LÍQUIDO</th>
+              <th>OBS</th>
             </tr>
           </thead>
-          <tbody id="pag-tbody">
-            <tr><td colspan="8" class="vazio">Clique em Buscar pra carregar</td></tr>
-          </tbody>
-          <tfoot id="pag-tfoot" style="display:none">
-            <tr>
-              <td colspan="4">TOTAL</td>
-              <td class="num" id="pag-sum-bruto">R$ 0,00</td>
-              <td class="num" id="pag-sum-adiant">R$ 0,00</td>
-              <td class="num verde" id="pag-sum-liq">R$ 0,00</td>
+          <tbody id="pag-tbody"></tbody>
+          <tfoot>
+            <tr class="total">
+              <td colspan="4" style="text-align:right">TOTAL</td>
+              <td class="num" id="pag-t-bruto"></td>
+              <td class="num" id="pag-t-adiant"></td>
+              <td class="num" id="pag-t-liq"></td>
               <td></td>
             </tr>
           </tfoot>
@@ -282,9 +448,9 @@
       </div>
     </div>
 
-    <!-- ========== ABA: HISTÓRICO DE RETORNOS ========== -->
+    <!-- ========= ABA: RETORNOS ========= -->
     <div class="painel" data-painel="retornos">
-      <div class="filtros-rel">
+      <div class="controles">
         <div class="campo">
           <label>Costureira</label>
           <input list="costureiras-list" id="ret-cost" placeholder="todas">
@@ -294,22 +460,37 @@
           <input id="ret-ref" placeholder="todas">
         </div>
         <button class="btn-buscar" onclick="buscarRetornos()">🔎 Buscar</button>
-        <button class="btn-excel" onclick="exportarExcel('retornos')">📥 Excel</button>
-        <button class="btn-imprimir" onclick="window.print()">🖨 Imprimir</button>
+        <button class="btn-imprimir" onclick="window.print()">🖨️ Imprimir</button>
+        <span class="info" id="ret-info">clique em Buscar</span>
       </div>
-      <div class="bloco-tabela">
-        <table class="tabela-rel">
+
+      <div id="ret-vazio" class="vazio-msg" style="display:none">
+        Nenhum retorno registrado.
+      </div>
+
+      <div class="folha" id="ret-folha" style="display:none">
+        <div class="folha-header">
+          <div class="empresa">BAMBAM BABY</div>
+          <div class="titulo">HISTÓRICO DE RETORNOS</div>
+          <div class="data" id="ret-data">—</div>
+        </div>
+        <table class="tabela-simples">
           <thead>
             <tr>
-              <th>#</th><th>Costureira</th><th>Lote/Ref</th>
-              <th>Data saída</th><th>1ª chegada</th><th>2ª chegada</th>
-              <th class="num">Saiu</th><th class="num">Chegou</th>
-              <th class="num">Pendente</th>
+              <th>DATA</th>
+              <th>COSTUREIRA</th>
+              <th>LOTE</th>
+              <th>REF</th>
+              <th style="text-align:center">CHEG.</th>
+              <th style="text-align:right">RN</th>
+              <th style="text-align:right">P</th>
+              <th style="text-align:right">M</th>
+              <th style="text-align:right">G</th>
+              <th style="text-align:right">GG</th>
+              <th style="text-align:right">TOTAL</th>
             </tr>
           </thead>
-          <tbody id="ret-tbody">
-            <tr><td colspan="9" class="vazio">Clique em Buscar pra carregar</td></tr>
-          </tbody>
+          <tbody id="ret-tbody"></tbody>
         </table>
       </div>
     </div>
