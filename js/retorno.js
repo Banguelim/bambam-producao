@@ -1,4 +1,9 @@
 // Tela de Retorno — costureira volta com peças
+//
+// CORREÇÃO 19/08/2026: defeito registrado NO RETORNO desconta do valor a pagar.
+// Regra: se a nota ainda está aberta, valor_nota = (total_saida − defeitos) × preço.
+// Se já foi paga (parcial ou total), grava o defeito mas NÃO mexe no valor —
+// a costureira já recebeu, o defeito posterior fica pra estatística.
 
 let todasNotasAbertas = [];  // cache das notas em aberto
 let notasFinalizadas = [];    // notas com retorno 100% completo
@@ -8,7 +13,6 @@ async function init() {
   await protegerRota();
   document.getElementById('p-data-chegada').value = hojeISO();
 
-  // Popular datalists de costureiras (dois: filtro e trocar)
   try {
     const cs = await listarCostureiras();
     const dl1 = document.getElementById('costureiras-list');
@@ -23,10 +27,8 @@ async function init() {
     });
   } catch (e) { console.warn('Costureiras não carregadas:', e); }
 
-  // Carregar todas as notas em aberto
   await carregarNotasAbertas();
 
-  // Handlers
   document.getElementById('filtro-cost').addEventListener('input', onFiltroChange);
   document.getElementById('filtro-lote').addEventListener('input', onFiltroChange);
   document.getElementById('x-cost').addEventListener('click', () => limparCampo('filtro-cost'));
@@ -41,7 +43,6 @@ async function init() {
   document.getElementById('trocar-cost-nova').addEventListener('change', atualizarBtnTroca);
   document.getElementById('btn-confirmar-defeito').addEventListener('click', confirmarDefeito);
 
-  // Botões de defeito são adicionados dinamicamente — usar delegação
   document.getElementById('grade').addEventListener('click', (e) => {
     const btn = e.target.closest('.btn-defeito');
     if (!btn) return;
@@ -53,25 +54,22 @@ async function carregarNotasAbertas() {
   const chips = document.getElementById('chips-notas');
   chips.innerHTML = '<span style="color:var(--text-muted);font-size:12px">carregando...</span>';
   try {
-    // Buscar TODAS as notas (abertas + finalizadas)
     const snap = await colNotas().get();
     const todas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     todas.sort((a, b) => (b.data_saida || '').localeCompare(a.data_saida || ''));
 
-    // Separar: finalizada = retorno 100% completo (totalChegou >= total_saida) E não reaberta
     todasNotasAbertas = todas.filter(n => {
-      if (n.retorno_finalizado) return false; // marcada como finalizada manualmente
+      if (n.retorno_finalizado) return false;
       const chegou = calcularTotalChegou(n);
-      return chegou < (n.total_saida || 0); // ainda tem pendente
+      return chegou < (n.total_saida || 0);
     });
 
     notasFinalizadas = todas.filter(n => {
-      if (n.retorno_finalizado) return true; // marcada manualmente
+      if (n.retorno_finalizado) return true;
       const chegou = calcularTotalChegou(n);
-      return chegou >= (n.total_saida || 0) && chegou > 0; // 100% chegou
+      return chegou >= (n.total_saida || 0) && chegou > 0;
     });
 
-    // Popular datalist de lotes
     const dlLotes = document.getElementById('lotes-list');
     dlLotes.innerHTML = '';
     const lotesUnicos = new Set();
@@ -103,7 +101,7 @@ function onFiltroChange() {
   document.getElementById('x-cost').classList.toggle('visivel', !!c);
   document.getElementById('x-lote').classList.toggle('visivel', !!l);
   renderChips();
-  renderFinalizadas(); // atualiza também o segundo plano
+  renderFinalizadas();
 }
 
 function renderChips() {
@@ -135,7 +133,6 @@ function renderChips() {
     const isParcial = totalChegou > 0 && totalChegou < n.total_saida;
     const chip = document.createElement('div');
     chip.className = 'chip-nota';
-    // Destaque: LOTE/REF sempre em primeiro. Cost e nota como meta
     chip.innerHTML = `
       <span class="dot ${isParcial ? 'parcial' : ''}"></span>
       <span>${n.lote}/${n.ref}</span>
@@ -189,7 +186,6 @@ function renderFinalizadas() {
         toast('Erro: ' + err.message, 'err');
       }
     });
-    // Clique abre a nota pra consulta
     item.addEventListener('click', (e) => {
       if (e.target.classList.contains('btn-reabilitar')) return;
       abrirNota(n);
@@ -245,7 +241,6 @@ function abrirNota(n) {
   document.getElementById('p-data').textContent = formatDataBR(n.data_saida);
   document.getElementById('p-valor').textContent = formatBRL(n.valor_nota || 0);
 
-  // Determina qual chegada mostrar por padrão (se já teve 1ª, sugere 2ª)
   const chegou1 = Object.values(n.chegada_1?.qtds || {}).reduce((a, v) => a + v, 0);
   const chegou2 = Object.values(n.chegada_2?.qtds || {}).reduce((a, v) => a + v, 0);
   if (chegou1 > 0 && chegou2 === 0) {
@@ -314,7 +309,6 @@ function renderizarGrade() {
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === 'Tab') {
         e.preventDefault();
-        // Pula pro próximo input HABILITADO (ignora colunas com pendente=0)
         const inputs = [...document.querySelectorAll('.chegou-input')];
         const idx = inputs.indexOf(input);
         for (let i = idx + 1; i < inputs.length; i++) {
@@ -323,14 +317,12 @@ function renderizarGrade() {
             return;
           }
         }
-        // Não achou próximo habilitado → foca no botão Registrar
         document.getElementById('btn-registrar').focus();
       }
     });
 
     btnTudo.addEventListener('click', () => {
       const v = parseInt(input.value) || 0;
-      // Toggle: se já tá no máximo, zera. Senão, coloca no máximo.
       const novo = v >= pendente ? 0 : pendente;
       input.value = String(novo);
       atualizarEstadoColuna(col, novo);
@@ -376,7 +368,6 @@ function fecharPainel() {
   notaAtual = null;
 }
 
-// Calcula total chegado considerando uma nova chegada que ainda não foi salva
 function calcularTotalCheguoComQtds(nota, novaChegada, campoCampo) {
   const c1 = campoCampo === 'chegada_1' ? novaChegada.qtds : (nota.chegada_1?.qtds || {});
   const c2 = campoCampo === 'chegada_2' ? novaChegada.qtds : (nota.chegada_2?.qtds || {});
@@ -399,7 +390,6 @@ async function registrarChegada() {
     return;
   }
 
-  // Coleta quantidades por tam
   const qtds = {};
   let total = 0;
   TAMS.forEach(tam => {
@@ -419,7 +409,6 @@ async function registrarChegada() {
   }
 
   try {
-    // Acumula com a chegada existente (soma, não substitui)
     const chegadaCampo = qualChegada === '1' ? 'chegada_1' : 'chegada_2';
     const chegadaExistente = notaAtual[chegadaCampo] || { data: '', qtds: {} };
     const novasQtds = { ...(chegadaExistente.qtds || {}) };
@@ -433,7 +422,6 @@ async function registrarChegada() {
     };
 
     await atualizarNota(notaAtual.numero, { [chegadaCampo]: novaChegada });
-    // Verificar se ficou com pendente zero → finalizar automaticamente
     const chegouAtual = calcularTotalCheguoComQtds(notaAtual, novaChegada, chegadaCampo);
     const totalChegouAgora = Object.values(chegouAtual).reduce((a, v) => a + v, 0);
     const ficouCompleto = totalChegouAgora >= (notaAtual.total_saida || 0);
@@ -445,7 +433,6 @@ async function registrarChegada() {
       toast(`✓ ${total} peças registradas na ${qualChegada}ª chegada da nota #${notaAtual.numero}`, 'ok');
     }
 
-    // Recarrega tudo
     setTimeout(async () => {
       await carregarNotasAbertas();
       fecharPainel();
@@ -467,7 +454,6 @@ function abrirModalTrocar() {
   document.getElementById('trocar-preco').value = '';
   document.getElementById('modal-trocar').classList.add('visivel');
   atualizarBtnTroca();
-  // Foca no campo pra facilitar
   setTimeout(() => inputCost.focus(), 100);
 }
 
@@ -500,7 +486,6 @@ async function confirmarTroca() {
   btn.textContent = '⏳ Trocando...';
 
   try {
-    // Se não informou preço novo, tenta buscar da matriz
     if (!novoPreco || novoPreco <= 0) {
       novoPreco = await precoDe(notaAtual.ref, novaCost);
       if (!novoPreco || novoPreco <= 0) {
@@ -509,7 +494,6 @@ async function confirmarTroca() {
         return;
       }
     } else {
-      // Salva o novo preço na matriz
       await salvarPreco(notaAtual.ref, novaCost, novoPreco);
     }
 
@@ -542,7 +526,6 @@ function abrirModalDefeito(tam, pendente) {
   document.getElementById('def-qtd').max = pendente;
   document.getElementById('def-cor').value = '';
 
-  // Popular cores da nota atual
   const dl = document.getElementById('def-cores-list');
   dl.innerHTML = '';
   if (notaAtual) {
@@ -575,30 +558,54 @@ async function confirmarDefeito() {
   btn.disabled = true;
 
   try {
-    // Registra o defeito como uma chegada especial (qtd negativa não — usa campo defeito)
-    const defeitosExistentes = notaAtual.defeitos || {};
+    // 1) Atualiza o mapa de defeitos (por tam_cor) somando ao existente
+    const defeitosExistentes = { ...(notaAtual.defeitos || {}) };
     const chave = `${tam}_${cor}`;
     defeitosExistentes[chave] = (defeitosExistentes[chave] || 0) + qtd;
 
-    // Também registra na chegada_1 pra fechar o pendente
+    // 2) Total de defeitos registrados NO RETORNO desta nota (recalcula do zero)
+    const totalDefeitos = Object.values(defeitosExistentes).reduce((a, v) => a + (Number(v) || 0), 0);
+
+    // 3) Registra na chegada_1 pra fechar o pendente (peça defeituosa
+    //    "chegou", só que ruim)
     const chegadaCampo = 'chegada_1';
     const chegadaExistente = notaAtual[chegadaCampo] || { data: '', qtds: {} };
     const novasQtds = { ...(chegadaExistente.qtds || {}) };
     novasQtds[tam] = (novasQtds[tam] || 0) + qtd;
 
-    await atualizarNota(notaAtual.numero, {
-      defeitos: defeitosExistentes,
-      [chegadaCampo]: { data: chegadaExistente.data || hojeISO(), qtds: novasQtds }
-    });
+    // 4) CORREÇÃO 19/08/2026 — recalcula valor_nota se a nota ainda não foi paga
+    const status = notaAtual.status || 'aberta';
+    const jaFoiPaga = status === 'paga_total' || status === 'paga_parcial';
+    const totalSaida = Number(notaAtual.total_saida) || 0;
+    const precoPeca = Number(notaAtual.preco_peca) || 0;
 
-    toast(`✓ ${qtd} peças com defeito registradas no ${tam} — pendente atualizado`, 'ok');
+    const updates = {
+      defeitos: defeitosExistentes,
+      defeito_retorno_total: totalDefeitos,
+      [chegadaCampo]: { data: chegadaExistente.data || hojeISO(), qtds: novasQtds }
+    };
+
+    let msgExtra = '';
+    if (!jaFoiPaga && precoPeca > 0) {
+      // Peças a pagar = tudo que saiu MENOS os defeitos registrados no retorno
+      const novoValor = Math.max(0, (totalSaida - totalDefeitos) * precoPeca);
+      updates.valor_nota = novoValor;
+      const desconto = qtd * precoPeca;
+      msgExtra = ` · desconto ${formatBRL(desconto)} no pagamento (novo total: ${formatBRL(novoValor)})`;
+    } else if (jaFoiPaga) {
+      msgExtra = ` · ⚠ nota já paga, valor NÃO atualizado`;
+    }
+
+    await atualizarNota(notaAtual.numero, updates);
+
+    toast(`✓ ${qtd} peça${qtd>1?'s':''} com defeito no ${tam}${msgExtra}`, 'ok');
     document.getElementById('modal-defeito').classList.remove('visivel');
 
     setTimeout(async () => {
       await carregarNotasAbertas();
       fecharPainel();
       btn.disabled = false;
-    }, 1200);
+    }, 1500);
   } catch (e) {
     console.error('Erro registrando defeito:', e);
     toast('Erro: ' + e.message, 'err');
@@ -648,7 +655,6 @@ async function devolverParaDesignacao() {
 
   try {
     await deletarNota(notaAtual.numero);
-    // Atualiza status do corte pra "designado_parcial" (pode voltar a ser designado)
     if (notaAtual.corte_id) {
       await colCortes().doc(notaAtual.corte_id).update({ status: 'designado_parcial' });
     }
