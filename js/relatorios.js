@@ -1,347 +1,528 @@
-// Tela de Relatórios — BAMBAM BABY
+// relatorios.js — 4 abas:
+//   1. FORA         (notas em aberto)      → export CSV LAYOUT PLANILHA3
+//   2. PARA MANDAR  (cortes pendentes)     → export CSV LAYOUT PLANILHA3
+//   3. PAGAMENTOS   (histórico)            → export CSV tabela
+//   4. RETORNOS     (histórico de chegadas)→ export CSV tabela
+//
+// CSV com BOM UTF-8 e separador ; (Excel BR abre com acentos e colunas certas).
+// Compatível com o relatorios.html do repo (botões, cards, filtros existentes).
 
-// Dados em cache
-let _notas = null;
-let _cortes = null;
-let _pagamentos = null;
+const TAMS_LOC = ['RN','P','M','G','GG'];
 
-// ===== ABAS =====
-document.querySelectorAll('.abas button').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.abas button').forEach(b => b.classList.remove('ativa'));
-    document.querySelectorAll('.painel').forEach(p => p.classList.remove('ativo'));
-    btn.classList.add('ativa');
-    document.querySelector(`.painel[data-painel="${btn.dataset.aba}"]`).classList.add('ativo');
-  });
-});
+let TODAS_NOTAS = [];
+let TODOS_CORTES = [];
+let TODOS_PAGAMENTOS = [];
 
 async function init() {
   await protegerRota();
 
-  // Popular costureiras
+  document.querySelectorAll('.abas button').forEach(b => {
+    b.addEventListener('click', () => trocarAba(b.dataset.aba));
+  });
+
+  await carregarTudo();
+
+  const cs = [...new Set(TODAS_NOTAS.map(n => n.costureira).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b));
+  const dl = document.getElementById('costureiras-list');
+  if (dl) dl.innerHTML = cs.map(c => `<option value="${escapeHtml(c)}">`).join('');
+
+  buscarFora();
+}
+
+async function carregarTudo() {
   try {
-    const cs = await listarCostureiras();
-    const dl = document.getElementById('costureiras-list');
-    cs.forEach(c => {
-      const opt = document.createElement('option');
-      opt.value = c.nome;
-      dl.appendChild(opt);
-    });
-  } catch (e) { console.warn('Costureiras:', e); }
+    const _colCortes = (typeof colCortes === 'function')
+      ? colCortes
+      : () => firebase.firestore().collection('producao_dados').doc('op').collection('cortes');
+    const _colPag = (typeof colPagamentos === 'function')
+      ? colPagamentos
+      : () => firebase.firestore().collection('producao_dados').doc('op').collection('pagamentos');
 
-  // Datas padrão: último mês
-  const hoje = new Date();
-  const mesPassado = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
-  document.getElementById('pag-de').value = mesPassado.toISOString().slice(0, 10);
-  document.getElementById('pag-ate').value = hoje.toISOString().slice(0, 10);
-}
-
-// ===== BUSCAR TODAS AS NOTAS (cache) =====
-async function getNotas() {
-  if (!_notas) {
-    const snap = await colNotas().get();
-    _notas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  }
-  return _notas;
-}
-async function getCortes() {
-  if (!_cortes) {
-    const snap = await colCortes().get();
-    _cortes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  }
-  return _cortes;
-}
-async function getPagamentos() {
-  if (!_pagamentos) {
-    const snap = await colPagamentos().get();
-    _pagamentos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    _pagamentos.sort((a, b) => (b.data || '').localeCompare(a.data || ''));
-  }
-  return _pagamentos;
-}
-
-function calcChegou(n) {
-  const c1 = n.chegada_1?.qtds || {};
-  const c2 = n.chegada_2?.qtds || {};
-  return TAMS.reduce((a, t) => a + (c1[t]||0) + (c2[t]||0), 0);
-}
-
-// ===== ABA: O QUE ESTÁ FORA =====
-async function buscarFora() {
-  const cost = document.getElementById('fora-cost').value.trim().toUpperCase();
-  const ref  = document.getElementById('fora-ref').value.trim().toUpperCase();
-  const tbody = document.getElementById('fora-tbody');
-  tbody.innerHTML = '<tr><td colspan="8" class="vazio">carregando...</td></tr>';
-
-  try {
-    const notas = await getNotas();
-    // "Fora" = notas abertas com pendente > 0 e não finalizadas
-    let lista = notas.filter(n => {
-      if (n.retorno_finalizado) return false;
-      const chegou = calcChegou(n);
-      return chegou < (n.total_saida || 0);
-    });
-    if (cost) lista = lista.filter(n => (n.costureira||'').toUpperCase().includes(cost));
-    if (ref)  lista = lista.filter(n => (n.ref||'').toUpperCase().includes(ref));
-    lista.sort((a, b) => (a.costureira||'').localeCompare(b.costureira||''));
-
-    if (lista.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="8" class="vazio">Nenhuma nota encontrada</td></tr>';
-      document.getElementById('fora-cards').style.display = 'none';
-      document.getElementById('fora-tfoot').style.display = 'none';
-      return;
-    }
-
-    let sumSaiu=0, sumChegou=0, sumPend=0, sumValor=0;
-    tbody.innerHTML = '';
-    lista.forEach(n => {
-      const chegou = calcChegou(n);
-      const pend = (n.total_saida||0) - chegou;
-      const valor = n.valor_nota || 0;
-      sumSaiu += n.total_saida||0;
-      sumChegou += chegou;
-      sumPend += pend;
-      sumValor += valor;
-
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td class="muted">#${n.numero}</td>
-        <td class="destaque">${n.costureira||'?'}</td>
-        <td>${n.lote}/${n.ref}</td>
-        <td class="muted">${formatDataBR(n.data_saida)}</td>
-        <td class="num">${n.total_saida||0}</td>
-        <td class="num azul">${chegou}</td>
-        <td class="num laranja">${pend}</td>
-        <td class="num verde">${formatBRL(valor)}</td>
-      `;
-      tbody.appendChild(tr);
-    });
-
-    // Cards e rodapé
-    document.getElementById('fora-cards').style.display = 'grid';
-    document.getElementById('fora-tot-notas').textContent = lista.length;
-    document.getElementById('fora-tot-pecas').textContent = sumSaiu;
-    document.getElementById('fora-tot-pend').textContent = sumPend;
-    document.getElementById('fora-tot-valor').textContent = formatBRL(sumValor);
-    document.getElementById('fora-tfoot').style.display = '';
-    document.getElementById('fora-sum-saiu').textContent = sumSaiu;
-    document.getElementById('fora-sum-chegou').textContent = sumChegou;
-    document.getElementById('fora-sum-pend').textContent = sumPend;
-    document.getElementById('fora-sum-valor').textContent = formatBRL(sumValor);
-
-    // Salva pra exportar
-    window._dadosFora = lista;
+    const [snapN, snapC, snapP] = await Promise.all([
+      colNotas().get(),
+      _colCortes().get(),
+      _colPag().get().catch(() => ({ docs: [] }))
+    ]);
+    TODAS_NOTAS      = snapN.docs.map(d => ({ id: d.id, ...d.data() }));
+    TODOS_CORTES     = snapC.docs.map(d => ({ id: d.id, ...d.data() }));
+    TODOS_PAGAMENTOS = snapP.docs.map(d => ({ id: d.id, ...d.data() }));
+    console.log(`[relatorios] ${TODAS_NOTAS.length} notas, ${TODOS_CORTES.length} cortes, ${TODOS_PAGAMENTOS.length} pagamentos`);
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="8" class="vazio" style="color:var(--text-danger)">Erro: ${e.message}</td></tr>`;
+    console.error('Erro carregando dados:', e);
+    if (typeof toast === 'function') toast('Erro ao carregar: ' + e.message, 'err');
   }
 }
 
-// ===== ABA: O QUE TEM PRA MANDAR =====
-async function buscarParaMandar() {
-  const ref    = document.getElementById('pman-ref').value.trim().toUpperCase();
-  const status = document.getElementById('pman-status').value;
-  const tbody  = document.getElementById('pman-tbody');
-  tbody.innerHTML = '<tr><td colspan="6" class="vazio">carregando...</td></tr>';
+function trocarAba(aba) {
+  document.querySelectorAll('.abas button').forEach(b =>
+    b.classList.toggle('ativa', b.dataset.aba === aba));
+  document.querySelectorAll('.painel').forEach(p =>
+    p.classList.toggle('ativo', p.dataset.painel === aba));
+}
 
-  try {
-    const cortes = await getCortes();
-    let lista = cortes.filter(c => c.status !== 'designado_total');
-    if (ref)    lista = lista.filter(c => (c.refs||[]).some(r => r.toUpperCase().includes(ref)));
-    if (status !== 'todos') lista = lista.filter(c => c.status === status);
-    lista.sort((a, b) => (a.data_corte||'').localeCompare(b.data_corte||''));
+// =========== HELPERS ===========
+function toDate(v) {
+  if (!v) return null;
+  if (v.toDate) return v.toDate();
+  if (v instanceof Date) return v;
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? null : d;
+}
 
-    if (lista.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" class="vazio">Nenhum corte encontrado</td></tr>';
-      document.getElementById('pman-cards').style.display = 'none';
-      document.getElementById('pman-tfoot').style.display = 'none';
-      return;
+function dataStr(v) {
+  const d = toDate(v);
+  return d ? d.toLocaleDateString('pt-BR') : '—';
+}
+
+function dataISO(v) {
+  const d = toDate(v);
+  return d ? d.toISOString().slice(0, 10) : '';
+}
+
+function fmtBRL(v) {
+  return (Number(v) || 0).toLocaleString('pt-BR', {
+    style: 'currency', currency: 'BRL'
+  });
+}
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"]/g, c =>
+    ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+}
+
+function totalPorTam(nota) {
+  const res = { RN:0, P:0, M:0, G:0, GG:0, total:0 };
+  (nota.itens || []).forEach(i => {
+    const t = i.tam, q = Number(i.qtd) || 0;
+    if (res[t] != null) { res[t] += q; res.total += q; }
+  });
+  return res;
+}
+
+function chegouTotalNota(n) {
+  const c1 = Object.values(n.chegada_1?.qtds || {}).reduce((a, v) => a + (Number(v) || 0), 0);
+  const c2 = Object.values(n.chegada_2?.qtds || {}).reduce((a, v) => a + (Number(v) || 0), 0);
+  return c1 + c2;
+}
+
+function chegouTamNota(n, tam) {
+  return (Number(n.chegada_1?.qtds?.[tam]) || 0) +
+         (Number(n.chegada_2?.qtds?.[tam]) || 0);
+}
+
+function pendenteTamNota(n, tam) {
+  const enviado = (n.itens || [])
+    .filter(i => i.tam === tam)
+    .reduce((a, i) => a + (Number(i.qtd) || 0), 0);
+  return Math.max(0, enviado - chegouTamNota(n, tam));
+}
+
+function baixarCSV(linhas, nomeArquivo) {
+  const csv = linhas.map(row => row.map(cel => {
+    const s = String(cel == null ? '' : cel);
+    if (s.includes(';') || s.includes('"') || s.includes('\n') || s.includes(',')) {
+      return `"${s.replaceAll('"', '""')}"`;
     }
-
-    let sumPecas = 0;
-    tbody.innerHTML = '';
-    lista.forEach(c => {
-      sumPecas += c.total_pecas||0;
-      const statusTxt = c.status === 'cortado' ? 'Aguardando designação' : 'Designado parcialmente';
-      const statusCls = c.status === 'cortado' ? 'laranja' : 'azul';
-
-      // Resumo de tamanhos
-      const tamRes = {};
-      (c.itens||[]).forEach(i => { tamRes[i.tam] = (tamRes[i.tam]||0) + i.qtd; });
-      const tamTxt = TAMS.filter(t => tamRes[t]).map(t => `${t}:${tamRes[t]}`).join(' ');
-
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td class="destaque">${c.lote}</td>
-        <td>${(c.refs||[]).join('+')}</td>
-        <td class="muted">${formatDataBR(c.data_corte)}</td>
-        <td class="num">${c.total_pecas||0}</td>
-        <td class="${statusCls}">${statusTxt}</td>
-        <td class="muted">${tamTxt}</td>
-      `;
-      tbody.appendChild(tr);
-    });
-
-    document.getElementById('pman-cards').style.display = 'grid';
-    document.getElementById('pman-tot-cortes').textContent = lista.length;
-    document.getElementById('pman-tot-pecas').textContent = sumPecas;
-    document.getElementById('pman-tfoot').style.display = '';
-    document.getElementById('pman-sum-pecas').textContent = sumPecas;
-    window._dadosPman = lista;
-  } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="6" class="vazio" style="color:var(--text-danger)">Erro: ${e.message}</td></tr>`;
-  }
-}
-
-// ===== ABA: HISTÓRICO DE PAGAMENTOS =====
-async function buscarPagamentos() {
-  const cost = document.getElementById('pag-cost').value.trim().toUpperCase();
-  const de   = document.getElementById('pag-de').value;
-  const ate  = document.getElementById('pag-ate').value;
-  const tbody = document.getElementById('pag-tbody');
-  tbody.innerHTML = '<tr><td colspan="8" class="vazio">carregando...</td></tr>';
-
-  try {
-    const pags = await getPagamentos();
-    let lista = pags;
-    if (cost) lista = lista.filter(p => (p.costureira||'').toUpperCase().includes(cost));
-    if (de)   lista = lista.filter(p => (p.data||'') >= de);
-    if (ate)  lista = lista.filter(p => (p.data||'') <= ate);
-
-    if (lista.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="8" class="vazio">Nenhum pagamento encontrado</td></tr>';
-      document.getElementById('pag-cards').style.display = 'none';
-      document.getElementById('pag-tfoot').style.display = 'none';
-      return;
-    }
-
-    let sumBruto=0, sumAdiant=0, sumLiq=0;
-    tbody.innerHTML = '';
-    lista.forEach(p => {
-      sumBruto  += p.valor_bruto||0;
-      sumAdiant += p.adiantamento_usado||0;
-      sumLiq    += p.valor_liquido||0;
-
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${formatDataBR(p.data)}</td>
-        <td class="destaque">${p.costureira||'?'}</td>
-        <td>${p.forma||'—'}</td>
-        <td class="num">${(p.notas_pagas||[]).length}</td>
-        <td class="num">${formatBRL(p.valor_bruto||0)}</td>
-        <td class="num ${p.adiantamento_usado>0?'laranja':''}">${p.adiantamento_usado>0 ? '−'+formatBRL(p.adiantamento_usado) : '—'}</td>
-        <td class="num verde">${formatBRL(p.valor_liquido||0)}</td>
-        <td class="muted">${p.observacao||'—'}</td>
-      `;
-      tbody.appendChild(tr);
-    });
-
-    document.getElementById('pag-cards').style.display = 'grid';
-    document.getElementById('pag-tot-pags').textContent = lista.length;
-    document.getElementById('pag-tot-valor').textContent = formatBRL(sumLiq);
-    document.getElementById('pag-tot-adiant').textContent = formatBRL(sumAdiant);
-    document.getElementById('pag-tfoot').style.display = '';
-    document.getElementById('pag-sum-bruto').textContent = formatBRL(sumBruto);
-    document.getElementById('pag-sum-adiant').textContent = formatBRL(sumAdiant);
-    document.getElementById('pag-sum-liq').textContent = formatBRL(sumLiq);
-    window._dadosPag = lista;
-  } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="8" class="vazio" style="color:var(--text-danger)">Erro: ${e.message}</td></tr>`;
-  }
-}
-
-// ===== ABA: HISTÓRICO DE RETORNOS =====
-async function buscarRetornos() {
-  const cost = document.getElementById('ret-cost').value.trim().toUpperCase();
-  const ref  = document.getElementById('ret-ref').value.trim().toUpperCase();
-  const tbody = document.getElementById('ret-tbody');
-  tbody.innerHTML = '<tr><td colspan="9" class="vazio">carregando...</td></tr>';
-
-  try {
-    const notas = await getNotas();
-    let lista = notas.filter(n => calcChegou(n) > 0); // só as que tiveram retorno
-    if (cost) lista = lista.filter(n => (n.costureira||'').toUpperCase().includes(cost));
-    if (ref)  lista = lista.filter(n => (n.ref||'').toUpperCase().includes(ref));
-    lista.sort((a, b) => (a.costureira||'').localeCompare(b.costureira||''));
-
-    if (lista.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="9" class="vazio">Nenhum retorno encontrado</td></tr>';
-      return;
-    }
-
-    tbody.innerHTML = '';
-    lista.forEach(n => {
-      const chegou = calcChegou(n);
-      const pend = (n.total_saida||0) - chegou;
-      const finalizado = n.retorno_finalizado || chegou >= (n.total_saida||0);
-      const pendCls = pend > 0 ? 'laranja' : 'verde';
-
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td class="muted">#${n.numero}</td>
-        <td class="destaque">${n.costureira||'?'}</td>
-        <td>${n.lote}/${n.ref}</td>
-        <td class="muted">${formatDataBR(n.data_saida)}</td>
-        <td class="muted">${n.chegada_1?.data ? formatDataBR(n.chegada_1.data) : '—'}</td>
-        <td class="muted">${n.chegada_2?.data ? formatDataBR(n.chegada_2.data) : '—'}</td>
-        <td class="num">${n.total_saida||0}</td>
-        <td class="num azul">${chegou}</td>
-        <td class="num ${pendCls}">${pend > 0 ? pend : '✓'}</td>
-      `;
-      tbody.appendChild(tr);
-    });
-    window._dadosRetornos = lista;
-  } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="9" class="vazio" style="color:var(--text-danger)">Erro: ${e.message}</td></tr>`;
-  }
-}
-
-// ===== EXPORTAR EXCEL (CSV) =====
-function exportarExcel(tipo) {
-  const bom = '\uFEFF';
-  let csv = '';
-  const linhas = [];
-
-  if (tipo === 'fora' && window._dadosFora) {
-    linhas.push(['#', 'Costureira', 'Lote', 'Ref', 'Data Saída', 'Saiu', 'Chegou', 'Pendente', 'Valor Nota']);
-    window._dadosFora.forEach(n => {
-      const chegou = calcChegou(n);
-      linhas.push([n.numero, n.costureira, n.lote, n.ref, n.data_saida, n.total_saida, chegou, (n.total_saida||0)-chegou, n.valor_nota||0]);
-    });
-  } else if (tipo === 'para-mandar' && window._dadosPman) {
-    linhas.push(['Lote', 'Ref', 'Data Corte', 'Total Peças', 'Status']);
-    window._dadosPman.forEach(c => {
-      linhas.push([c.lote, (c.refs||[]).join('+'), c.data_corte, c.total_pecas, c.status]);
-    });
-  } else if (tipo === 'pagamentos' && window._dadosPag) {
-    linhas.push(['Data', 'Costureira', 'Forma', 'Notas Pagas', 'Valor Bruto', 'Adiantamento', 'Total Pago', 'Obs']);
-    window._dadosPag.forEach(p => {
-      linhas.push([p.data, p.costureira, p.forma, (p.notas_pagas||[]).length, p.valor_bruto||0, p.adiantamento_usado||0, p.valor_liquido||0, p.observacao||'']);
-    });
-  } else if (tipo === 'retornos' && window._dadosRetornos) {
-    linhas.push(['#', 'Costureira', 'Lote', 'Ref', 'Data Saída', '1ª Chegada', '2ª Chegada', 'Saiu', 'Chegou', 'Pendente']);
-    window._dadosRetornos.forEach(n => {
-      const chegou = calcChegou(n);
-      linhas.push([n.numero, n.costureira, n.lote, n.ref, n.data_saida, n.chegada_1?.data||'', n.chegada_2?.data||'', n.total_saida, chegou, (n.total_saida||0)-chegou]);
-    });
-  } else {
-    toast('Faça uma busca primeiro', 'err');
-    return;
-  }
-
-  csv = linhas.map(r => r.map(v => {
-    const s = String(v ?? '');
-    return s.includes(',') || s.includes('"') ? `"${s.replace(/"/g,'""')}"` : s;
-  }).join(',')).join('\n');
-
-  const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8' });
+    return s;
+  }).join(';')).join('\r\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `bambam-${tipo}-${hojeISO()}.csv`;
+  a.download = nomeArquivo;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+// =========== ABA FORA ===========
+function notasForaFiltradas() {
+  const fc = document.getElementById('fora-cost').value.trim().toUpperCase();
+  const fr = document.getElementById('fora-ref').value.trim().toUpperCase();
+  let list = TODAS_NOTAS.filter(n => {
+    if (n.retorno_finalizado === true) return false;
+    const tp = totalPorTam(n).total;
+    const ch = chegouTotalNota(n);
+    return tp > ch;
+  });
+  if (fc) list = list.filter(n => (n.costureira || '').toUpperCase().includes(fc));
+  if (fr) list = list.filter(n => (n.ref || '').toUpperCase().includes(fr));
+  return list.sort((a, b) => {
+    const c = (a.costureira || '').localeCompare(b.costureira || '');
+    return c !== 0 ? c : (toDate(a.data_saida) || 0) - (toDate(b.data_saida) || 0);
+  });
+}
+
+function buscarFora() {
+  const list = notasForaFiltradas();
+  const tbody = document.getElementById('fora-tbody');
+  const tfoot = document.getElementById('fora-tfoot');
+  const cards = document.getElementById('fora-cards');
+  tbody.innerHTML = '';
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="vazio">Nada encontrado com esses filtros</td></tr>';
+    tfoot.style.display = 'none';
+    cards.style.display = 'none';
+    return;
+  }
+  let sSaiu = 0, sChegou = 0, sPend = 0, sValor = 0;
+  list.forEach(n => {
+    const tp = totalPorTam(n).total;
+    const ch = chegouTotalNota(n);
+    const pend = Math.max(0, tp - ch);
+    const v = Number(n.valor_nota) || 0;
+    sSaiu += tp; sChegou += ch; sPend += pend; sValor += v;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${escapeHtml(n.numero || n.id)}</td>
+      <td>${escapeHtml(n.costureira || '—')}</td>
+      <td><b>${escapeHtml(n.lote || '—')}</b> / ${escapeHtml(n.ref || '—')}</td>
+      <td>${dataStr(n.data_saida)}</td>
+      <td class="num">${tp}</td>
+      <td class="num">${ch}</td>
+      <td class="num ${pend>0?'laranja':''}">${pend}</td>
+      <td class="num verde">${fmtBRL(v)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('fora-tot-notas').textContent = list.length;
+  document.getElementById('fora-tot-pecas').textContent = sSaiu;
+  document.getElementById('fora-tot-pend').textContent = sPend;
+  document.getElementById('fora-tot-valor').textContent = fmtBRL(sValor);
+  document.getElementById('fora-sum-saiu').textContent = sSaiu;
+  document.getElementById('fora-sum-chegou').textContent = sChegou;
+  document.getElementById('fora-sum-pend').textContent = sPend;
+  document.getElementById('fora-sum-valor').textContent = fmtBRL(sValor);
+  cards.style.display = 'grid';
+  tfoot.style.display = '';
+}
+
+function exportarFora() {
+  const list = notasForaFiltradas();
+  if (!list.length) {
+    if (typeof toast === 'function') toast('Nada pra exportar', 'err');
+    return;
+  }
+  const linhas = [];
+  linhas.push([`FORA — ${new Date().toLocaleDateString('pt-BR')}`]);
+  linhas.push([]);
+  linhas.push(['NOME', 'SAÍDA',
+    'RN','RN', 'P','P', 'M','M', 'G','G', 'GG','GG']);
+  const totais = { RN:0, P:0, M:0, G:0, GG:0 };
+  list.forEach(n => {
+    const row = [n.costureira || '', dataStr(n.data_saida)];
+    TAMS_LOC.forEach(tam => {
+      const pend = pendenteTamNota(n, tam);
+      totais[tam] += pend;
+      // Coluna com valor NEGATIVO (padrão Excel antigo) + coluna vazia pra anotar
+      row.push(pend > 0 ? -pend : '', '');
+    });
+    linhas.push(row);
+  });
+  linhas.push([]);
+  linhas.push(['TOTAL', '',
+    totais.RN || '', '',
+    totais.P  || '', '',
+    totais.M  || '', '',
+    totais.G  || '', '',
+    totais.GG || '', ''
+  ]);
+  baixarCSV(linhas, `bambam_fora_${hojeISO()}.csv`);
+}
+
+// =========== ABA PARA MANDAR ===========
+function notasDoCorte(corteId) {
+  return TODAS_NOTAS.filter(n => n.corte_id === corteId);
+}
+
+function totalCorteTam(c, tam) {
+  return (c.itens || []).filter(i => i.tam === tam)
+    .reduce((a, i) => a + (Number(i.qtd) || 0), 0);
+}
+
+function designadoCorteTam(c, tam) {
+  return notasDoCorte(c.id).flatMap(n => n.itens || [])
+    .filter(i => i.tam === tam)
+    .reduce((a, i) => a + (Number(i.qtd) || 0), 0);
+}
+
+function pendenteCorteTam(c, tam) {
+  return Math.max(0, totalCorteTam(c, tam) - designadoCorteTam(c, tam));
+}
+
+function pendenteTotalCorte(c) {
+  return TAMS_LOC.reduce((a, t) => a + pendenteCorteTam(c, t), 0);
+}
+
+function refsCorte(c) {
+  if (Array.isArray(c.refs) && c.refs.length) return c.refs.join(', ');
+  if (c.ref) return c.ref;
+  return [...new Set((c.itens || []).map(i => i.ref).filter(Boolean))].join(', ') || '—';
+}
+
+function cortesParaMandarFiltrados() {
+  const fr = document.getElementById('pman-ref').value.trim().toUpperCase();
+  const status = document.getElementById('pman-status').value;
+  let list = TODOS_CORTES.filter(c => pendenteTotalCorte(c) > 0);
+  if (status !== 'todos') list = list.filter(c => c.status === status);
+  if (fr) list = list.filter(c => refsCorte(c).toUpperCase().includes(fr));
+  return list.sort((a, b) => (toDate(a.data_corte) || 0) - (toDate(b.data_corte) || 0));
+}
+
+function buscarParaMandar() {
+  const list = cortesParaMandarFiltrados();
+  const tbody = document.getElementById('pman-tbody');
+  const tfoot = document.getElementById('pman-tfoot');
+  const cards = document.getElementById('pman-cards');
+  tbody.innerHTML = '';
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="vazio">Nenhum corte pendente</td></tr>';
+    tfoot.style.display = 'none';
+    cards.style.display = 'none';
+    return;
+  }
+  let sPecas = 0;
+  list.forEach(c => {
+    const pend = pendenteTotalCorte(c);
+    sPecas += pend;
+    const tamStr = TAMS_LOC.map(t => {
+      const p = pendenteCorteTam(c, t);
+      return p > 0 ? `${t}:${p}` : '';
+    }).filter(Boolean).join(' · ');
+    const st = c.status || 'cortado';
+    const stLabel = st === 'cortado' ? 'aguardando' :
+                    st === 'designado_parcial' ? 'parcial' : 'total';
+    const stClass = st === 'cortado' ? 'cortado' :
+                    st === 'designado_parcial' ? 'parcial' : 'total';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><b>${escapeHtml(c.lote || '—')}</b></td>
+      <td>${escapeHtml(refsCorte(c))}</td>
+      <td>${dataStr(c.data_corte)}</td>
+      <td class="num">${pend}</td>
+      <td><span class="status ${stClass}">${stLabel}</span></td>
+      <td class="muted">${tamStr}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('pman-tot-cortes').textContent = list.length;
+  document.getElementById('pman-tot-pecas').textContent = sPecas;
+  document.getElementById('pman-sum-pecas').textContent = sPecas;
+  cards.style.display = 'grid';
+  tfoot.style.display = '';
+}
+
+function exportarParaMandar() {
+  const list = cortesParaMandarFiltrados();
+  if (!list.length) {
+    if (typeof toast === 'function') toast('Nada pra exportar', 'err');
+    return;
+  }
+  const linhas = [];
+  linhas.push([`PRA MANDAR — ${new Date().toLocaleDateString('pt-BR')}`]);
+  linhas.push([]);
+  linhas.push(['DATA', 'LOTE', 'REF',
+    'RN','RN', 'P','P', 'M','M', 'G','G', 'GG','GG',
+    'COSTUREIRA']);
+  const totais = { RN:0, P:0, M:0, G:0, GG:0 };
+  list.forEach(c => {
+    const row = [dataStr(c.data_corte), c.lote || '', refsCorte(c)];
+    TAMS_LOC.forEach(tam => {
+      const pend = pendenteCorteTam(c, tam);
+      totais[tam] += pend;
+      row.push(pend > 0 ? pend : '', '');
+    });
+    row.push(''); // coluna COSTUREIRA vazia pra anotar
+    linhas.push(row);
+  });
+  linhas.push([]);
+  linhas.push(['TOTAL', '', '',
+    totais.RN || '', '',
+    totais.P  || '', '',
+    totais.M  || '', '',
+    totais.G  || '', '',
+    totais.GG || '', '',
+    ''
+  ]);
+  baixarCSV(linhas, `bambam_pra_mandar_${hojeISO()}.csv`);
+}
+
+// =========== ABA PAGAMENTOS ===========
+function pagamentosFiltrados() {
+  const fc = document.getElementById('pag-cost').value.trim().toUpperCase();
+  const de = document.getElementById('pag-de').value;
+  const ate = document.getElementById('pag-ate').value;
+  let list = TODOS_PAGAMENTOS.slice();
+  if (fc) list = list.filter(p => (p.costureira || '').toUpperCase().includes(fc));
+  if (de)  list = list.filter(p => dataISO(p.data) >= de);
+  if (ate) list = list.filter(p => dataISO(p.data) <= ate);
+  return list.sort((a, b) => (toDate(b.data) || 0) - (toDate(a.data) || 0));
+}
+
+function buscarPagamentos() {
+  const list = pagamentosFiltrados();
+  const tbody = document.getElementById('pag-tbody');
+  const tfoot = document.getElementById('pag-tfoot');
+  const cards = document.getElementById('pag-cards');
+  tbody.innerHTML = '';
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="vazio">Nenhum pagamento no período</td></tr>';
+    tfoot.style.display = 'none';
+    cards.style.display = 'none';
+    return;
+  }
+  let sB = 0, sA = 0, sL = 0;
+  list.forEach(p => {
+    const b = Number(p.valor_bruto) || 0;
+    const a = Number(p.adiantamento_usado) || 0;
+    const l = Number(p.valor_liquido) || 0;
+    sB += b; sA += a; sL += l;
+    const nStr = (p.notas_pagas || []).map(n => n.numero || n).join(', ');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${dataStr(p.data)}</td>
+      <td>${escapeHtml(p.costureira || '—')}</td>
+      <td>${escapeHtml(p.forma || '—')}</td>
+      <td class="num muted">${escapeHtml(nStr)}</td>
+      <td class="num">${fmtBRL(b)}</td>
+      <td class="num">${a > 0 ? fmtBRL(a) : '—'}</td>
+      <td class="num verde">${fmtBRL(l)}</td>
+      <td class="muted">${escapeHtml(p.observacao || '')}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('pag-tot-pags').textContent = list.length;
+  document.getElementById('pag-tot-valor').textContent = fmtBRL(sL);
+  document.getElementById('pag-tot-adiant').textContent = fmtBRL(sA);
+  document.getElementById('pag-sum-bruto').textContent = fmtBRL(sB);
+  document.getElementById('pag-sum-adiant').textContent = fmtBRL(sA);
+  document.getElementById('pag-sum-liq').textContent = fmtBRL(sL);
+  cards.style.display = 'grid';
+  tfoot.style.display = '';
+}
+
+function exportarPagamentos() {
+  const list = pagamentosFiltrados();
+  if (!list.length) {
+    if (typeof toast === 'function') toast('Nada pra exportar', 'err');
+    return;
+  }
+  const linhas = [];
+  linhas.push([`HISTÓRICO DE PAGAMENTOS — ${new Date().toLocaleDateString('pt-BR')}`]);
+  linhas.push([]);
+  linhas.push(['DATA', 'COSTUREIRA', 'FORMA', 'NOTAS',
+    'BRUTO', 'ADIANTAMENTO', 'LÍQUIDO', 'OBS']);
+  let sB = 0, sA = 0, sL = 0;
+  list.forEach(p => {
+    const b = Number(p.valor_bruto) || 0;
+    const a = Number(p.adiantamento_usado) || 0;
+    const l = Number(p.valor_liquido) || 0;
+    sB += b; sA += a; sL += l;
+    const nStr = (p.notas_pagas || []).map(n => n.numero || n).join(', ');
+    linhas.push([
+      dataStr(p.data), p.costureira || '', p.forma || '', nStr,
+      b.toFixed(2).replace('.', ','),
+      a.toFixed(2).replace('.', ','),
+      l.toFixed(2).replace('.', ','),
+      p.observacao || ''
+    ]);
+  });
+  linhas.push([]);
+  linhas.push(['TOTAL', '', '', '',
+    sB.toFixed(2).replace('.', ','),
+    sA.toFixed(2).replace('.', ','),
+    sL.toFixed(2).replace('.', ','),
+    ''
+  ]);
+  baixarCSV(linhas, `bambam_pagamentos_${hojeISO()}.csv`);
+}
+
+// =========== ABA RETORNOS ===========
+function retornosFiltrados() {
+  const fc = document.getElementById('ret-cost').value.trim().toUpperCase();
+  const fr = document.getElementById('ret-ref').value.trim().toUpperCase();
+  let list = TODAS_NOTAS.filter(n => chegouTotalNota(n) > 0);
+  if (fc) list = list.filter(n => (n.costureira || '').toUpperCase().includes(fc));
+  if (fr) list = list.filter(n => (n.ref || '').toUpperCase().includes(fr));
+  return list.sort((a, b) => {
+    const da = toDate(a.chegada_2?.data || a.chegada_1?.data) || 0;
+    const db = toDate(b.chegada_2?.data || b.chegada_1?.data) || 0;
+    return db - da;
+  });
+}
+
+function buscarRetornos() {
+  const list = retornosFiltrados();
+  const tbody = document.getElementById('ret-tbody');
+  tbody.innerHTML = '';
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="9" class="vazio">Nenhum retorno encontrado</td></tr>';
+    return;
+  }
+  list.forEach(n => {
+    const tp = totalPorTam(n).total;
+    const ch = chegouTotalNota(n);
+    const pend = Math.max(0, tp - ch);
+    const c1d = n.chegada_1?.data ? dataStr(n.chegada_1.data) : '—';
+    const c2d = n.chegada_2?.data ? dataStr(n.chegada_2.data) : '—';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${escapeHtml(n.numero || n.id)}</td>
+      <td>${escapeHtml(n.costureira || '—')}</td>
+      <td><b>${escapeHtml(n.lote || '—')}</b> / ${escapeHtml(n.ref || '—')}</td>
+      <td>${dataStr(n.data_saida)}</td>
+      <td>${c1d}</td>
+      <td>${c2d}</td>
+      <td class="num">${tp}</td>
+      <td class="num azul">${ch}</td>
+      <td class="num ${pend>0?'laranja':'verde'}">${pend}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function exportarRetornos() {
+  const list = retornosFiltrados();
+  if (!list.length) {
+    if (typeof toast === 'function') toast('Nada pra exportar', 'err');
+    return;
+  }
+  const linhas = [];
+  linhas.push([`HISTÓRICO DE RETORNOS — ${new Date().toLocaleDateString('pt-BR')}`]);
+  linhas.push([]);
+  linhas.push(['#', 'COSTUREIRA', 'LOTE', 'REF',
+    'DATA SAÍDA', '1ª CHEGADA', '2ª CHEGADA',
+    'SAIU', 'CHEGOU', 'PENDENTE']);
+  list.forEach(n => {
+    const tp = totalPorTam(n).total;
+    const ch = chegouTotalNota(n);
+    linhas.push([
+      n.numero || n.id,
+      n.costureira || '',
+      n.lote || '',
+      n.ref || '',
+      dataStr(n.data_saida),
+      n.chegada_1?.data ? dataStr(n.chegada_1.data) : '',
+      n.chegada_2?.data ? dataStr(n.chegada_2.data) : '',
+      tp, ch, Math.max(0, tp - ch)
+    ]);
+  });
+  baixarCSV(linhas, `bambam_retornos_${hojeISO()}.csv`);
+}
+
+// =========== DISPATCHER ===========
+function exportarExcel(aba) {
+  const fn = {
+    'fora':        exportarFora,
+    'para-mandar': exportarParaMandar,
+    'pagamentos':  exportarPagamentos,
+    'retornos':    exportarRetornos
+  }[aba];
+  if (fn) fn();
+  else console.warn('Aba desconhecida pra exportar:', aba);
 }
 
 document.addEventListener('DOMContentLoaded', init);
