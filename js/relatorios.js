@@ -1,17 +1,17 @@
-// relatorios.js — 4 abas:
-//   1. FORA         (notas em aberto)      → export CSV LAYOUT PLANILHA3
-//   2. PARA MANDAR  (cortes pendentes)     → export CSV LAYOUT PLANILHA3
-//   3. PAGAMENTOS   (histórico)            → export CSV tabela
-//   4. RETORNOS     (histórico de chegadas)→ export CSV tabela
+// Relatórios BAMBAM BABY — 4 abas com folha branca imprimível:
+//   1. FORA         → ordenada por REF do menor pro maior (numérica)
+//   2. PRA MANDAR   → ordenada por REF A-Z (natural sort)
+//   3. PAGAMENTOS   → histórico ordenado por data desc
+//   4. RETORNOS     → histórico ordenado por data desc
 //
-// CSV com BOM UTF-8 e separador ; (Excel BR abre com acentos e colunas certas).
-// Compatível com o relatorios.html do repo (botões, cards, filtros existentes).
+// Botão único: 🖨️ Imprimir (sem Excel). Folha em fundo branco, texto preto,
+// colunas duplicadas por tam nas abas 1 e 2 (segunda em branco pra anotar).
 
-const TAMS_LOC = ['RN','P','M','G','GG'];
+const TAMS_R = ['RN','P','M','G','GG'];
 
-let TODAS_NOTAS = [];
-let TODOS_CORTES = [];
-let TODOS_PAGAMENTOS = [];
+let TODAS_NOTAS_R = [];
+let TODOS_CORTES_R = [];
+let TODOS_PAGAMENTOS_R = [];
 
 async function init() {
   await protegerRota();
@@ -22,10 +22,10 @@ async function init() {
 
   await carregarTudo();
 
-  const cs = [...new Set(TODAS_NOTAS.map(n => n.costureira).filter(Boolean))]
+  const cs = [...new Set(TODAS_NOTAS_R.map(n => n.costureira).filter(Boolean))]
     .sort((a, b) => a.localeCompare(b));
   const dl = document.getElementById('costureiras-list');
-  if (dl) dl.innerHTML = cs.map(c => `<option value="${escapeHtml(c)}">`).join('');
+  if (dl) dl.innerHTML = cs.map(c => `<option value="${escapeHtmlR(c)}">`).join('');
 
   buscarFora();
 }
@@ -44,10 +44,10 @@ async function carregarTudo() {
       _colCortes().get(),
       _colPag().get().catch(() => ({ docs: [] }))
     ]);
-    TODAS_NOTAS      = snapN.docs.map(d => ({ id: d.id, ...d.data() }));
-    TODOS_CORTES     = snapC.docs.map(d => ({ id: d.id, ...d.data() }));
-    TODOS_PAGAMENTOS = snapP.docs.map(d => ({ id: d.id, ...d.data() }));
-    console.log(`[relatorios] ${TODAS_NOTAS.length} notas, ${TODOS_CORTES.length} cortes, ${TODOS_PAGAMENTOS.length} pagamentos`);
+    TODAS_NOTAS_R      = snapN.docs.map(d => ({ id: d.id, ...d.data() }));
+    TODOS_CORTES_R     = snapC.docs.map(d => ({ id: d.id, ...d.data() }));
+    TODOS_PAGAMENTOS_R = snapP.docs.map(d => ({ id: d.id, ...d.data() }));
+    console.log(`[relatorios] ${TODAS_NOTAS_R.length} notas, ${TODOS_CORTES_R.length} cortes, ${TODOS_PAGAMENTOS_R.length} pagamentos`);
   } catch (e) {
     console.error('Erro carregando dados:', e);
     if (typeof toast === 'function') toast('Erro ao carregar: ' + e.message, 'err');
@@ -69,285 +69,220 @@ function toDate(v) {
   const d = new Date(v);
   return isNaN(d.getTime()) ? null : d;
 }
-
 function dataStr(v) {
   const d = toDate(v);
   return d ? d.toLocaleDateString('pt-BR') : '—';
 }
-
+function dataCurta(v) {
+  const d = toDate(v);
+  if (!d) return '—';
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yy = String(d.getFullYear()).slice(-2);
+  return `${dd}/${mm}/${yy}`;
+}
 function dataISO(v) {
   const d = toDate(v);
   return d ? d.toISOString().slice(0, 10) : '';
 }
-
 function fmtBRL(v) {
-  return (Number(v) || 0).toLocaleString('pt-BR', {
-    style: 'currency', currency: 'BRL'
-  });
+  return (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
-
-function escapeHtml(s) {
+function escapeHtmlR(s) {
   if (s == null) return '';
   return String(s).replace(/[&<>"]/g, c =>
     ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
 }
 
-function totalPorTam(nota) {
-  const res = { RN:0, P:0, M:0, G:0, GG:0, total:0 };
-  (nota.itens || []).forEach(i => {
-    const t = i.tam, q = Number(i.qtd) || 0;
-    if (res[t] != null) { res[t] += q; res.total += q; }
-  });
-  return res;
+// Ordenação natural que trata partes numéricas como número:
+// "205" < "703" numericamente; "205A" < "205B" alfabeticamente.
+function cmpRef(a, b) {
+  return String(a || '').localeCompare(String(b || ''), 'pt-BR', { numeric: true, sensitivity: 'base' });
 }
 
-function chegouTotalNota(n) {
-  const c1 = Object.values(n.chegada_1?.qtds || {}).reduce((a, v) => a + (Number(v) || 0), 0);
-  const c2 = Object.values(n.chegada_2?.qtds || {}).reduce((a, v) => a + (Number(v) || 0), 0);
-  return c1 + c2;
-}
-
-function chegouTamNota(n, tam) {
-  return (Number(n.chegada_1?.qtds?.[tam]) || 0) +
-         (Number(n.chegada_2?.qtds?.[tam]) || 0);
-}
-
-function pendenteTamNota(n, tam) {
+function pendenteTamNotaR(n, tam) {
   const enviado = (n.itens || [])
     .filter(i => i.tam === tam)
     .reduce((a, i) => a + (Number(i.qtd) || 0), 0);
-  return Math.max(0, enviado - chegouTamNota(n, tam));
+  const rec1 = Number(n.chegada_1?.qtds?.[tam]) || 0;
+  const rec2 = Number(n.chegada_2?.qtds?.[tam]) || 0;
+  return Math.max(0, enviado - rec1 - rec2);
 }
-
-function baixarCSV(linhas, nomeArquivo) {
-  const csv = linhas.map(row => row.map(cel => {
-    const s = String(cel == null ? '' : cel);
-    if (s.includes(';') || s.includes('"') || s.includes('\n') || s.includes(',')) {
-      return `"${s.replaceAll('"', '""')}"`;
-    }
-    return s;
-  }).join(';')).join('\r\n');
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = nomeArquivo;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+function pendenteTotalNotaR(n) {
+  return TAMS_R.reduce((a, t) => a + pendenteTamNotaR(n, t), 0);
+}
+function chegouTotalNotaR(n) {
+  const c1 = Object.values(n.chegada_1?.qtds || {}).reduce((a, v) => a + (Number(v) || 0), 0);
+  const c2 = Object.values(n.chegada_2?.qtds || {}).reduce((a, v) => a + (Number(v) || 0), 0);
+  return c1 + c2;
 }
 
 // =========== ABA FORA ===========
 function notasForaFiltradas() {
   const fc = document.getElementById('fora-cost').value.trim().toUpperCase();
   const fr = document.getElementById('fora-ref').value.trim().toUpperCase();
-  let list = TODAS_NOTAS.filter(n => {
-    if (n.retorno_finalizado === true) return false;
-    const tp = totalPorTam(n).total;
-    const ch = chegouTotalNota(n);
-    return tp > ch;
-  });
+  let list = TODAS_NOTAS_R.filter(n =>
+    n.retorno_finalizado !== true && pendenteTotalNotaR(n) > 0);
   if (fc) list = list.filter(n => (n.costureira || '').toUpperCase().includes(fc));
   if (fr) list = list.filter(n => (n.ref || '').toUpperCase().includes(fr));
+  // Ordenado por REF (menor pro maior), depois costureira, depois lote
   return list.sort((a, b) => {
+    const r = cmpRef(a.ref, b.ref);
+    if (r !== 0) return r;
     const c = (a.costureira || '').localeCompare(b.costureira || '');
-    return c !== 0 ? c : (toDate(a.data_saida) || 0) - (toDate(b.data_saida) || 0);
+    if (c !== 0) return c;
+    return (a.lote || '').localeCompare(b.lote || '');
   });
 }
 
 function buscarFora() {
   const list = notasForaFiltradas();
+  const folha = document.getElementById('fora-folha');
+  const vazio = document.getElementById('fora-vazio');
   const tbody = document.getElementById('fora-tbody');
-  const tfoot = document.getElementById('fora-tfoot');
-  const cards = document.getElementById('fora-cards');
-  tbody.innerHTML = '';
+
+  document.getElementById('fora-data').textContent = dataStr(new Date());
+
   if (!list.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="vazio">Nada encontrado com esses filtros</td></tr>';
-    tfoot.style.display = 'none';
-    cards.style.display = 'none';
+    folha.style.display = 'none';
+    vazio.style.display = 'block';
+    document.getElementById('fora-info').textContent = 'nada encontrado';
     return;
   }
-  let sSaiu = 0, sChegou = 0, sPend = 0, sValor = 0;
+  vazio.style.display = 'none';
+  folha.style.display = 'block';
+
+  tbody.innerHTML = '';
+  const totais = { RN:0, P:0, M:0, G:0, GG:0 };
+
   list.forEach(n => {
-    const tp = totalPorTam(n).total;
-    const ch = chegouTotalNota(n);
-    const pend = Math.max(0, tp - ch);
-    const v = Number(n.valor_nota) || 0;
-    sSaiu += tp; sChegou += ch; sPend += pend; sValor += v;
+    const teve1 = n.chegada_1 && Object.values(n.chegada_1.qtds || {}).some(v => Number(v) > 0);
+    const teve2 = n.chegada_2 && Object.values(n.chegada_2.qtds || {}).some(v => Number(v) > 0);
+    let obs = '';
+    if (teve2) obs = '2ª parcial';
+    else if (teve1) obs = '1ª parcial';
+
     const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${escapeHtml(n.numero || n.id)}</td>
-      <td>${escapeHtml(n.costureira || '—')}</td>
-      <td><b>${escapeHtml(n.lote || '—')}</b> / ${escapeHtml(n.ref || '—')}</td>
-      <td>${dataStr(n.data_saida)}</td>
-      <td class="num">${tp}</td>
-      <td class="num">${ch}</td>
-      <td class="num ${pend>0?'laranja':''}">${pend}</td>
-      <td class="num verde">${fmtBRL(v)}</td>
+    let html = `
+      <td class="ref">${escapeHtmlR(n.ref || '—')}</td>
+      <td class="lote">${escapeHtmlR(n.lote || '—')}</td>
+      <td class="nome">${escapeHtmlR(n.costureira || '—')}</td>
+      <td class="saida">${dataCurta(n.data_saida)}</td>
     `;
+    TAMS_R.forEach(tam => {
+      const pend = pendenteTamNotaR(n, tam);
+      totais[tam] += pend;
+      if (pend > 0) html += `<td class="sai">${pend}</td><td class="rec"></td>`;
+      else html += `<td class="sai vazio">—</td><td class="rec"></td>`;
+    });
+    html += `<td class="obs">${obs}</td>`;
+    tr.innerHTML = html;
     tbody.appendChild(tr);
   });
-  document.getElementById('fora-tot-notas').textContent = list.length;
-  document.getElementById('fora-tot-pecas').textContent = sSaiu;
-  document.getElementById('fora-tot-pend').textContent = sPend;
-  document.getElementById('fora-tot-valor').textContent = fmtBRL(sValor);
-  document.getElementById('fora-sum-saiu').textContent = sSaiu;
-  document.getElementById('fora-sum-chegou').textContent = sChegou;
-  document.getElementById('fora-sum-pend').textContent = sPend;
-  document.getElementById('fora-sum-valor').textContent = fmtBRL(sValor);
-  cards.style.display = 'grid';
-  tfoot.style.display = '';
+
+  const totalGeral = Object.values(totais).reduce((a, v) => a + v, 0);
+  document.getElementById('fora-t-rn').textContent = totais.RN || '—';
+  document.getElementById('fora-t-p').textContent  = totais.P  || '—';
+  document.getElementById('fora-t-m').textContent  = totais.M  || '—';
+  document.getElementById('fora-t-g').textContent  = totais.G  || '—';
+  document.getElementById('fora-t-gg').textContent = totais.GG || '—';
+  document.getElementById('fora-t-geral').textContent = `${totalGeral} pç`;
+  document.getElementById('fora-info').textContent =
+    `${list.length} nota${list.length!==1?'s':''} · ${totalGeral} peças a receber`;
 }
 
-function exportarFora() {
-  const list = notasForaFiltradas();
-  if (!list.length) {
-    if (typeof toast === 'function') toast('Nada pra exportar', 'err');
-    return;
-  }
-  const linhas = [];
-  linhas.push([`FORA — ${new Date().toLocaleDateString('pt-BR')}`]);
-  linhas.push([]);
-  linhas.push(['NOME', 'SAÍDA',
-    'RN','RN', 'P','P', 'M','M', 'G','G', 'GG','GG']);
-  const totais = { RN:0, P:0, M:0, G:0, GG:0 };
-  list.forEach(n => {
-    const row = [n.costureira || '', dataStr(n.data_saida)];
-    TAMS_LOC.forEach(tam => {
-      const pend = pendenteTamNota(n, tam);
-      totais[tam] += pend;
-      // Coluna com valor NEGATIVO (padrão Excel antigo) + coluna vazia pra anotar
-      row.push(pend > 0 ? -pend : '', '');
-    });
-    linhas.push(row);
-  });
-  linhas.push([]);
-  linhas.push(['TOTAL', '',
-    totais.RN || '', '',
-    totais.P  || '', '',
-    totais.M  || '', '',
-    totais.G  || '', '',
-    totais.GG || '', ''
-  ]);
-  baixarCSV(linhas, `bambam_fora_${hojeISO()}.csv`);
+// =========== ABA PRA MANDAR ===========
+function notasDoCorteR(corteId) {
+  return TODAS_NOTAS_R.filter(n => n.corte_id === corteId);
 }
-
-// =========== ABA PARA MANDAR ===========
-function notasDoCorte(corteId) {
-  return TODAS_NOTAS.filter(n => n.corte_id === corteId);
-}
-
 function totalCorteTam(c, tam) {
   return (c.itens || []).filter(i => i.tam === tam)
     .reduce((a, i) => a + (Number(i.qtd) || 0), 0);
 }
-
 function designadoCorteTam(c, tam) {
-  return notasDoCorte(c.id).flatMap(n => n.itens || [])
+  return notasDoCorteR(c.id).flatMap(n => n.itens || [])
     .filter(i => i.tam === tam)
     .reduce((a, i) => a + (Number(i.qtd) || 0), 0);
 }
-
 function pendenteCorteTam(c, tam) {
   return Math.max(0, totalCorteTam(c, tam) - designadoCorteTam(c, tam));
 }
-
 function pendenteTotalCorte(c) {
-  return TAMS_LOC.reduce((a, t) => a + pendenteCorteTam(c, t), 0);
+  return TAMS_R.reduce((a, t) => a + pendenteCorteTam(c, t), 0);
 }
-
 function refsCorte(c) {
   if (Array.isArray(c.refs) && c.refs.length) return c.refs.join(', ');
   if (c.ref) return c.ref;
   return [...new Set((c.itens || []).map(i => i.ref).filter(Boolean))].join(', ') || '—';
 }
+function refPrincipal(c) {
+  if (Array.isArray(c.refs) && c.refs.length) return c.refs[0];
+  if (c.ref) return c.ref;
+  const rs = [...new Set((c.itens || []).map(i => i.ref).filter(Boolean))];
+  return rs[0] || '';
+}
 
 function cortesParaMandarFiltrados() {
   const fr = document.getElementById('pman-ref').value.trim().toUpperCase();
   const status = document.getElementById('pman-status').value;
-  let list = TODOS_CORTES.filter(c => pendenteTotalCorte(c) > 0);
+  let list = TODOS_CORTES_R.filter(c => pendenteTotalCorte(c) > 0);
   if (status !== 'todos') list = list.filter(c => c.status === status);
   if (fr) list = list.filter(c => refsCorte(c).toUpperCase().includes(fr));
-  return list.sort((a, b) => (toDate(a.data_corte) || 0) - (toDate(b.data_corte) || 0));
+  // Ordenado por REF A-Z (usa refPrincipal pra sort), depois lote
+  return list.sort((a, b) => {
+    const r = cmpRef(refPrincipal(a), refPrincipal(b));
+    if (r !== 0) return r;
+    return (a.lote || '').localeCompare(b.lote || '');
+  });
 }
 
 function buscarParaMandar() {
   const list = cortesParaMandarFiltrados();
+  const folha = document.getElementById('pman-folha');
+  const vazio = document.getElementById('pman-vazio');
   const tbody = document.getElementById('pman-tbody');
-  const tfoot = document.getElementById('pman-tfoot');
-  const cards = document.getElementById('pman-cards');
-  tbody.innerHTML = '';
-  if (!list.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="vazio">Nenhum corte pendente</td></tr>';
-    tfoot.style.display = 'none';
-    cards.style.display = 'none';
-    return;
-  }
-  let sPecas = 0;
-  list.forEach(c => {
-    const pend = pendenteTotalCorte(c);
-    sPecas += pend;
-    const tamStr = TAMS_LOC.map(t => {
-      const p = pendenteCorteTam(c, t);
-      return p > 0 ? `${t}:${p}` : '';
-    }).filter(Boolean).join(' · ');
-    const st = c.status || 'cortado';
-    const stLabel = st === 'cortado' ? 'aguardando' :
-                    st === 'designado_parcial' ? 'parcial' : 'total';
-    const stClass = st === 'cortado' ? 'cortado' :
-                    st === 'designado_parcial' ? 'parcial' : 'total';
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td><b>${escapeHtml(c.lote || '—')}</b></td>
-      <td>${escapeHtml(refsCorte(c))}</td>
-      <td>${dataStr(c.data_corte)}</td>
-      <td class="num">${pend}</td>
-      <td><span class="status ${stClass}">${stLabel}</span></td>
-      <td class="muted">${tamStr}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-  document.getElementById('pman-tot-cortes').textContent = list.length;
-  document.getElementById('pman-tot-pecas').textContent = sPecas;
-  document.getElementById('pman-sum-pecas').textContent = sPecas;
-  cards.style.display = 'grid';
-  tfoot.style.display = '';
-}
 
-function exportarParaMandar() {
-  const list = cortesParaMandarFiltrados();
+  document.getElementById('pman-data').textContent = dataStr(new Date());
+
   if (!list.length) {
-    if (typeof toast === 'function') toast('Nada pra exportar', 'err');
+    folha.style.display = 'none';
+    vazio.style.display = 'block';
+    document.getElementById('pman-info').textContent = 'nada encontrado';
     return;
   }
-  const linhas = [];
-  linhas.push([`PRA MANDAR — ${new Date().toLocaleDateString('pt-BR')}`]);
-  linhas.push([]);
-  linhas.push(['DATA', 'LOTE', 'REF',
-    'RN','RN', 'P','P', 'M','M', 'G','G', 'GG','GG',
-    'COSTUREIRA']);
+  vazio.style.display = 'none';
+  folha.style.display = 'block';
+
+  tbody.innerHTML = '';
   const totais = { RN:0, P:0, M:0, G:0, GG:0 };
+
   list.forEach(c => {
-    const row = [dataStr(c.data_corte), c.lote || '', refsCorte(c)];
-    TAMS_LOC.forEach(tam => {
+    const tr = document.createElement('tr');
+    let html = `
+      <td class="ref">${escapeHtmlR(refsCorte(c))}</td>
+      <td class="lote">${escapeHtmlR(c.lote || '—')}</td>
+      <td class="saida">${dataCurta(c.data_corte)}</td>
+    `;
+    TAMS_R.forEach(tam => {
       const pend = pendenteCorteTam(c, tam);
       totais[tam] += pend;
-      row.push(pend > 0 ? pend : '', '');
+      if (pend > 0) html += `<td class="sai">${pend}</td><td class="rec"></td>`;
+      else html += `<td class="sai vazio">—</td><td class="rec"></td>`;
     });
-    row.push(''); // coluna COSTUREIRA vazia pra anotar
-    linhas.push(row);
+    html += `<td class="obs"></td>`; // costureira em branco pra anotar
+    tr.innerHTML = html;
+    tbody.appendChild(tr);
   });
-  linhas.push([]);
-  linhas.push(['TOTAL', '', '',
-    totais.RN || '', '',
-    totais.P  || '', '',
-    totais.M  || '', '',
-    totais.G  || '', '',
-    totais.GG || '', '',
-    ''
-  ]);
-  baixarCSV(linhas, `bambam_pra_mandar_${hojeISO()}.csv`);
+
+  const totalGeral = Object.values(totais).reduce((a, v) => a + v, 0);
+  document.getElementById('pman-t-rn').textContent = totais.RN || '—';
+  document.getElementById('pman-t-p').textContent  = totais.P  || '—';
+  document.getElementById('pman-t-m').textContent  = totais.M  || '—';
+  document.getElementById('pman-t-g').textContent  = totais.G  || '—';
+  document.getElementById('pman-t-gg').textContent = totais.GG || '—';
+  document.getElementById('pman-t-geral').textContent = `${totalGeral} pç`;
+  document.getElementById('pman-info').textContent =
+    `${list.length} corte${list.length!==1?'s':''} · ${totalGeral} peças pra designar`;
 }
 
 // =========== ABA PAGAMENTOS ===========
@@ -355,7 +290,7 @@ function pagamentosFiltrados() {
   const fc = document.getElementById('pag-cost').value.trim().toUpperCase();
   const de = document.getElementById('pag-de').value;
   const ate = document.getElementById('pag-ate').value;
-  let list = TODOS_PAGAMENTOS.slice();
+  let list = TODOS_PAGAMENTOS_R.slice();
   if (fc) list = list.filter(p => (p.costureira || '').toUpperCase().includes(fc));
   if (de)  list = list.filter(p => dataISO(p.data) >= de);
   if (ate) list = list.filter(p => dataISO(p.data) <= ate);
@@ -364,16 +299,28 @@ function pagamentosFiltrados() {
 
 function buscarPagamentos() {
   const list = pagamentosFiltrados();
+  const folha = document.getElementById('pag-folha');
+  const vazio = document.getElementById('pag-vazio');
   const tbody = document.getElementById('pag-tbody');
-  const tfoot = document.getElementById('pag-tfoot');
-  const cards = document.getElementById('pag-cards');
-  tbody.innerHTML = '';
+
+  const de = document.getElementById('pag-de').value;
+  const ate = document.getElementById('pag-ate').value;
+  let periodo = 'todos os pagamentos';
+  if (de && ate) periodo = `${dataStr(de)} a ${dataStr(ate)}`;
+  else if (de) periodo = `a partir de ${dataStr(de)}`;
+  else if (ate) periodo = `até ${dataStr(ate)}`;
+  document.getElementById('pag-periodo').textContent = 'Período: ' + periodo;
+
   if (!list.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="vazio">Nenhum pagamento no período</td></tr>';
-    tfoot.style.display = 'none';
-    cards.style.display = 'none';
+    folha.style.display = 'none';
+    vazio.style.display = 'block';
+    document.getElementById('pag-info').textContent = 'nada encontrado';
     return;
   }
+  vazio.style.display = 'none';
+  folha.style.display = 'block';
+
+  tbody.innerHTML = '';
   let sB = 0, sA = 0, sL = 0;
   list.forEach(p => {
     const b = Number(p.valor_bruto) || 0;
@@ -383,146 +330,94 @@ function buscarPagamentos() {
     const nStr = (p.notas_pagas || []).map(n => n.numero || n).join(', ');
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${dataStr(p.data)}</td>
-      <td>${escapeHtml(p.costureira || '—')}</td>
-      <td>${escapeHtml(p.forma || '—')}</td>
-      <td class="num muted">${escapeHtml(nStr)}</td>
+      <td class="data">${dataStr(p.data)}</td>
+      <td>${escapeHtmlR(p.costureira || '—')}</td>
+      <td>${escapeHtmlR(p.forma || '—')}</td>
+      <td style="font-size:11px">${escapeHtmlR(nStr)}</td>
       <td class="num">${fmtBRL(b)}</td>
       <td class="num">${a > 0 ? fmtBRL(a) : '—'}</td>
-      <td class="num verde">${fmtBRL(l)}</td>
-      <td class="muted">${escapeHtml(p.observacao || '')}</td>
+      <td class="num" style="font-weight:700">${fmtBRL(l)}</td>
+      <td style="font-size:11px">${escapeHtmlR(p.observacao || '')}</td>
     `;
     tbody.appendChild(tr);
   });
-  document.getElementById('pag-tot-pags').textContent = list.length;
-  document.getElementById('pag-tot-valor').textContent = fmtBRL(sL);
-  document.getElementById('pag-tot-adiant').textContent = fmtBRL(sA);
-  document.getElementById('pag-sum-bruto').textContent = fmtBRL(sB);
-  document.getElementById('pag-sum-adiant').textContent = fmtBRL(sA);
-  document.getElementById('pag-sum-liq').textContent = fmtBRL(sL);
-  cards.style.display = 'grid';
-  tfoot.style.display = '';
-}
-
-function exportarPagamentos() {
-  const list = pagamentosFiltrados();
-  if (!list.length) {
-    if (typeof toast === 'function') toast('Nada pra exportar', 'err');
-    return;
-  }
-  const linhas = [];
-  linhas.push([`HISTÓRICO DE PAGAMENTOS — ${new Date().toLocaleDateString('pt-BR')}`]);
-  linhas.push([]);
-  linhas.push(['DATA', 'COSTUREIRA', 'FORMA', 'NOTAS',
-    'BRUTO', 'ADIANTAMENTO', 'LÍQUIDO', 'OBS']);
-  let sB = 0, sA = 0, sL = 0;
-  list.forEach(p => {
-    const b = Number(p.valor_bruto) || 0;
-    const a = Number(p.adiantamento_usado) || 0;
-    const l = Number(p.valor_liquido) || 0;
-    sB += b; sA += a; sL += l;
-    const nStr = (p.notas_pagas || []).map(n => n.numero || n).join(', ');
-    linhas.push([
-      dataStr(p.data), p.costureira || '', p.forma || '', nStr,
-      b.toFixed(2).replace('.', ','),
-      a.toFixed(2).replace('.', ','),
-      l.toFixed(2).replace('.', ','),
-      p.observacao || ''
-    ]);
-  });
-  linhas.push([]);
-  linhas.push(['TOTAL', '', '', '',
-    sB.toFixed(2).replace('.', ','),
-    sA.toFixed(2).replace('.', ','),
-    sL.toFixed(2).replace('.', ','),
-    ''
-  ]);
-  baixarCSV(linhas, `bambam_pagamentos_${hojeISO()}.csv`);
+  document.getElementById('pag-t-bruto').textContent = fmtBRL(sB);
+  document.getElementById('pag-t-adiant').textContent = fmtBRL(sA);
+  document.getElementById('pag-t-liq').textContent = fmtBRL(sL);
+  document.getElementById('pag-info').textContent =
+    `${list.length} pagamento${list.length!==1?'s':''} · ${fmtBRL(sL)} total`;
 }
 
 // =========== ABA RETORNOS ===========
 function retornosFiltrados() {
   const fc = document.getElementById('ret-cost').value.trim().toUpperCase();
   const fr = document.getElementById('ret-ref').value.trim().toUpperCase();
-  let list = TODAS_NOTAS.filter(n => chegouTotalNota(n) > 0);
-  if (fc) list = list.filter(n => (n.costureira || '').toUpperCase().includes(fc));
-  if (fr) list = list.filter(n => (n.ref || '').toUpperCase().includes(fr));
-  return list.sort((a, b) => {
-    const da = toDate(a.chegada_2?.data || a.chegada_1?.data) || 0;
-    const db = toDate(b.chegada_2?.data || b.chegada_1?.data) || 0;
-    return db - da;
+
+  // Cada nota pode gerar 1 ou 2 eventos (chegada_1 e chegada_2)
+  const eventos = [];
+  TODAS_NOTAS_R.forEach(n => {
+    ['chegada_1', 'chegada_2'].forEach((k, idx) => {
+      const ch = n[k];
+      if (!ch) return;
+      const total = Object.values(ch.qtds || {}).reduce((a, v) => a + (Number(v) || 0), 0);
+      if (total <= 0) return;
+      eventos.push({
+        data: ch.data,
+        costureira: n.costureira || '',
+        lote: n.lote || '',
+        ref: n.ref || '',
+        chegada: idx + 1,
+        qtds: ch.qtds || {},
+        total
+      });
+    });
   });
+
+  let list = eventos;
+  if (fc) list = list.filter(e => e.costureira.toUpperCase().includes(fc));
+  if (fr) list = list.filter(e => e.ref.toUpperCase().includes(fr));
+  return list.sort((a, b) => (toDate(b.data) || 0) - (toDate(a.data) || 0));
 }
 
 function buscarRetornos() {
   const list = retornosFiltrados();
+  const folha = document.getElementById('ret-folha');
+  const vazio = document.getElementById('ret-vazio');
   const tbody = document.getElementById('ret-tbody');
-  tbody.innerHTML = '';
+
+  document.getElementById('ret-data').textContent = 'Data: ' + dataStr(new Date());
+
   if (!list.length) {
-    tbody.innerHTML = '<tr><td colspan="9" class="vazio">Nenhum retorno encontrado</td></tr>';
+    folha.style.display = 'none';
+    vazio.style.display = 'block';
+    document.getElementById('ret-info').textContent = 'nada encontrado';
     return;
   }
-  list.forEach(n => {
-    const tp = totalPorTam(n).total;
-    const ch = chegouTotalNota(n);
-    const pend = Math.max(0, tp - ch);
-    const c1d = n.chegada_1?.data ? dataStr(n.chegada_1.data) : '—';
-    const c2d = n.chegada_2?.data ? dataStr(n.chegada_2.data) : '—';
+  vazio.style.display = 'none';
+  folha.style.display = 'block';
+
+  tbody.innerHTML = '';
+  let totPecas = 0;
+  list.forEach(e => {
+    totPecas += e.total;
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${escapeHtml(n.numero || n.id)}</td>
-      <td>${escapeHtml(n.costureira || '—')}</td>
-      <td><b>${escapeHtml(n.lote || '—')}</b> / ${escapeHtml(n.ref || '—')}</td>
-      <td>${dataStr(n.data_saida)}</td>
-      <td>${c1d}</td>
-      <td>${c2d}</td>
-      <td class="num">${tp}</td>
-      <td class="num azul">${ch}</td>
-      <td class="num ${pend>0?'laranja':'verde'}">${pend}</td>
+      <td class="data">${dataStr(e.data)}</td>
+      <td>${escapeHtmlR(e.costureira)}</td>
+      <td style="font-family:monospace">${escapeHtmlR(e.lote)}</td>
+      <td style="font-family:monospace;font-weight:700">${escapeHtmlR(e.ref)}</td>
+      <td style="text-align:center">${e.chegada}ª</td>
+      <td class="num">${Number(e.qtds.RN) || '—'}</td>
+      <td class="num">${Number(e.qtds.P)  || '—'}</td>
+      <td class="num">${Number(e.qtds.M)  || '—'}</td>
+      <td class="num">${Number(e.qtds.G)  || '—'}</td>
+      <td class="num">${Number(e.qtds.GG) || '—'}</td>
+      <td class="num" style="font-weight:700">${e.total}</td>
     `;
     tbody.appendChild(tr);
   });
-}
-
-function exportarRetornos() {
-  const list = retornosFiltrados();
-  if (!list.length) {
-    if (typeof toast === 'function') toast('Nada pra exportar', 'err');
-    return;
-  }
-  const linhas = [];
-  linhas.push([`HISTÓRICO DE RETORNOS — ${new Date().toLocaleDateString('pt-BR')}`]);
-  linhas.push([]);
-  linhas.push(['#', 'COSTUREIRA', 'LOTE', 'REF',
-    'DATA SAÍDA', '1ª CHEGADA', '2ª CHEGADA',
-    'SAIU', 'CHEGOU', 'PENDENTE']);
-  list.forEach(n => {
-    const tp = totalPorTam(n).total;
-    const ch = chegouTotalNota(n);
-    linhas.push([
-      n.numero || n.id,
-      n.costureira || '',
-      n.lote || '',
-      n.ref || '',
-      dataStr(n.data_saida),
-      n.chegada_1?.data ? dataStr(n.chegada_1.data) : '',
-      n.chegada_2?.data ? dataStr(n.chegada_2.data) : '',
-      tp, ch, Math.max(0, tp - ch)
-    ]);
-  });
-  baixarCSV(linhas, `bambam_retornos_${hojeISO()}.csv`);
-}
-
-// =========== DISPATCHER ===========
-function exportarExcel(aba) {
-  const fn = {
-    'fora':        exportarFora,
-    'para-mandar': exportarParaMandar,
-    'pagamentos':  exportarPagamentos,
-    'retornos':    exportarRetornos
-  }[aba];
-  if (fn) fn();
-  else console.warn('Aba desconhecida pra exportar:', aba);
+  document.getElementById('ret-info').textContent =
+    `${list.length} retorno${list.length!==1?'s':''} · ${totPecas} peças`;
 }
 
 document.addEventListener('DOMContentLoaded', init);
