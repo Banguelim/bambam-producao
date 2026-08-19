@@ -328,12 +328,22 @@ function buscarPagamentos() {
     const l = Number(p.valor_liquido) || 0;
     sB += b; sA += a; sL += l;
     const nStr = (p.notas_pagas || []).map(n => n.numero || n).join(', ');
+    // MELHORIA 19/08/2026 — mostra lote/ref de cada nota pra dar pra
+    // bater com a costureira sem abrir cada nota. Busca em TODAS_NOTAS_R.
+    const notasHtml = (p.notas_pagas || []).map(entry => {
+      const numero = entry && entry.numero != null ? entry.numero : entry;
+      const nota = TODAS_NOTAS_R.find(n => Number(n.numero) === Number(numero));
+      if (!nota) {
+        return `<span style="color:#999">#${escapeHtmlR(numero)} (nota removida)</span>`;
+      }
+      return `<span style="white-space:nowrap"><b>#${escapeHtmlR(nota.numero)}</b> · ${escapeHtmlR(nota.lote || '?')}/${escapeHtmlR(nota.ref || '?')}</span>`;
+    }).join('<br>');
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td class="data">${dataStr(p.data)}</td>
       <td>${escapeHtmlR(p.costureira || '—')}</td>
       <td>${escapeHtmlR(p.forma || '—')}</td>
-      <td style="font-size:11px">${escapeHtmlR(nStr)}</td>
+      <td style="font-size:11px;line-height:1.5">${notasHtml || '—'}</td>
       <td class="num">${fmtBRL(b)}</td>
       <td class="num">${a > 0 ? fmtBRL(a) : '—'}</td>
       <td class="num" style="font-weight:700">${fmtBRL(l)}</td>
