@@ -327,11 +327,36 @@ function buscarPagamentos() {
     const a = Number(p.adiantamento_usado) || 0;
     const l = Number(p.valor_liquido) || 0;
     sB += b; sA += a; sL += l;
-    const nStr = (p.notas_pagas || []).map(n => n.numero || n).join(', ');
-    // MELHORIA 19/08/2026 — mostra lote/ref de cada nota pra dar pra
-    // bater com a costureira sem abrir cada nota. Busca em TODAS_NOTAS_R.
+    const nStr = (p.notas_pagas || []).map(n => (n && (n.numero ?? n.num ?? n.id)) ?? n).join(', ');
+    // Debug: se o console mostra estrutura estranha, me manda pra eu ajustar
+    if (p.notas_pagas && p.notas_pagas.length && !window._pagLogado) {
+      console.log('[relatorios] estrutura de notas_pagas exemplo:', p.notas_pagas[0]);
+      window._pagLogado = true;
+    }
+    // Renderização defensiva:
+    //   1) Se o entry JÁ TRAZ lote/ref/valor (pagamento congelou os dados) → usa direto
+    //   2) Se é só um número ou objeto com número → faz lookup em TODAS_NOTAS_R
+    //   3) Caso raro (estrutura inesperada) → mostra alerta pra ajustar
     const notasHtml = (p.notas_pagas || []).map(entry => {
-      const numero = entry && entry.numero != null ? entry.numero : entry;
+      // Caso 1: dados já congelados no pagamento (lote/ref/valor no próprio entry)
+      if (entry && typeof entry === 'object' && (entry.lote || entry.ref)) {
+        const num  = entry.numero ?? entry.num ?? entry.id ?? '?';
+        const lote = entry.lote || '?';
+        const ref  = entry.ref || '?';
+        const val  = entry.valor ?? entry.valor_nota;
+        const valStr = (val != null && !isNaN(Number(val))) ? ` — ${fmtBRL(val)}` : '';
+        return `<span style="white-space:nowrap"><b>#${escapeHtmlR(num)}</b> · ${escapeHtmlR(lote)}/${escapeHtmlR(ref)}${valStr}</span>`;
+      }
+      // Caso 2: extrai só o número e faz lookup
+      let numero = null;
+      if (typeof entry === 'number' || typeof entry === 'string') {
+        numero = entry;
+      } else if (entry && typeof entry === 'object') {
+        numero = entry.numero ?? entry.num ?? entry.id ?? null;
+      }
+      if (numero == null) {
+        return `<span style="color:#c66">? estrutura desconhecida (F12→Console)</span>`;
+      }
       const nota = TODAS_NOTAS_R.find(n => Number(n.numero) === Number(numero));
       if (!nota) {
         return `<span style="color:#999">#${escapeHtmlR(numero)} (nota removida)</span>`;
