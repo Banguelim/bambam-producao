@@ -383,6 +383,111 @@
     .modal-nota .botoes { display: none !important; }
     @page { margin: 8mm; }
   }
+
+  /* ============================================================ */
+  /* NOVO 20/08/2026 — "Notas já pagas" (segundo plano por costureira) */
+  /* Aparece embaixo do bloco de notas em aberto, colapsável.     */
+  /* ============================================================ */
+  .bloco-notas-pagas {
+    background: var(--surface-1);
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    display: none;
+  }
+  .bloco-notas-pagas.visivel { display: block; }
+  .bloco-notas-pagas .tit-pagas {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    padding: 2px 4px;
+    user-select: none;
+  }
+  .bloco-notas-pagas .tit-pagas .lbl-pagas {
+    font-size: 11px;
+    color: var(--success);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+  }
+  .bloco-notas-pagas .tit-pagas .lbl-pagas .contador {
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-left: 4px;
+  }
+  .bloco-notas-pagas .tit-pagas .hint-pagas {
+    font-size: 11px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .bloco-notas-pagas .caret-pagas {
+    transition: transform 0.2s;
+    display: inline-block;
+  }
+  .bloco-notas-pagas.aberto .caret-pagas { transform: rotate(180deg); }
+  .bloco-notas-pagas .lista-pagas {
+    display: none;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 10px;
+  }
+  .bloco-notas-pagas.aberto .lista-pagas { display: flex; }
+
+  .pag-item {
+    background: var(--surface-2);
+    border: 0.5px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .pag-item .pag-cab {
+    display: grid;
+    grid-template-columns: auto auto 1fr auto auto auto;
+    gap: 10px;
+    align-items: center;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  .pag-item .pag-cab:hover { background: color-mix(in srgb, var(--bg-accent) 12%, transparent); }
+  .pag-item .pag-data { color: var(--text-secondary); font-weight: 600; white-space: nowrap; }
+  .pag-item .pag-forma { color: var(--text-secondary); font-size: 11px; padding: 2px 8px; background: var(--surface-1); border-radius: 4px; }
+  .pag-item .pag-qtd { color: var(--text-muted); font-size: 11px; }
+  .pag-item .pag-valor { color: var(--success); font-weight: 800; font-variant-numeric: tabular-nums; min-width: 90px; text-align: right; }
+  .pag-item .pag-caret {
+    color: var(--text-muted);
+    font-size: 11px;
+    transition: transform 0.2s;
+  }
+  .pag-item.aberto .pag-caret { transform: rotate(180deg); }
+  .pag-item .pag-detalhes {
+    display: none;
+    padding: 10px 14px;
+    border-top: 0.5px solid var(--border);
+    background: var(--surface-1);
+    font-size: 11px;
+    line-height: 1.6;
+  }
+  .pag-item.aberto .pag-detalhes { display: block; }
+  .pag-item .pag-detalhes .rot-detalhes {
+    color: var(--text-muted);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .pag-item .pag-detalhes .nota-pag-linha {
+    padding: 4px 0;
+    border-bottom: 0.5px dashed var(--border);
+    color: var(--text-secondary);
+  }
+  .pag-item .pag-detalhes .nota-pag-linha:last-child { border-bottom: none; }
+  .pag-item .pag-detalhes .nota-pag-linha b { color: var(--text-primary); }
+
 </style>
 </head>
 <body>
@@ -449,6 +554,17 @@
       </div>
       <div class="lista-notas" id="lista-notas"></div>
     </div>
+
+    <!-- NOVO 20/08/2026 — Notas já pagas (histórico colapsável por costureira) -->
+    <div class="bloco-notas-pagas" id="bloco-notas-pagas">
+      <div class="tit-pagas">
+        <span class="lbl-pagas">✓ Notas já pagas <span class="contador" id="contador-pagas">(0)</span></span>
+        <span class="hint-pagas">clique pra abrir <span class="caret-pagas">▾</span></span>
+      </div>
+      <div class="lista-pagas" id="lista-pagas"></div>
+    </div>
+
+
 
     <!-- Bloco do pagamento -->
     <div class="bloco-total" id="bloco-total">
@@ -520,5 +636,6 @@
   <script src="js/utils.js"></script>
   <script src="js/db.js"></script>
   <script src="js/pagamento.js"></script>
+  <script src="js/pagamento-historico.js"></script>
 </body>
 </html>
