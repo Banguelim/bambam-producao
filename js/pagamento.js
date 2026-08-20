@@ -92,16 +92,28 @@ function renderNotas() {
     const chegou = calcularTotalChegou(n);
     const fora = (n.total_saida || 0) - chegou;
     const jaPago = totalJaPagoDaNota(n);
+    // NOVO 20/08/2026 — desconta as peças com defeito registradas no retorno.
+    // Motivo: no retorno.js as peças defeituosas entram na chegada_1 pra
+    // fechar o pendente, mas NÃO devem ser pagas. Sugestão de pagamento
+    // agora é (chegou - defeitos).
+    const defeitos = Number(n.defeito_retorno_total) || 0;
+    const pecasValidas = Math.max(0, chegou - defeitos);
     const valorRestante = (n.valor_nota || 0) - jaPago;
-    const pecasSugeridas = chegou > 0 ? chegou : (n.total_saida || 0);
+    const pecasSugeridas = pecasValidas > 0 ? pecasValidas : (chegou > 0 ? chegou : (n.total_saida || 0));
 
     const linha = document.createElement('div');
     linha.className = 'nota-linha';
     linha.dataset.numero = n.numero;
     linha.dataset.chegou = chegou;
+    linha.dataset.defeitos = defeitos;
     linha.dataset.totalSaida = n.total_saida || 0;
     linha.dataset.precoOriginal = n.preco_peca || 0;
     linha.dataset.valorPagoAnterior = jaPago;
+
+    // Aviso visual quando há defeitos
+    const avisoDef = defeitos > 0
+      ? ` · <span style="color:var(--text-danger);font-weight:700">${defeitos} defeito</span> = <b style="color:var(--success)">${pecasValidas} a pagar</b>`
+      : '';
 
     linha.innerHTML = `
       <div class="nota-cab">
@@ -109,7 +121,7 @@ function renderNotas() {
         <span class="num">#${n.numero}</span>
         <span class="lote-ref">${n.lote}/${n.ref}</span>
         <span class="status-pecas">
-          <b>${chegou}</b>/${n.total_saida} chegou${fora > 0 ? ` · <span class="fora">${fora} fora</span>` : ''}
+          <b>${chegou}</b>/${n.total_saida} chegou${fora > 0 ? ` · <span class="fora">${fora} fora</span>` : ''}${avisoDef}
         </span>
         <span class="preco">${formatBRL(n.preco_peca || 0)}/pç</span>
         <span class="valor" data-valor-atual>${formatBRL(valorRestante)}</span>
@@ -118,7 +130,7 @@ function renderNotas() {
       <div class="nota-detalhes">
         <div class="campos">
           <div class="campo">
-            <label>Peças a pagar</label>
+            <label>Peças a pagar${defeitos > 0 ? ` <span style="color:var(--text-danger);font-weight:700;text-transform:none">(defeito já descontado)</span>` : ''}</label>
             <input type="number" class="in-pecas" min="0" max="${n.total_saida}" value="${pecasSugeridas}">
           </div>
           <div class="campo">
@@ -131,7 +143,7 @@ function renderNotas() {
           </div>
         </div>
         <div class="info-linha">
-          Saída original: <b>${n.total_saida} peças</b> em ${formatDataBR(n.data_saida)} · Já chegaram: <b>${chegou}</b> · Ainda fora: <b>${fora}</b>${jaPago > 0 ? ` · Já pago antes: <b>${formatBRL(jaPago)}</b>` : ''}
+          Saída original: <b>${n.total_saida} peças</b> em ${formatDataBR(n.data_saida)} · Chegaram: <b>${chegou}</b>${defeitos > 0 ? ` · <span style="color:var(--text-danger)">Defeito: <b>${defeitos}</b></span> · <span style="color:var(--success)">A pagar: <b>${pecasValidas}</b></span>` : ''} · Ainda fora: <b>${fora}</b>${jaPago > 0 ? ` · Já pago antes: <b>${formatBRL(jaPago)}</b>` : ''}
         </div>
       </div>
     `;
