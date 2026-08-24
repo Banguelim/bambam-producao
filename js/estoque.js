@@ -176,6 +176,15 @@ function render(ref, porCor) {
           <span class="h-tam">GG</span>
           <span class="h-tot">= TOTAL</span>
         </div>
+        <div class="totais-header-linha">
+          <span class="h-cor-rot">totais</span>
+          <span class="tot-tam${totais.RN === 0 ? ' zero' : ''}">${totais.RN || '—'}</span>
+          <span class="tot-tam${totais.P  === 0 ? ' zero' : ''}">${totais.P  || '—'}</span>
+          <span class="tot-tam${totais.M  === 0 ? ' zero' : ''}">${totais.M  || '—'}</span>
+          <span class="tot-tam${totais.G  === 0 ? ' zero' : ''}">${totais.G  || '—'}</span>
+          <span class="tot-tam${totais.GG === 0 ? ' zero' : ''}">${totais.GG || '—'}</span>
+          <span class="tot-geral">= ${totalGeral}</span>
+        </div>
         ${linhasHtml}
       </div>
     </div>
