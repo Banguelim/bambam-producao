@@ -115,25 +115,67 @@
   .grade-cores {
     padding: 8px 16px 12px;
   }
-  .grade-header-cores, .cor-linha {
+  .grade-header-cores, .cor-linha, .totais-header-linha {
     display: grid;
-    grid-template-columns: 1fr repeat(5, 56px) 80px;
-    gap: 6px;
+    /* COR mais estreita (encosta nos números) + colunas de tam mais largas (respiro) */
+    grid-template-columns: 120px repeat(5, 1fr) 110px;
+    gap: 4px;
     align-items: center;
     padding: 6px 4px;
   }
   .grade-header-cores {
     border-bottom: 0.5px solid var(--border);
     color: var(--text-muted);
-    font-size: 10px;
+    font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     font-weight: 700;
-    margin-bottom: 2px;
+    margin-bottom: 0;
   }
-  .grade-header-cores .h-cor { text-align: left; }
+  .grade-header-cores .h-cor { text-align: left; padding-left: 4px; }
   .grade-header-cores .h-tam { text-align: center; }
   .grade-header-cores .h-tot { text-align: right; }
+
+  /* NOVO: linha de totais grandes logo abaixo do header */
+  .totais-header-linha {
+    padding: 8px 4px 12px;
+    border-bottom: 1.5px solid var(--border-accent);
+    margin-bottom: 6px;
+    background: color-mix(in srgb, var(--bg-accent) 6%, transparent);
+    border-radius: 4px;
+  }
+  .totais-header-linha .h-cor-rot {
+    text-align: left;
+    padding-left: 4px;
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+    align-self: center;
+  }
+  .totais-header-linha .tot-tam {
+    text-align: center;
+    font-family: 'Courier New', ui-monospace, monospace;
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--text-accent);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .totais-header-linha .tot-tam.zero {
+    color: var(--text-muted);
+    opacity: 0.5;
+  }
+  .totais-header-linha .tot-geral {
+    text-align: right;
+    font-family: 'Courier New', ui-monospace, monospace;
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--success);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
 
   .cor-linha {
     border-bottom: 0.5px dashed color-mix(in srgb, var(--border) 60%, transparent);
@@ -146,13 +188,14 @@
     font-size: 14px;
     color: var(--text-primary);
     letter-spacing: 0.5px;
+    padding-left: 4px;
   }
   .cor-linha .qtd {
     text-align: center;
     font-variant-numeric: tabular-nums;
     font-weight: 600;
     color: var(--text-primary);
-    font-size: 14px;
+    font-size: 15px;
   }
   .cor-linha .qtd.zero { color: var(--text-muted); font-weight: 400; }
   .cor-linha .total-linha {
@@ -176,11 +219,12 @@
   .msg .icone { font-size: 32px; margin-bottom: 8px; }
 
   @media (max-width: 640px) {
-    .grade-header-cores, .cor-linha {
-      grid-template-columns: 1fr repeat(5, 38px) 60px;
-      gap: 4px;
+    .grade-header-cores, .cor-linha, .totais-header-linha {
+      grid-template-columns: 85px repeat(5, 1fr) 70px;
+      gap: 2px;
     }
     .cor-linha .cor-nome, .cor-linha .qtd, .cor-linha .total-linha { font-size: 12px; }
+    .totais-header-linha .tot-tam, .totais-header-linha .tot-geral { font-size: 16px; }
     .card-ref-header .ref-num { font-size: 16px; }
   }
 </style>
