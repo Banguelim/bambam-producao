@@ -361,10 +361,14 @@ async function registrarPagamento() {
       const novosPagamentos = [...pagamentosAntes, { pag_id: pagId, data: dataPag, valor: np.valor, pecas: np.pecas_pagas }];
       const totalPago = novosPagamentos.reduce((a, p) => a + (p.valor || 0), 0);
       const valorTotalNota = (nota.total_saida || 0) * (nota.preco_peca || 0);
-      // Determinar status: paga_total se pagou tudo ou se todas as peças foram pagas
+      // Determinar status: paga_total quando as peças pagas cobrem as
+      // peças ESPERADAS (total saída MENOS defeitos registrados no retorno).
+      // Antes: só comparava com total_saida — bug quando havia defeito.
       let novoStatus = 'paga_parcial';
       const pecasPagasTotal = novosPagamentos.reduce((a, p) => a + (p.pecas || 0), 0);
-      if (pecasPagasTotal >= nota.total_saida) novoStatus = 'paga_total';
+      const defeitosNota = Number(nota.defeito_retorno_total) || 0;
+      const pecasEsperadas = Math.max(0, (nota.total_saida || 0) - defeitosNota);
+      if (pecasPagasTotal >= pecasEsperadas) novoStatus = 'paga_total';
       await atualizarNota(np.nota_numero, {
         pagamentos: novosPagamentos,
         status: novoStatus,
