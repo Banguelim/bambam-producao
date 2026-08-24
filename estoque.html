@@ -7,185 +7,181 @@
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/forms.css">
 <style>
-  .controles {
+  .barra-busca {
     display: flex;
-    gap: 12px;
-    align-items: flex-end;
-    flex-wrap: wrap;
-    padding: 12px 16px;
+    gap: 10px;
+    align-items: center;
+    padding: 10px 14px;
     background: var(--surface-2);
     border: 0.5px solid var(--border);
     border-radius: 8px;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
   }
-  .controles .campo { display: flex; flex-direction: column; gap: 4px; }
-  .controles label {
-    font-size: 11px;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    font-weight: 700;
+  .barra-busca .campo-busca {
+    flex: 1;
+    min-width: 180px;
+    position: relative;
   }
-  .controles input {
-    padding: 8px 12px;
-    font-size: 16px;
+  .barra-busca input {
+    width: 100%;
+    padding: 10px 12px 10px 34px;
+    font-size: 15px;
     font-weight: 700;
     text-transform: uppercase;
     border-radius: 6px;
     border: 0.5px solid var(--border);
     background: var(--surface-1);
     color: var(--text-primary);
-    min-height: 38px;
-    min-width: 160px;
+    min-height: 40px;
     font-family: 'Courier New', ui-monospace, monospace;
+    letter-spacing: 0.5px;
   }
-  .controles button {
-    padding: 8px 18px;
+  .barra-busca .lupa {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 14px;
+    pointer-events: none;
+  }
+  .barra-busca button {
+    padding: 10px 18px;
     font-size: 13px;
     font-weight: 700;
     border-radius: 6px;
     border: none;
     cursor: pointer;
-    min-height: 38px;
+    background: var(--bg-accent-strong);
+    color: white;
+    min-height: 40px;
   }
-  .controles .btn-buscar { background: var(--bg-accent-strong); color: white; }
-  .controles .btn-imprimir {
-    background: none;
-    border: 0.5px solid var(--border);
-    color: var(--text-primary);
-  }
-  .controles button:hover { filter: brightness(1.15); }
-  .controles .info {
-    margin-left: auto;
+  .barra-busca button:hover { filter: brightness(1.15); }
+  .barra-busca .info {
     color: var(--text-muted);
     font-size: 12px;
-    align-self: center;
+    white-space: nowrap;
   }
 
-  /* Folha branca — visual de impressão / consulta limpa */
-  .folha {
-    background: white;
-    color: black;
-    padding: 24px 28px;
+  /* Card no estilo dos cards da Designação */
+  .card-ref {
+    background: var(--surface-1);
+    border: 0.5px solid var(--border);
     border-radius: 8px;
-    font-family: Arial, Helvetica, sans-serif;
+    margin-bottom: 10px;
+    overflow: hidden;
   }
-  .folha-header {
+  .card-ref-header {
     display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 18px;
-    padding-bottom: 12px;
-    border-bottom: 2px solid black;
-    gap: 12px;
-    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    background: var(--surface-2);
+    border-bottom: 0.5px solid var(--border);
   }
-  .folha-header .empresa {
-    font-size: 22px;
+  .card-ref-header .ref-num {
+    font-family: 'Courier New', ui-monospace, monospace;
+    font-size: 20px;
     font-weight: 900;
+    color: var(--text-primary);
     letter-spacing: 1px;
   }
-  .folha-header .ref-titulo {
-    font-size: 20px;
-    font-weight: 800;
-    font-family: 'Courier New', ui-monospace, monospace;
-  }
-  .folha-header .ref-titulo b { color: #000; font-size: 26px; }
-  .folha-header .data { font-size: 13px; font-weight: 700; }
-
-  .grade-estoque {
-    font-family: 'Courier New', ui-monospace, monospace;
-    font-size: 15px;
-    color: black;
-  }
-  .grade-header, .cor-linha, .total-linha {
-    display: grid;
-    grid-template-columns: 1fr repeat(5, 60px) 90px;
-    gap: 8px;
-    padding: 6px 0;
-    align-items: center;
-  }
-  .grade-header {
-    border-bottom: 1px solid #333;
-    font-weight: 700;
-    font-size: 12px;
+  .card-ref-header .ref-num .rot {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-weight: 600;
     text-transform: uppercase;
-    color: #666;
+    letter-spacing: 0.5px;
+    margin-right: 6px;
   }
-  .grade-header .rot { text-align: left; }
-  .grade-header .tam-h { text-align: center; }
-  .grade-header .total-h { text-align: right; }
+  .card-ref-header .badge-total {
+    margin-left: auto;
+    padding: 4px 12px;
+    background: var(--bg-accent-strong);
+    color: white;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .card-ref-header .contador-cores {
+    color: var(--text-muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+  }
+
+  .grade-cores {
+    padding: 8px 16px 12px;
+  }
+  .grade-header-cores, .cor-linha {
+    display: grid;
+    grid-template-columns: 1fr repeat(5, 56px) 80px;
+    gap: 6px;
+    align-items: center;
+    padding: 6px 4px;
+  }
+  .grade-header-cores {
+    border-bottom: 0.5px solid var(--border);
+    color: var(--text-muted);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+    margin-bottom: 2px;
+  }
+  .grade-header-cores .h-cor { text-align: left; }
+  .grade-header-cores .h-tam { text-align: center; }
+  .grade-header-cores .h-tot { text-align: right; }
 
   .cor-linha {
-    border-bottom: 1px dashed #ddd;
+    border-bottom: 0.5px dashed color-mix(in srgb, var(--border) 60%, transparent);
+    font-family: 'Courier New', ui-monospace, monospace;
   }
-  .cor-linha:hover { background: #fafafa; }
+  .cor-linha:last-child { border-bottom: none; }
+  .cor-linha:hover { background: color-mix(in srgb, var(--bg-accent) 8%, transparent); }
   .cor-linha .cor-nome {
     font-weight: 700;
-    font-size: 16px;
+    font-size: 14px;
+    color: var(--text-primary);
     letter-spacing: 0.5px;
   }
   .cor-linha .qtd {
     text-align: center;
     font-variant-numeric: tabular-nums;
     font-weight: 600;
+    color: var(--text-primary);
+    font-size: 14px;
   }
-  .cor-linha .qtd.zero { color: #ccc; font-weight: 400; }
-  .cor-linha .total {
+  .cor-linha .qtd.zero { color: var(--text-muted); font-weight: 400; }
+  .cor-linha .total-linha {
     text-align: right;
     font-weight: 800;
-    color: #16a34a;
-    font-size: 16px;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .total-linha {
-    border-top: 2px solid #000;
-    border-bottom: none;
-    margin-top: 6px;
-    padding-top: 10px;
-    font-weight: 900;
-    font-size: 16px;
-    background: #ffeb99;
-    padding-left: 8px;
-    padding-right: 8px;
-    border-radius: 4px;
-  }
-  .total-linha .rot { text-align: left; font-size: 13px; }
-  .total-linha .qtd { text-align: center; font-variant-numeric: tabular-nums; }
-  .total-linha .total {
-    text-align: right;
-    color: #000;
-    font-size: 18px;
+    color: var(--success);
+    font-size: 15px;
     font-variant-numeric: tabular-nums;
   }
 
   .msg {
-    background: white;
-    color: #666;
+    background: var(--surface-1);
+    border: 0.5px dashed var(--border);
+    color: var(--text-muted);
     padding: 40px 20px;
     text-align: center;
-    border-radius: 8px;
-    font-size: 15px;
+    border-radius: 10px;
+    font-size: 14px;
   }
-  .msg.err { color: #c66; }
-
-  @media print {
-    @page { size: A4 portrait; margin: 12mm; }
-    body { background: white !important; }
-    .topbar, .controles { display: none !important; }
-    .wrap { padding: 0 !important; margin: 0 !important; max-width: none !important; }
-    .folha { padding: 0 !important; border-radius: 0; }
-  }
+  .msg.err { color: var(--text-danger); border-color: var(--text-danger); }
+  .msg .icone { font-size: 32px; margin-bottom: 8px; }
 
   @media (max-width: 640px) {
-    .grade-header, .cor-linha, .total-linha {
-      grid-template-columns: 1fr repeat(5, 42px) 70px;
+    .grade-header-cores, .cor-linha {
+      grid-template-columns: 1fr repeat(5, 38px) 60px;
       gap: 4px;
-      font-size: 13px;
     }
-    .cor-linha .cor-nome { font-size: 13px; }
-    .folha-header .ref-titulo b { font-size: 22px; }
+    .cor-linha .cor-nome, .cor-linha .qtd, .cor-linha .total-linha { font-size: 12px; }
+    .card-ref-header .ref-num { font-size: 16px; }
   }
 </style>
 </head>
@@ -213,21 +209,21 @@
 
   <div class="wrap">
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px">
-      <h1 style="margin:0">Consulta de Estoque</h1>
-      <span class="hint">Digite a referência e aperte Buscar (ou Enter)</span>
+      <h1 style="margin:0">Estoque</h1>
+      <span class="hint" id="info-topo">Digite uma referência pra consultar</span>
     </div>
 
-    <div class="controles">
-      <div class="campo">
-        <label>Referência</label>
-        <input list="refs-list" id="ref-input" placeholder="ex: 104" autocomplete="off">
+    <div class="barra-busca">
+      <div class="campo-busca">
+        <span class="lupa">🔎</span>
+        <input list="refs-list" id="ref-input" placeholder="digite a referência (ex: 104)" autocomplete="off">
       </div>
-      <button class="btn-buscar" id="btn-buscar">🔎 Buscar</button>
-      <button class="btn-imprimir" id="btn-imprimir" disabled>🖨️ Imprimir</button>
-      <span class="info" id="info">carregando refs...</span>
+      <button id="btn-buscar">Buscar</button>
+      <span class="info" id="info-bar">carregando refs...</span>
     </div>
 
     <div id="vazio" class="msg">
+      <div class="icone">📦</div>
       Digite uma referência acima pra ver o estoque dela.
     </div>
 
@@ -235,37 +231,7 @@
       Nenhum estoque encontrado pra essa REF.
     </div>
 
-    <div id="folha" class="folha" style="display:none">
-      <div class="folha-header">
-        <div class="empresa">BAMBAM BABY</div>
-        <div class="ref-titulo">REF <b id="lbl-ref">—</b></div>
-        <div class="data">Data: <span id="lbl-data">—</span></div>
-      </div>
-
-      <div class="grade-estoque">
-        <div class="grade-header">
-          <span class="rot">COR</span>
-          <span class="tam-h">RN</span>
-          <span class="tam-h">P</span>
-          <span class="tam-h">M</span>
-          <span class="tam-h">G</span>
-          <span class="tam-h">GG</span>
-          <span class="total-h">= TOTAL</span>
-        </div>
-
-        <div id="lista-cores"></div>
-
-        <div class="total-linha">
-          <span class="rot">TOTAL DA REF</span>
-          <span class="qtd" id="tot-rn">—</span>
-          <span class="qtd" id="tot-p">—</span>
-          <span class="qtd" id="tot-m">—</span>
-          <span class="qtd" id="tot-g">—</span>
-          <span class="qtd" id="tot-gg">—</span>
-          <span class="total" id="tot-geral">= 0</span>
-        </div>
-      </div>
-    </div>
+    <div id="resultado"></div>
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
