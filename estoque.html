@@ -6,158 +6,265 @@
 <title>BAMBAM · Estoque</title>
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/forms.css">
-<link rel="stylesheet" href="css/grade5.css">
 <style>
-  .busca-lote { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
-  .busca-lote input { padding:10px 12px; font-size:14px; font-weight:600; }
-
-  .chips-lotes {
-    display:flex; gap:6px; flex-wrap:wrap; padding:10px;
-    background:var(--surface-2); border:0.5px dashed var(--border);
-    border-radius:8px; min-height:46px; margin-bottom:12px;
+  .controles {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    padding: 12px 16px;
+    background: var(--surface-2);
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 12px;
   }
-  .chip-lote {
-    background:var(--surface-1); border:1px solid var(--warning);
-    border-radius:6px; padding:7px 12px; cursor:pointer;
-    font-size:13px; font-weight:700; color:var(--text-primary);
-    display:flex; align-items:center; gap:8px;
+  .controles .campo { display: flex; flex-direction: column; gap: 4px; }
+  .controles label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
   }
-  .chip-lote:hover { background:color-mix(in srgb,var(--warning) 15%,var(--surface-1)); }
-  .chip-lote .dot { width:8px; height:8px; border-radius:50%; background:var(--warning); flex-shrink:0; }
-  .chip-lote .meta { color:var(--text-secondary); font-weight:500; font-size:11px; }
-
-  .painel-estoque { background:var(--surface-1); border:1px solid var(--success); border-radius:10px; padding:14px; display:none; }
-  .painel-estoque.visivel { display:block; }
-
-  .cabec-estoque {
-    display:flex; gap:14px; align-items:center;
-    padding-bottom:12px; border-bottom:0.5px solid var(--border);
-    flex-wrap:wrap; margin-bottom:10px;
+  .controles input {
+    padding: 8px 12px;
+    font-size: 16px;
+    font-weight: 700;
+    text-transform: uppercase;
+    border-radius: 6px;
+    border: 0.5px solid var(--border);
+    background: var(--surface-1);
+    color: var(--text-primary);
+    min-height: 38px;
+    min-width: 160px;
+    font-family: 'Courier New', ui-monospace, monospace;
   }
-  .cabec-estoque .lote-destaque {
-    background:var(--success); color:white; padding:8px 16px;
-    border-radius:6px; font-weight:900; font-size:22px;
-    letter-spacing:1px; font-family:'Courier New',monospace;
+  .controles button {
+    padding: 8px 18px;
+    font-size: 13px;
+    font-weight: 700;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    min-height: 38px;
   }
-  .cabec-estoque .info { font-size:13px; color:var(--text-secondary); }
-  .cabec-estoque .info b { color:var(--text-primary); font-weight:700; }
+  .controles .btn-buscar { background: var(--bg-accent-strong); color: white; }
+  .controles .btn-imprimir {
+    background: none;
+    border: 0.5px solid var(--border);
+    color: var(--text-primary);
+  }
+  .controles button:hover { filter: brightness(1.15); }
+  .controles .info {
+    margin-left: auto;
+    color: var(--text-muted);
+    font-size: 12px;
+    align-self: center;
+  }
 
-  .config-data { display:flex; gap:14px; align-items:flex-end; margin-bottom:10px; padding:10px 12px; background:var(--surface-2); border-radius:6px; }
+  /* Folha branca — visual de impressão / consulta limpa */
+  .folha {
+    background: white;
+    color: black;
+    padding: 24px 28px;
+    border-radius: 8px;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  .folha-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid black;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .folha-header .empresa {
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: 1px;
+  }
+  .folha-header .ref-titulo {
+    font-size: 20px;
+    font-weight: 800;
+    font-family: 'Courier New', ui-monospace, monospace;
+  }
+  .folha-header .ref-titulo b { color: #000; font-size: 26px; }
+  .folha-header .data { font-size: 13px; font-weight: 700; }
 
-  .acoes-estoque { display:flex; justify-content:space-between; margin-top:12px; gap:8px; }
+  .grade-estoque {
+    font-family: 'Courier New', ui-monospace, monospace;
+    font-size: 15px;
+    color: black;
+  }
+  .grade-header, .cor-linha, .total-linha {
+    display: grid;
+    grid-template-columns: 1fr repeat(5, 60px) 90px;
+    gap: 8px;
+    padding: 6px 0;
+    align-items: center;
+  }
+  .grade-header {
+    border-bottom: 1px solid #333;
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    color: #666;
+  }
+  .grade-header .rot { text-align: left; }
+  .grade-header .tam-h { text-align: center; }
+  .grade-header .total-h { text-align: right; }
 
-  .estado-vazio { padding:40px 20px; text-align:center; color:var(--text-muted); background:var(--surface-1); border:0.5px dashed var(--border); border-radius:10px; }
-  .estado-vazio .icone { font-size:32px; margin-bottom:8px; }
+  .cor-linha {
+    border-bottom: 1px dashed #ddd;
+  }
+  .cor-linha:hover { background: #fafafa; }
+  .cor-linha .cor-nome {
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: 0.5px;
+  }
+  .cor-linha .qtd {
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+  .cor-linha .qtd.zero { color: #ccc; font-weight: 400; }
+  .cor-linha .total {
+    text-align: right;
+    font-weight: 800;
+    color: #16a34a;
+    font-size: 16px;
+    font-variant-numeric: tabular-nums;
+  }
 
-  .bloco-consulta { background:var(--surface-1); border:0.5px solid var(--border); border-radius:8px; padding:14px; margin-top:14px; }
-  .bloco-consulta .rot { font-size:11px; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; font-weight:700; margin-bottom:10px; }
-  .estoque-item { display:grid; grid-template-columns:auto auto auto 1fr auto; gap:10px; padding:8px 12px; border-bottom:0.5px dashed var(--border); font-size:13px; align-items:center; }
-  .estoque-item:last-child { border-bottom:none; }
-  .estoque-item .ref-est { font-weight:800; color:var(--text-primary); font-size:14px; }
-  .estoque-item .cor-est { color:var(--text-secondary); }
-  .estoque-item .tam-est { background:var(--surface-2); padding:2px 8px; border-radius:4px; font-weight:700; font-size:11px; }
-  .estoque-item .qtd-est { font-weight:800; color:var(--success); font-size:16px; text-align:right; }
+  .total-linha {
+    border-top: 2px solid #000;
+    border-bottom: none;
+    margin-top: 6px;
+    padding-top: 10px;
+    font-weight: 900;
+    font-size: 16px;
+    background: #ffeb99;
+    padding-left: 8px;
+    padding-right: 8px;
+    border-radius: 4px;
+  }
+  .total-linha .rot { text-align: left; font-size: 13px; }
+  .total-linha .qtd { text-align: center; font-variant-numeric: tabular-nums; }
+  .total-linha .total {
+    text-align: right;
+    color: #000;
+    font-size: 18px;
+    font-variant-numeric: tabular-nums;
+  }
 
-  .cores-ref { padding:4px 6px; font-size:10px; color:var(--text-muted); border-top:0.5px dashed var(--border); margin-top:4px; }
+  .msg {
+    background: white;
+    color: #666;
+    padding: 40px 20px;
+    text-align: center;
+    border-radius: 8px;
+    font-size: 15px;
+  }
+  .msg.err { color: #c66; }
+
+  @media print {
+    @page { size: A4 portrait; margin: 12mm; }
+    body { background: white !important; }
+    .topbar, .controles { display: none !important; }
+    .wrap { padding: 0 !important; margin: 0 !important; max-width: none !important; }
+    .folha { padding: 0 !important; border-radius: 0; }
+  }
+
+  @media (max-width: 640px) {
+    .grade-header, .cor-linha, .total-linha {
+      grid-template-columns: 1fr repeat(5, 42px) 70px;
+      gap: 4px;
+      font-size: 13px;
+    }
+    .cor-linha .cor-nome { font-size: 13px; }
+    .folha-header .ref-titulo b { font-size: 22px; }
+  }
 </style>
 </head>
 <body>
   <div class="topbar">
     <span class="logo">BAMBAM <b>BABY</b></span>
     <nav class="nav">
-          <a href="index.html">Painel</a>
-          <a href="novo-corte.html">Novo corte</a>
-          <a href="designacao.html">Designação</a>
-          <a href="retorno.html">Retorno</a>
-          <a href="pagamento.html">Pagamento</a>
-          <a href="arremate.html">Arremate</a>
-          <a href="estoque-entrada.html" class="ativo">Estoque</a>
-          <a href="cadastros.html">Cadastros</a>
-          <a href="relatorios.html">Relatórios</a>
-        </nav>
+      <a href="index.html">Painel</a>
+      <a href="novo-corte.html">Novo corte</a>
+      <a href="designacao.html">Designação</a>
+      <a href="retorno.html">Retorno</a>
+      <a href="pagamento.html">Pagamento</a>
+      <a href="arremate.html">Arremate</a>
+      <a href="estoque.html" class="ativo">Estoque</a>
+      <a href="cadastros.html">Cadastros</a>
+      <a href="relatorios.html">Relatórios</a>
+    </nav>
     <div class="user">
       <span id="user-email">—</span>
       <button class="logout" onclick="logout()">sair</button>
     </div>
   </div>
 
-  <datalist id="lotes-list"></datalist>
   <datalist id="refs-list"></datalist>
 
   <div class="wrap">
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px">
-      <h1 style="margin:0">Estoque</h1>
-      <span class="hint">Confirma a entrada das peças que chegaram do retorno</span>
+      <h1 style="margin:0">Consulta de Estoque</h1>
+      <span class="hint">Digite a referência e aperte Buscar (ou Enter)</span>
     </div>
 
-    <div class="busca-lote">
-      <div><label class="lbl">Lote</label><input list="lotes-list" id="filtro-lote" placeholder="ex: 2041A"></div>
-      <div><label class="lbl">Referência</label><input list="refs-list" id="filtro-ref" placeholder="ex: 205"></div>
-    </div>
-
-    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;padding:0 4px">
-      <div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;font-weight:700">
-        Notas com retorno
-        <span id="contador-chips" style="color:var(--text-muted);font-weight:500;margin-left:4px">(0)</span>
+    <div class="controles">
+      <div class="campo">
+        <label>Referência</label>
+        <input list="refs-list" id="ref-input" placeholder="ex: 104" autocomplete="off">
       </div>
-      <div style="font-size:11px;color:var(--text-muted)">● laranja = só 1ª chegada · ● verde = 1ª+2ª chegada</div>
-    </div>
-    <div class="chips-lotes" id="chips-lotes">
-      <span style="color:var(--text-muted);font-size:12px">carregando...</span>
+      <button class="btn-buscar" id="btn-buscar">🔎 Buscar</button>
+      <button class="btn-imprimir" id="btn-imprimir" disabled>🖨️ Imprimir</button>
+      <span class="info" id="info">carregando refs...</span>
     </div>
 
-    <div class="painel-estoque" id="painel-estoque">
-      <div class="cabec-estoque">
-        <span class="lote-destaque"><span id="p-lote">—</span>/<span id="p-ref">—</span></span>
-        <span class="info">
-          Nota <b id="p-num">#—</b> · <b id="p-cost">—</b> ·
-          <b id="p-chegou" style="color:var(--success)">0</b> peças chegaram (<span id="p-chegada-tipo">—</span>)
-        </span>
-      </div>
+    <div id="vazio" class="msg">
+      Digite uma referência acima pra ver o estoque dela.
+    </div>
 
-      <div class="config-data">
-        <div>
-          <label class="lbl">Data entrada estoque</label>
-          <input type="date" id="p-data" class="data-in">
-        </div>
-        <div style="font-size:11px;color:var(--text-muted);font-style:italic;line-height:1.6">
-          As quantidades abaixo são o total que chegou<br>
-          (1ª + 2ª chegada combinadas)
-        </div>
+    <div id="nao-encontrado" class="msg err" style="display:none">
+      Nenhum estoque encontrado pra essa REF.
+    </div>
+
+    <div id="folha" class="folha" style="display:none">
+      <div class="folha-header">
+        <div class="empresa">BAMBAM BABY</div>
+        <div class="ref-titulo">REF <b id="lbl-ref">—</b></div>
+        <div class="data">Data: <span id="lbl-data">—</span></div>
       </div>
 
-      <div class="grade5" id="grade"></div>
-
-      <div class="rodape-tot">
-        <div class="col-totais" id="col-totais">
-          <span class="ct" data-ct="RN">RN <b>0</b></span>
-          <span class="ct" data-ct="P">P <b>0</b></span>
-          <span class="ct" data-ct="M">M <b>0</b></span>
-          <span class="ct" data-ct="G">G <b>0</b></span>
-          <span class="ct" data-ct="GG">GG <b>0</b></span>
+      <div class="grade-estoque">
+        <div class="grade-header">
+          <span class="rot">COR</span>
+          <span class="tam-h">RN</span>
+          <span class="tam-h">P</span>
+          <span class="tam-h">M</span>
+          <span class="tam-h">G</span>
+          <span class="tam-h">GG</span>
+          <span class="total-h">= TOTAL</span>
         </div>
-        <div class="total-geral">
-          <div>Entrando no estoque: <b id="lbl-entrando">0</b> peças</div>
+
+        <div id="lista-cores"></div>
+
+        <div class="total-linha">
+          <span class="rot">TOTAL DA REF</span>
+          <span class="qtd" id="tot-rn">—</span>
+          <span class="qtd" id="tot-p">—</span>
+          <span class="qtd" id="tot-m">—</span>
+          <span class="qtd" id="tot-g">—</span>
+          <span class="qtd" id="tot-gg">—</span>
+          <span class="total" id="tot-geral">= 0</span>
         </div>
       </div>
-
-      <div class="acoes-estoque">
-        <button class="btn btn-secondary" id="btn-fechar">← Fechar</button>
-        <button class="btn btn-primary" id="btn-confirmar" style="background:var(--success);border-color:var(--success)">
-          ✓ Confirmar entrada no estoque
-        </button>
-      </div>
-    </div>
-
-    <div class="estado-vazio" id="estado-vazio" style="display:none">
-      <div class="icone">📦</div>
-      <div><b>Nenhuma nota com retorno ainda</b></div>
-      <div style="font-size:12px;margin-top:4px">Quando a costureira devolver peças no Retorno, elas aparecem aqui pra você confirmar a entrada no estoque.</div>
-    </div>
-
-    <div class="bloco-consulta" id="bloco-consulta" style="display:none">
-      <div class="rot">Estoque atual <span id="est-contagem" style="color:var(--text-muted);font-weight:500"></span></div>
-      <div id="est-lista"></div>
     </div>
   </div>
 
