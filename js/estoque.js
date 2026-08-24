@@ -76,11 +76,32 @@ function buscar() {
     String(i.ref || '').toUpperCase() === ref
   );
 
+  // === DIAGNÓSTICO 24/08/2026 ===
+  console.group(`[estoque] Buscando REF ${ref}`);
+  console.log(`Encontradas ${itens.length} entradas pra REF ${ref}`);
+  if (itens.length > 0) {
+    console.log('Primeiras 3 entradas (pra ver formato):');
+    itens.slice(0, 3).forEach((it, idx) => {
+      console.log(`  [${idx}]`, JSON.stringify(it));
+    });
+  } else {
+    console.warn(`NENHUMA entrada pra REF ${ref}!`);
+    console.log(`Total geral no estoque: ${TODO_ESTOQUE.length} docs`);
+    console.log(`REFs existentes no estoque (${REFS_DISPONIVEIS.size}):`,
+      [...REFS_DISPONIVEIS].sort().join(', '));
+    if (TODO_ESTOQUE.length > 0) {
+      console.log('Formato de um doc qualquer pra referência:');
+      console.log(JSON.stringify(TODO_ESTOQUE[0], null, 2));
+    }
+  }
+  console.groupEnd();
+
   if (itens.length === 0) {
     vazio.style.display = 'none';
     folha.style.display = 'none';
     naoEnc.style.display = 'block';
-    naoEnc.textContent = `Nenhum estoque encontrado pra REF ${ref}.`;
+    naoEnc.innerHTML = `Nenhum estoque encontrado pra REF <b>${escHtml(ref)}</b>.<br><br>
+      <span style="font-size:12px;color:#999">Abre F12 → Console pra ver diagnóstico detalhado.</span>`;
     btnImp.disabled = true;
     document.getElementById('info').textContent = `REF ${ref} sem estoque`;
     return;
