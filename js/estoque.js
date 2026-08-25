@@ -169,21 +169,12 @@ function render(ref, porCor) {
       <div class="grade-cores">
         <div class="grade-header-cores">
           <span class="h-cor">COR</span>
-          <span class="h-tam">RN</span>
-          <span class="h-tam">P</span>
-          <span class="h-tam">M</span>
-          <span class="h-tam">G</span>
-          <span class="h-tam">GG</span>
-          <span class="h-tot">= TOTAL</span>
-        </div>
-        <div class="totais-header-linha">
-          <span class="h-cor-rot">totais</span>
-          <span class="tot-tam${totais.RN === 0 ? ' zero' : ''}">${totais.RN || '—'}</span>
-          <span class="tot-tam${totais.P  === 0 ? ' zero' : ''}">${totais.P  || '—'}</span>
-          <span class="tot-tam${totais.M  === 0 ? ' zero' : ''}">${totais.M  || '—'}</span>
-          <span class="tot-tam${totais.G  === 0 ? ' zero' : ''}">${totais.G  || '—'}</span>
-          <span class="tot-tam${totais.GG === 0 ? ' zero' : ''}">${totais.GG || '—'}</span>
-          <span class="tot-geral">= ${totalGeral}</span>
+          <span class="h-tam"><span class="tam-rot">RN</span> <b>${totais.RN || 0}</b></span>
+          <span class="h-tam"><span class="tam-rot">P</span> <b>${totais.P  || 0}</b></span>
+          <span class="h-tam"><span class="tam-rot">M</span> <b>${totais.M  || 0}</b></span>
+          <span class="h-tam"><span class="tam-rot">G</span> <b>${totais.G  || 0}</b></span>
+          <span class="h-tam"><span class="tam-rot">GG</span> <b>${totais.GG || 0}</b></span>
+          <span class="h-tot">= <b>${totalGeral}</b></span>
         </div>
         ${linhasHtml}
       </div>
