@@ -35,347 +35,76 @@
     font-size: 15px;
     letter-spacing: 0.5px;
   }
-
-  /* Painel de notas já geradas do corte */
-  .notas-existentes {
-    background: var(--surface-2);
-    border: 0.5px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 14px;
-    margin-top: 8px;
-  }
-  .notas-titulo {
-    font-size: 11px;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    font-weight: 700;
-    margin-bottom: 6px;
-  }
-  .notas-titulo span {
-    color: var(--text-muted);
-    font-weight: 500;
-    margin-left: 4px;
-  }
-  .notas-lista {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-  .nota-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 7px 10px;
-    background: var(--surface-1);
-    border: 0.5px solid var(--border);
-    border-radius: 5px;
-    font-size: 12px;
-  }
-  .nota-item .num {
-    font-weight: 800;
-    color: var(--text-accent);
-    font-size: 13px;
-    min-width: 55px;
-  }
-  .nota-item .cost {
-    font-weight: 700;
-    color: var(--text-primary);
-    min-width: 100px;
-  }
-  .nota-item .detalhes {
-    flex: 1;
-    color: var(--text-secondary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .nota-item .valor {
-    font-weight: 700;
-    color: var(--success);
-    min-width: 85px;
-    text-align: right;
-  }
-  .nota-item .acoes {
-    display: flex;
-    gap: 4px;
-  }
-  .nota-item .btn-mini {
-    padding: 4px 9px;
-    border-radius: 4px;
-    font-size: 10px;
-    font-weight: 700;
-    cursor: pointer;
-    border: 0.5px solid var(--border);
-    background: none;
-    color: var(--text-secondary);
-    letter-spacing: 0.3px;
-  }
+  .notas-existentes { background: var(--surface-2); border: 0.5px solid var(--border); border-radius: 8px; padding: 10px 14px; margin-top: 8px; }
+  .notas-titulo { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; margin-bottom: 6px; }
+  .notas-titulo span { color: var(--text-muted); font-weight: 500; margin-left: 4px; }
+  .notas-lista { display: flex; flex-direction: column; gap: 4px; }
+  .nota-item { display: flex; align-items: center; gap: 10px; padding: 7px 10px; background: var(--surface-1); border: 0.5px solid var(--border); border-radius: 5px; font-size: 12px; }
+  .nota-item .num { font-weight: 800; color: var(--text-accent); font-size: 13px; min-width: 55px; }
+  .nota-item .cost { font-weight: 700; color: var(--text-primary); min-width: 100px; }
+  .nota-item .detalhes { flex: 1; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nota-item .valor { font-weight: 700; color: var(--success); min-width: 85px; text-align: right; }
+  .nota-item .acoes { display: flex; gap: 4px; }
+  .nota-item .btn-mini { padding: 4px 9px; border-radius: 4px; font-size: 10px; font-weight: 700; cursor: pointer; border: 0.5px solid var(--border); background: none; color: var(--text-secondary); letter-spacing: 0.3px; }
   .nota-item .btn-mini:hover { color: var(--text-primary); border-color: var(--border-accent); }
   .nota-item .btn-mini.danger:hover { color: var(--text-danger); border-color: var(--text-danger); }
-
-  /* Estado da linha na designação: checkbox + cor + qtd editável */
-  .cor-linha .chk {
-    width: 14px;
-    height: 14px;
-    accent-color: var(--bg-accent-strong);
-    cursor: pointer;
-    flex-shrink: 0;
-  }
-  .cor-linha .qmax {
-    font-size: 10px;
-    color: var(--text-muted);
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-  }
-  .cor-linha.desmarcada .cor,
-  .cor-linha.desmarcada .qmax,
-  .cor-linha.desmarcada .q { opacity: 0.35; }
-  .cor-linha.parcial {
-    border-color: var(--text-accent);
-    border-style: dashed;
-  }
+  .cor-linha .chk { width: 14px; height: 14px; accent-color: var(--bg-accent-strong); cursor: pointer; flex-shrink: 0; }
+  .cor-linha .qmax { font-size: 10px; color: var(--text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .cor-linha.desmarcada .cor, .cor-linha.desmarcada .qmax, .cor-linha.desmarcada .q { opacity: 0.35; }
+  .cor-linha.parcial { border-color: var(--text-accent); border-style: dashed; }
   .cor-linha.parcial .q { color: var(--text-accent); }
-
   .subtot-col .cell.saiu b { color: var(--text-accent); }
   .subtot-col .cell.sobrou b { color: var(--warning); }
-
-  /* Bloco de escolha da costureira + preço */
-  .bloco-nota {
-    background: var(--surface-2);
-    border: 0.5px solid var(--border);
-    border-radius: 10px;
-    padding: 14px 18px;
-    margin-top: 12px;
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr auto;
-    gap: 14px;
-    align-items: flex-end;
-  }
+  .bloco-nota { background: var(--surface-2); border: 0.5px solid var(--border); border-radius: 10px; padding: 14px 18px; margin-top: 12px; display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 14px; align-items: flex-end; }
   .bloco-nota .costureira-field { position: relative; }
-  .bloco-nota input {
-    width: 100%;
-    padding: 9px 12px;
-    font-size: 14px;
-    font-weight: 600;
-  }
-  .bloco-nota .valor-total {
-    text-align: right;
-    padding-right: 8px;
-  }
+  .bloco-nota input { width: 100%; padding: 9px 12px; font-size: 14px; font-weight: 600; }
+  .bloco-nota .valor-total { text-align: right; padding-right: 8px; }
   .bloco-nota .valor-total .lbl { text-align: right; }
-  .bloco-nota .valor-total .v {
-    font-size: 22px;
-    font-weight: 800;
-    color: var(--success);
-    font-variant-numeric: tabular-nums;
-    line-height: 1;
-  }
-  .bloco-nota .aviso-preco {
-    grid-column: 1 / -1;
-    font-size: 11px;
-    color: var(--warning);
-    font-style: italic;
-    margin-top: -6px;
-    display: none;
-  }
+  .bloco-nota .valor-total .v { font-size: 22px; font-weight: 800; color: var(--success); font-variant-numeric: tabular-nums; line-height: 1; }
+  .bloco-nota .aviso-preco { grid-column: 1 / -1; font-size: 11px; color: var(--warning); font-style: italic; margin-top: -6px; display: none; }
   .bloco-nota.sem-preco .aviso-preco { display: block; }
-
-  .acoes {
-    display: flex;
-    gap: 8px;
-    justify-content: flex-end;
-    margin-top: 12px;
-  }
-
-  /* Tela inicial quando não tem corte selecionado */
-  .selecao-corte {
-    background: var(--surface-1);
-    border: 0.5px solid var(--border);
-    border-radius: 10px;
-    padding: 20px;
-    margin-top: 12px;
-  }
+  .acoes { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+  .selecao-corte { background: var(--surface-1); border: 0.5px solid var(--border); border-radius: 10px; padding: 20px; margin-top: 12px; }
   .selecao-corte h3 { margin-bottom: 10px; }
-  .lista-cortes {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    max-height: 500px;
-    overflow-y: auto;
-  }
-  .item-corte {
-    background: var(--surface-2);
-    border: 0.5px solid var(--border);
-    border-radius: 6px;
-    padding: 10px 14px;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 12px;
-    cursor: pointer;
-    font-size: 13px;
-  }
+  .lista-cortes { display: flex; flex-direction: column; gap: 6px; max-height: 500px; overflow-y: auto; }
+  .item-corte { background: var(--surface-2); border: 0.5px solid var(--border); border-radius: 6px; padding: 10px 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; cursor: pointer; font-size: 13px; }
   .item-corte > .lote { font-weight: 800; color: var(--text-primary); font-size: 15px; letter-spacing: 0.3px; min-width: 50px; }
   .item-corte > .ref { color: var(--text-secondary); font-weight: 600; min-width: 45px; }
   .item-corte > .info { color: var(--text-muted); font-size: 12px; min-width: 85px; }
   .item-corte > .pecas { font-weight: 700; color: var(--text-primary); min-width: 75px; }
-  .item-corte > .status {
-    padding: 3px 9px;
-    border-radius: 999px;
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  .item-corte > .detalhe-linha {
-    flex: 1;
-    text-align: right;
-    font-size: 11px;
-    color: var(--text-secondary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    min-width: 200px;
-    padding-left: 8px;
-    border-left: 0.5px dashed var(--border);
-  }
+  .item-corte > .status { padding: 3px 9px; border-radius: 999px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+  .item-corte > .detalhe-linha { flex: 1; text-align: right; font-size: 11px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 200px; padding-left: 8px; border-left: 0.5px dashed var(--border); }
   .item-corte > .detalhe-linha b { color: var(--text-primary); font-weight: 700; }
-  .item-corte:hover {
-    border-color: var(--border-accent);
-    background: color-mix(in srgb, var(--bg-accent) 30%, var(--surface-2));
-  }
+  .item-corte:hover { border-color: var(--border-accent); background: color-mix(in srgb, var(--bg-accent) 30%, var(--surface-2)); }
   .item-corte .status.cortado { background: color-mix(in srgb, var(--text-accent) 20%, transparent); color: var(--text-accent); }
   .item-corte .status.parcial { background: color-mix(in srgb, var(--warning) 20%, transparent); color: var(--warning); }
   .item-corte .status.total { background: color-mix(in srgb, var(--success) 20%, transparent); color: var(--success); }
-  .btn-excluir-corte {
-    padding: 3px 8px; background: none;
-    border: 0.5px solid var(--border); border-radius: 4px;
-    color: var(--text-muted); cursor: pointer;
-    font-size: 11px; font-weight: 700;
-  }
+  .btn-excluir-corte { padding: 3px 8px; background: none; border: 0.5px solid var(--border); border-radius: 4px; color: var(--text-muted); cursor: pointer; font-size: 11px; font-weight: 700; }
   .btn-excluir-corte:hover { color: var(--text-danger); border-color: var(--text-danger); }
-  .item-corte .status.parcial { background: color-mix(in srgb, var(--warning) 20%, transparent); color: var(--warning); }
-  .item-corte .status.total { background: color-mix(in srgb, var(--success) 20%, transparent); color: var(--success); }
-
-  /* Modal da nota gerada — aparece depois de designar */
-  .modal-nota {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.85);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    padding: 20px;
-  }
+  .modal-nota { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
   .modal-nota.visivel { display: flex; }
-  .modal-nota .caixa {
-    background: white;
-    color: #000;
-    border-radius: 10px;
-    padding: 18px 22px;
-    max-width: 620px;
-    width: 100%;
-    max-height: 92vh;
-    overflow-y: auto;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
-    font-family: 'Courier New', ui-monospace, monospace;
-  }
-  .modal-nota .num-nota {
-    font-size: 12px;
-    font-weight: 700;
-    color: #444;
-    text-align: right;
-    margin-bottom: 6px;
-  }
-  .modal-nota table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 11px;
-  }
-  .modal-nota table td,
-  .modal-nota table th {
-    border: 1px solid #000;
-    padding: 4px 6px;
-    text-align: center;
-    vertical-align: middle;
-  }
-  .modal-nota table th {
-    font-weight: 700;
-    font-size: 10px;
-    letter-spacing: 0.5px;
-    background: white;
-  }
+  .modal-nota .caixa { background: white; color: #000; border-radius: 10px; padding: 18px 22px; max-width: 620px; width: 100%; max-height: 92vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.6); font-family: 'Courier New', ui-monospace, monospace; }
+  .modal-nota .num-nota { font-size: 12px; font-weight: 700; color: #444; text-align: right; margin-bottom: 6px; }
+  .modal-nota table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .modal-nota table td, .modal-nota table th { border: 1px solid #000; padding: 4px 6px; text-align: center; vertical-align: middle; }
+  .modal-nota table th { font-weight: 700; font-size: 10px; letter-spacing: 0.5px; background: white; }
   .modal-nota table .tam-cel { font-weight: 700; font-size: 12px; }
   .modal-nota table .esq { text-align: left; }
-  .modal-nota table .cores-linha {
-    text-align: left;
-    padding: 5px 6px;
-    font-size: 11px;
-    font-weight: 600;
-  }
-  .modal-nota table .rot-chegada {
-    text-align: left;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    font-size: 11px;
-    padding: 4px 6px;
-  }
-  .modal-nota table .row-vazio td {
-    height: 28px;
-  }
-  .modal-nota table .destaque {
-    font-weight: 700;
-    font-size: 13px;
-  }
-  .modal-nota .botoes {
-    display: flex;
-    gap: 10px;
-    justify-content: flex-end;
-    margin-top: 14px;
-    padding-top: 10px;
-    border-top: 1px solid #ddd;
-  }
-  .modal-nota .btn-imp,
-  .modal-nota .btn-cont {
-    padding: 9px 20px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 700;
-    font-size: 13px;
-  }
-  .modal-nota .btn-imp {
-    background: #000;
-    color: white;
-  }
+  .modal-nota table .cores-linha { text-align: left; padding: 5px 6px; font-size: 11px; font-weight: 600; }
+  .modal-nota table .rot-chegada { text-align: left; font-weight: 700; letter-spacing: 0.5px; font-size: 11px; padding: 4px 6px; }
+  .modal-nota table .row-vazio td { height: 28px; }
+  .modal-nota table .destaque { font-weight: 700; font-size: 13px; }
+  .modal-nota .botoes { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; padding-top: 10px; border-top: 1px solid #ddd; }
+  .modal-nota .btn-imp, .modal-nota .btn-cont { padding: 9px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 13px; }
+  .modal-nota .btn-imp { background: #000; color: white; }
   .modal-nota .btn-imp:hover { background: #333; }
-  .modal-nota .btn-cont {
-    background: var(--bg-accent-strong);
-    color: white;
-  }
+  .modal-nota .btn-cont { background: var(--bg-accent-strong); color: white; }
   .modal-nota .btn-cont:hover { opacity: 0.9; }
-
-  /* Impressão: compacta, sem cores fortes, várias notas por página */
   @media print {
     body * { visibility: hidden; }
     .modal-nota, .modal-nota * { visibility: visible; }
-    .modal-nota {
-      position: absolute;
-      background: white;
-      padding: 0;
-      display: block !important;
-      top: 0; left: 0; right: 0;
-    }
-    .modal-nota .caixa {
-      box-shadow: none;
-      padding: 6mm 8mm;
-      max-height: none;
-      overflow: visible;
-      max-width: 100%;
-      page-break-inside: avoid;
-    }
+    .modal-nota { position: absolute; background: white; padding: 0; display: block !important; top: 0; left: 0; right: 0; }
+    .modal-nota .caixa { box-shadow: none; padding: 6mm 8mm; max-height: none; overflow: visible; max-width: 100%; page-break-inside: avoid; }
     .modal-nota .botoes { display: none !important; }
     @page { margin: 8mm; }
   }
@@ -409,7 +138,6 @@
       <span class="hint" id="hint-tela">Escolha um corte pra designar</span>
     </div>
 
-    <!-- Tela 1: Seleção do corte (aparece se não veio da URL) -->
     <div id="tela-selecao" class="selecao-corte" style="display:none">
       <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px">
         <h3 style="margin:0;flex:1">Cortes pendentes de designação</h3>
@@ -421,21 +149,16 @@
       </div>
     </div>
 
-    <!-- Tela 2: Designar (aparece quando corte selecionado) -->
     <div id="tela-designar" style="display:none">
       <div class="info-corte" id="info-corte">
         <span class="num-nota" id="num-nota">Nota #—</span>
         <span id="info-txt">—</span>
       </div>
-
-      <!-- Notas já geradas deste corte -->
       <div class="notas-existentes" id="notas-existentes" style="display:none">
         <div class="notas-titulo">Notas já geradas <span id="notas-contador"></span></div>
         <div class="notas-lista" id="notas-lista"></div>
       </div>
-
       <div class="grade5" id="grade" style="margin-top:10px"></div>
-
       <div class="rodape-tot">
         <div class="col-totais" id="col-totais">
           <span class="ct" data-ct="RN">RN <b>0</b></span>
@@ -448,7 +171,6 @@
           <div>Designando <b id="lbl-designando">0</b> peças <small id="lbl-sobra"></small></div>
         </div>
       </div>
-
       <div class="bloco-nota" id="bloco-nota">
         <div>
           <label class="lbl">Costureira</label>
@@ -470,7 +192,6 @@
         </div>
         <div class="aviso-preco">⚠ Essa costureira não tem preço cadastrado pra essa ref. Digite o preço acima.</div>
       </div>
-
       <div class="acoes">
         <button class="btn btn-secondary" id="btn-voltar">← Voltar</button>
         <button class="btn btn-primary" id="btn-gerar">✓ Gerar nota e designar</button>
@@ -478,17 +199,15 @@
     </div>
   </div>
 
-  <!-- Modal da nota gerada (aparece depois de designar) -->
   <div class="modal-nota" id="modal-nota">
-    <div class="caixa" id="caixa-nota">
-      <!-- montado dinamicamente -->
-    </div>
+    <div class="caixa" id="caixa-nota"></div>
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="js/firebase-config.js"></script>
+  <script src="js/acesso.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/db.js"></script>
