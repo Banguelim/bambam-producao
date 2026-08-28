@@ -7,213 +7,47 @@
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/forms.css">
 <style>
-  /* Abas */
-  .abas {
-    display: flex;
-    gap: 2px;
-    margin-bottom: 14px;
-    border-bottom: 0.5px solid var(--border);
-  }
-  .abas button {
-    padding: 10px 18px;
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -0.5px;
-  }
+  .abas { display: flex; gap: 2px; margin-bottom: 14px; border-bottom: 0.5px solid var(--border); }
+  .abas button { padding: 10px 18px; background: none; border: none; color: var(--text-secondary); font-size: 13px; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -0.5px; }
   .abas button:hover { color: var(--text-primary); }
   .abas button.ativa { color: var(--text-accent); border-bottom-color: var(--text-accent); }
-
   .painel { display: none; }
   .painel.ativo { display: block; }
-
-  /* Filtros e controles (some na impressão) */
-  .controles {
-    background: var(--surface-2);
-    border: 0.5px solid var(--border);
-    border-radius: 8px;
-    padding: 12px 16px;
-    margin-bottom: 14px;
-    display: flex;
-    gap: 12px;
-    align-items: flex-end;
-    flex-wrap: wrap;
-  }
+  .controles { background: var(--surface-2); border: 0.5px solid var(--border); border-radius: 8px; padding: 12px 16px; margin-bottom: 14px; display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
   .controles .campo { display: flex; flex-direction: column; gap: 4px; }
-  .controles label {
-    font-size: 11px;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    font-weight: 700;
-  }
-  .controles input, .controles select {
-    padding: 8px 12px;
-    font-size: 13px;
-    border-radius: 6px;
-    border: 0.5px solid var(--border);
-    background: var(--surface-1);
-    color: var(--text-primary);
-    min-height: 34px;
-  }
-  .controles .btn-buscar {
-    padding: 8px 18px;
-    font-size: 13px;
-    font-weight: 700;
-    background: var(--bg-accent-strong);
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-  }
+  .controles label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; }
+  .controles input, .controles select { padding: 8px 12px; font-size: 13px; border-radius: 6px; border: 0.5px solid var(--border); background: var(--surface-1); color: var(--text-primary); min-height: 34px; }
+  .controles .btn-buscar { padding: 8px 18px; font-size: 13px; font-weight: 700; background: var(--bg-accent-strong); color: white; border: none; border-radius: 6px; cursor: pointer; }
   .controles .btn-buscar:hover { opacity: 0.9; }
-  .controles .btn-imprimir {
-    padding: 8px 18px;
-    font-size: 13px;
-    font-weight: 700;
-    background: none;
-    border: 0.5px solid var(--border);
-    color: var(--text-primary);
-    border-radius: 6px;
-    cursor: pointer;
-  }
+  .controles .btn-imprimir { padding: 8px 18px; font-size: 13px; font-weight: 700; background: none; border: 0.5px solid var(--border); color: var(--text-primary); border-radius: 6px; cursor: pointer; }
   .controles .btn-imprimir:hover { border-color: var(--border-accent); background: var(--surface-1); }
-  .controles .info {
-    margin-left: auto;
-    color: var(--text-muted);
-    font-size: 12px;
-    align-self: center;
-  }
-
-  /* Folha branca — mesmo visual da folha de conferência */
-  .folha {
-    background: white;
-    color: black;
-    padding: 20px 24px;
-    border-radius: 8px;
-    font-family: Arial, Helvetica, sans-serif;
-  }
-  .folha-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 14px;
-    padding-bottom: 10px;
-    border-bottom: 2px solid black;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
+  .controles .info { margin-left: auto; color: var(--text-muted); font-size: 12px; align-self: center; }
+  .folha { background: white; color: black; padding: 20px 24px; border-radius: 8px; font-family: Arial, Helvetica, sans-serif; }
+  .folha-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 2px solid black; gap: 12px; flex-wrap: wrap; }
   .folha-header .empresa { font-size: 22px; font-weight: 900; letter-spacing: 1px; }
   .folha-header .titulo { font-size: 15px; font-weight: 700; }
   .folha-header .data { font-size: 14px; font-weight: 700; }
-
-  .folha-tabela {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 12px;
-    color: black;
-  }
-  .folha-tabela th, .folha-tabela td {
-    border: 1px solid #333;
-    padding: 5px 4px;
-    text-align: center;
-    vertical-align: middle;
-  }
-  .folha-tabela thead th {
-    background: #e5e5e5;
-    font-weight: 700;
-    font-size: 11px;
-    text-transform: uppercase;
-  }
-  .folha-tabela thead tr:nth-child(2) th {
-    font-size: 10px;
-    background: #f0f0f0;
-    font-weight: 600;
-  }
-  .folha-tabela td.ref {
-    font-family: 'Courier New', monospace;
-    font-weight: 900;
-    font-size: 13px;
-    background: #fafafa;
-  }
-  .folha-tabela td.lote {
-    font-family: 'Courier New', monospace;
-    font-weight: 700;
-    font-size: 12px;
-  }
-  .folha-tabela td.nome {
-    font-weight: 700;
-    text-align: left;
-    padding-left: 6px;
-  }
+  .folha-tabela { width: 100%; border-collapse: collapse; font-size: 12px; color: black; }
+  .folha-tabela th, .folha-tabela td { border: 1px solid #333; padding: 5px 4px; text-align: center; vertical-align: middle; }
+  .folha-tabela thead th { background: #e5e5e5; font-weight: 700; font-size: 11px; text-transform: uppercase; }
+  .folha-tabela thead tr:nth-child(2) th { font-size: 10px; background: #f0f0f0; font-weight: 600; }
+  .folha-tabela td.ref { font-family: 'Courier New', monospace; font-weight: 900; font-size: 13px; background: #fafafa; }
+  .folha-tabela td.lote { font-family: 'Courier New', monospace; font-weight: 700; font-size: 12px; }
+  .folha-tabela td.nome { font-weight: 700; text-align: left; padding-left: 6px; }
   .folha-tabela td.saida { font-size: 11px; color: #555; }
-  .folha-tabela td.sai {
-    background: #f5f5f5;
-    font-weight: 700;
-    font-size: 13px;
-  }
-  .folha-tabela td.rec {
-    background: white;
-    min-width: 32px;
-    height: 26px;
-  }
-  .folha-tabela td.obs {
-    background: white;
-    min-width: 60px;
-    font-size: 10px;
-    text-align: left;
-    padding-left: 6px;
-  }
+  .folha-tabela td.sai { background: #f5f5f5; font-weight: 700; font-size: 13px; }
+  .folha-tabela td.rec { background: white; min-width: 32px; height: 26px; }
+  .folha-tabela td.obs { background: white; min-width: 60px; font-size: 10px; text-align: left; padding-left: 6px; }
   .folha-tabela td.vazio { color: #ccc; }
-  .folha-tabela tfoot tr.total td {
-    background: #ffeb99;
-    font-weight: 900;
-    font-size: 13px;
-  }
-  .folha-tabela tfoot tr.total td.label {
-    text-align: right;
-    padding-right: 8px;
-  }
-
-  /* Tabela simples pra abas Pagamentos e Retornos (histórico) */
-  .tabela-simples {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 12px;
-    color: black;
-  }
-  .tabela-simples th, .tabela-simples td {
-    border: 1px solid #333;
-    padding: 6px 8px;
-    text-align: left;
-  }
-  .tabela-simples th {
-    background: #e5e5e5;
-    font-weight: 700;
-    font-size: 11px;
-    text-transform: uppercase;
-  }
+  .folha-tabela tfoot tr.total td { background: #ffeb99; font-weight: 900; font-size: 13px; }
+  .folha-tabela tfoot tr.total td.label { text-align: right; padding-right: 8px; }
+  .tabela-simples { width: 100%; border-collapse: collapse; font-size: 12px; color: black; }
+  .tabela-simples th, .tabela-simples td { border: 1px solid #333; padding: 6px 8px; text-align: left; }
+  .tabela-simples th { background: #e5e5e5; font-weight: 700; font-size: 11px; text-transform: uppercase; }
   .tabela-simples td.num { text-align: right; font-family: 'Courier New', monospace; }
   .tabela-simples td.data { font-size: 11px; color: #555; white-space: nowrap; }
-  .tabela-simples tfoot tr.total td {
-    background: #ffeb99;
-    font-weight: 900;
-  }
-
-  .vazio-msg {
-    background: white;
-    color: #666;
-    padding: 40px;
-    text-align: center;
-    border-radius: 8px;
-    font-size: 15px;
-  }
-
-  /* Impressão: folha limpa, sem menu nem controles */
+  .tabela-simples tfoot tr.total td { background: #ffeb99; font-weight: 900; }
+  .vazio-msg { background: white; color: #666; padding: 40px; text-align: center; border-radius: 8px; font-size: 15px; }
   @media print {
     @page { size: A4 portrait; margin: 10mm; }
     body { background: white !important; }
@@ -260,7 +94,6 @@
       <button data-aba="retornos">Histórico de retornos</button>
     </div>
 
-    <!-- ========= ABA: O QUE ESTÁ FORA ========= -->
     <div class="painel ativo" data-painel="fora">
       <div class="controles">
         <div class="campo">
@@ -275,11 +108,9 @@
         <button class="btn-imprimir" onclick="window.print()">🖨️ Imprimir</button>
         <span class="info" id="fora-info">clique em Buscar</span>
       </div>
-
       <div id="fora-vazio" class="vazio-msg" style="display:none">
         Nenhuma peça está fora no momento.
       </div>
-
       <div class="folha" id="fora-folha" style="display:none">
         <div class="folha-header">
           <div class="empresa">BAMBAM BABY</div>
@@ -324,7 +155,6 @@
       </div>
     </div>
 
-    <!-- ========= ABA: PRA MANDAR ========= -->
     <div class="painel" data-painel="para-mandar">
       <div class="controles">
         <div class="campo">
@@ -343,11 +173,9 @@
         <button class="btn-imprimir" onclick="window.print()">🖨️ Imprimir</button>
         <span class="info" id="pman-info">clique em Buscar</span>
       </div>
-
       <div id="pman-vazio" class="vazio-msg" style="display:none">
         Nenhum corte pendente pra designar.
       </div>
-
       <div class="folha" id="pman-folha" style="display:none">
         <div class="folha-header">
           <div class="empresa">BAMBAM BABY</div>
@@ -391,7 +219,6 @@
       </div>
     </div>
 
-    <!-- ========= ABA: PAGAMENTOS ========= -->
     <div class="painel" data-painel="pagamentos">
       <div class="controles">
         <div class="campo">
@@ -410,11 +237,9 @@
         <button class="btn-imprimir" onclick="window.print()">🖨️ Imprimir</button>
         <span class="info" id="pag-info">clique em Buscar</span>
       </div>
-
       <div id="pag-vazio" class="vazio-msg" style="display:none">
         Nenhum pagamento no período.
       </div>
-
       <div class="folha" id="pag-folha" style="display:none">
         <div class="folha-header">
           <div class="empresa">BAMBAM BABY</div>
@@ -448,7 +273,6 @@
       </div>
     </div>
 
-    <!-- ========= ABA: RETORNOS ========= -->
     <div class="painel" data-painel="retornos">
       <div class="controles">
         <div class="campo">
@@ -463,11 +287,9 @@
         <button class="btn-imprimir" onclick="window.print()">🖨️ Imprimir</button>
         <span class="info" id="ret-info">clique em Buscar</span>
       </div>
-
       <div id="ret-vazio" class="vazio-msg" style="display:none">
         Nenhum retorno registrado.
       </div>
-
       <div class="folha" id="ret-folha" style="display:none">
         <div class="folha-header">
           <div class="empresa">BAMBAM BABY</div>
@@ -500,6 +322,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="js/firebase-config.js"></script>
+  <script src="js/acesso.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/db.js"></script>
