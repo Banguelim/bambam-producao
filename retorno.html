@@ -8,321 +8,58 @@
 <link rel="stylesheet" href="css/forms.css">
 <link rel="stylesheet" href="css/grade5.css">
 <style>
-  /* Busca cruzada no topo */
-  .busca-cruzada {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-bottom: 12px;
-  }
-  .busca-cruzada .campo {
-    position: relative;
-  }
-  .busca-cruzada input {
-    width: 100%;
-    padding: 10px 34px 10px 12px;
-    font-size: 14px;
-    font-weight: 600;
-  }
+  .busca-cruzada { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .busca-cruzada .campo { position: relative; }
+  .busca-cruzada input { width: 100%; padding: 10px 34px 10px 12px; font-size: 14px; font-weight: 600; }
   .busca-cruzada .lbl { margin-bottom: 4px; }
-  .busca-cruzada .x-campo {
-    position: absolute;
-    right: 10px;
-    top: calc(50% + 8px);
-    transform: translateY(-50%);
-    background: none;
-    border: none;
-    color: var(--text-muted);
-    cursor: pointer;
-    font-size: 14px;
-    padding: 4px;
-    display: none;
-  }
+  .busca-cruzada .x-campo { position: absolute; right: 10px; top: calc(50% + 8px); transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px; padding: 4px; display: none; }
   .busca-cruzada .x-campo.visivel { display: block; }
-
-  /* Chips das notas */
-  .chips-notas {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    padding: 10px;
-    background: var(--surface-2);
-    border: 0.5px dashed var(--border);
-    border-radius: 8px;
-    min-height: 46px;
-    margin-bottom: 12px;
-  }
-  .chip-nota {
-    background: var(--surface-1);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 7px 12px;
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--text-primary);
-    letter-spacing: 0.3px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .chip-nota:hover {
-    border-color: var(--border-accent);
-    background: color-mix(in srgb, var(--bg-accent) 30%, var(--surface-1));
-  }
-  .chip-nota .dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--text-accent);
-    flex-shrink: 0;
-  }
+  .chips-notas { display: flex; gap: 6px; flex-wrap: wrap; padding: 10px; background: var(--surface-2); border: 0.5px dashed var(--border); border-radius: 8px; min-height: 46px; margin-bottom: 12px; }
+  .chip-nota { background: var(--surface-1); border: 1px solid var(--border); border-radius: 6px; padding: 7px 12px; cursor: pointer; font-size: 13px; font-weight: 700; color: var(--text-primary); letter-spacing: 0.3px; display: flex; align-items: center; gap: 8px; }
+  .chip-nota:hover { border-color: var(--border-accent); background: color-mix(in srgb, var(--bg-accent) 30%, var(--surface-1)); }
+  .chip-nota .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-accent); flex-shrink: 0; }
   .chip-nota .dot.parcial { background: var(--warning); }
-  .chip-nota .meta {
-    color: var(--text-secondary);
-    font-weight: 500;
-    font-size: 11px;
-  }
-
-  /* Painel da nota selecionada */
-  .painel-nota {
-    background: var(--surface-1);
-    border: 1px solid var(--border-accent);
-    border-radius: 10px;
-    padding: 14px;
-    display: none;
-  }
+  .chip-nota .meta { color: var(--text-secondary); font-weight: 500; font-size: 11px; }
+  .painel-nota { background: var(--surface-1); border: 1px solid var(--border-accent); border-radius: 10px; padding: 14px; display: none; }
   .painel-nota.visivel { display: block; }
-
-  .cabec-nota {
-    display: flex;
-    gap: 14px;
-    align-items: center;
-    padding-bottom: 12px;
-    border-bottom: 0.5px solid var(--border);
-    flex-wrap: wrap;
-  }
-  .cabec-nota .lote-destaque {
-    background: var(--bg-accent-strong);
-    color: white;
-    padding: 8px 16px;
-    border-radius: 6px;
-    font-weight: 900;
-    font-size: 22px;
-    letter-spacing: 1px;
-    font-family: 'Courier New', ui-monospace, monospace;
-  }
-  .cabec-nota .cost {
-    font-size: 16px;
-    font-weight: 800;
-    color: var(--text-primary);
-    letter-spacing: 0.3px;
-  }
-  .cabec-nota .info-extra {
-    color: var(--text-secondary);
-    font-size: 12px;
-  }
+  .cabec-nota { display: flex; gap: 14px; align-items: center; padding-bottom: 12px; border-bottom: 0.5px solid var(--border); flex-wrap: wrap; }
+  .cabec-nota .lote-destaque { background: var(--bg-accent-strong); color: white; padding: 8px 16px; border-radius: 6px; font-weight: 900; font-size: 22px; letter-spacing: 1px; font-family: 'Courier New', ui-monospace, monospace; }
+  .cabec-nota .cost { font-size: 16px; font-weight: 800; color: var(--text-primary); letter-spacing: 0.3px; }
+  .cabec-nota .info-extra { color: var(--text-secondary); font-size: 12px; }
   .cabec-nota .info-extra b { color: var(--text-primary); font-weight: 700; }
-  .cabec-nota .valor {
-    color: var(--success);
-    font-weight: 800;
-    font-size: 14px;
-    margin-left: auto;
-  }
-
-  /* Config da chegada */
-  .config-chegada {
-    display: grid;
-    grid-template-columns: auto auto 1fr;
-    gap: 14px;
-    align-items: flex-end;
-    margin: 10px 0;
-    padding: 10px 12px;
-    background: var(--surface-2);
-    border-radius: 6px;
-  }
-  .config-chegada .campo-radio {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  }
-  .config-chegada .campo-radio label {
-    padding: 6px 12px;
-    border: 0.5px solid var(--border);
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text-secondary);
-    background: var(--surface-1);
-  }
-  .config-chegada .campo-radio label:has(input:checked) {
-    border-color: var(--text-accent);
-    background: var(--bg-accent);
-    color: var(--text-accent);
-  }
+  .cabec-nota .valor { color: var(--success); font-weight: 800; font-size: 14px; margin-left: auto; }
+  .config-chegada { display: grid; grid-template-columns: auto auto 1fr; gap: 14px; align-items: flex-end; margin: 10px 0; padding: 10px 12px; background: var(--surface-2); border-radius: 6px; }
+  .config-chegada .campo-radio { display: flex; gap: 8px; align-items: center; }
+  .config-chegada .campo-radio label { padding: 6px 12px; border: 0.5px solid var(--border); border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--text-secondary); background: var(--surface-1); }
+  .config-chegada .campo-radio label:has(input:checked) { border-color: var(--text-accent); background: var(--bg-accent); color: var(--text-accent); }
   .config-chegada .campo-radio input { display: none; }
-  .config-chegada .aviso {
-    color: var(--text-muted);
-    font-size: 11px;
-    font-style: italic;
-    text-align: right;
-  }
-
-  /* Grade personalizada da tela de retorno */
-  .grade5 .col-h .pendente {
-    font-size: 9px;
-    color: var(--text-secondary);
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
+  .config-chegada .aviso { color: var(--text-muted); font-size: 11px; font-style: italic; text-align: right; }
+  .grade5 .col-h .pendente { font-size: 9px; color: var(--text-secondary); font-weight: 600; display: flex; align-items: center; gap: 4px; }
   .grade5 .col-h .pendente b { color: var(--warning); font-weight: 800; font-size: 11px; }
-  .btn-defeito {
-    padding: 2px 6px;
-    background: none;
-    border: 0.5px solid var(--text-danger);
-    border-radius: 4px;
-    color: var(--text-danger);
-    cursor: pointer;
-    font-size: 9px;
-    font-weight: 700;
-    line-height: 1.4;
-  }
+  .btn-defeito { padding: 2px 6px; background: none; border: 0.5px solid var(--text-danger); border-radius: 4px; color: var(--text-danger); cursor: pointer; font-size: 9px; font-weight: 700; line-height: 1.4; }
   .btn-defeito:hover { background: color-mix(in srgb, var(--text-danger) 15%, transparent); }
-
-  .entrada-chegada {
-    display: flex;
-    gap: 4px;
-    padding: 6px 4px;
-    align-items: center;
-  }
-  .entrada-chegada .chegou-input {
-    flex: 1;
-    padding: 6px;
-    border: 0.5px solid var(--border);
-    border-radius: 4px;
-    background: var(--surface-2);
-    font-size: 14px;
-    font-weight: 800;
-    text-align: center;
-    color: var(--text-primary);
-    box-sizing: border-box;
-    font-variant-numeric: tabular-nums;
-  }
-  .entrada-chegada .chegou-input:focus {
-    outline: none;
-    border-color: var(--text-accent);
-    background: white;
-    color: #000;
-  }
-  .entrada-chegada .btn-tudo {
-    padding: 6px 8px;
-    background: none;
-    border: 0.5px dashed var(--text-accent);
-    border-radius: 4px;
-    color: var(--text-accent);
-    cursor: pointer;
-    font-size: 10px;
-    font-weight: 700;
-    white-space: nowrap;
-    letter-spacing: 0.3px;
-  }
+  .entrada-chegada { display: flex; gap: 4px; padding: 6px 4px; align-items: center; }
+  .entrada-chegada .chegou-input { flex: 1; padding: 6px; border: 0.5px solid var(--border); border-radius: 4px; background: var(--surface-2); font-size: 14px; font-weight: 800; text-align: center; color: var(--text-primary); box-sizing: border-box; font-variant-numeric: tabular-nums; }
+  .entrada-chegada .chegou-input:focus { outline: none; border-color: var(--text-accent); background: white; color: #000; }
+  .entrada-chegada .btn-tudo { padding: 6px 8px; background: none; border: 0.5px dashed var(--text-accent); border-radius: 4px; color: var(--text-accent); cursor: pointer; font-size: 10px; font-weight: 700; white-space: nowrap; letter-spacing: 0.3px; }
   .entrada-chegada .btn-tudo:hover { background: var(--bg-accent); }
-
-  .cores-enviadas {
-    padding: 4px 6px;
-    font-size: 10px;
-    color: var(--text-muted);
-    max-height: 60px;
-    overflow-y: auto;
-    line-height: 1.5;
-    border-top: 0.5px dashed var(--border);
-    margin-top: 4px;
-  }
+  .cores-enviadas { padding: 4px 6px; font-size: 10px; color: var(--text-muted); max-height: 60px; overflow-y: auto; line-height: 1.5; border-top: 0.5px dashed var(--border); margin-top: 4px; }
   .cores-enviadas b { color: var(--text-secondary); font-weight: 700; }
-
   .subtot-col .cell.saiu b { color: var(--text-primary); }
   .subtot-col .cell.chegou b { color: var(--text-accent); }
   .subtot-col .cell.fora b { color: var(--warning); }
-
-  /* Ações do painel */
-  .acoes-nota {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 12px;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-  .acoes-nota .esq {
-    display: flex;
-    gap: 6px;
-  }
-  .acoes-nota .dir {
-    display: flex;
-    gap: 6px;
-  }
-
-  /* Cabeçalho de estado */
-
-  /* Notas finalizadas */
-  .bloco-finalizadas {
-    margin-top: 16px;
-    background: var(--surface-1);
-    border: 0.5px solid var(--border);
-    border-radius: 8px;
-    overflow: hidden;
-  }
-  .bloco-finalizadas .titulo-fin {
-    padding: 10px 14px;
-    background: var(--surface-2);
-    border-bottom: 0.5px solid var(--border);
-    font-size: 11px;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    font-weight: 700;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    cursor: pointer;
-  }
+  .acoes-nota { display: flex; justify-content: space-between; margin-top: 12px; gap: 8px; flex-wrap: wrap; }
+  .acoes-nota .esq, .acoes-nota .dir { display: flex; gap: 6px; }
+  .bloco-finalizadas { margin-top: 16px; background: var(--surface-1); border: 0.5px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .bloco-finalizadas .titulo-fin { padding: 10px 14px; background: var(--surface-2); border-bottom: 0.5px solid var(--border); font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
   .bloco-finalizadas .titulo-fin:hover { color: var(--text-primary); }
   .lista-finalizadas { padding: 6px; }
-  .nota-finalizada {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 10px;
-    font-size: 12px;
-    border-radius: 5px;
-    cursor: pointer;
-    opacity: 0.7;
-  }
+  .nota-finalizada { display: flex; align-items: center; gap: 10px; padding: 8px 10px; font-size: 12px; border-radius: 5px; cursor: pointer; opacity: 0.7; }
   .nota-finalizada:hover { background: var(--surface-2); opacity: 1; }
   .nota-finalizada .dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
-  .btn-reabilitar {
-    margin-left: auto;
-    padding: 3px 8px;
-    background: none;
-    border: 0.5px solid var(--border);
-    border-radius: 4px;
-    color: var(--text-muted);
-    cursor: pointer;
-    font-size: 10px;
-    font-weight: 700;
-    white-space: nowrap;
-  }
+  .btn-reabilitar { margin-left: auto; padding: 3px 8px; background: none; border: 0.5px solid var(--border); border-radius: 4px; color: var(--text-muted); cursor: pointer; font-size: 10px; font-weight: 700; white-space: nowrap; }
   .btn-reabilitar:hover { color: var(--text-accent); border-color: var(--text-accent); }
-  .estado-vazio {
-    padding: 40px 20px;
-    text-align: center;
-    color: var(--text-muted);
-    background: var(--surface-1);
-    border: 0.5px dashed var(--border);
-    border-radius: 10px;
-  }
+  .estado-vazio { padding: 40px 20px; text-align: center; color: var(--text-muted); background: var(--surface-1); border: 0.5px dashed var(--border); border-radius: 10px; }
   .estado-vazio .icone { font-size: 32px; margin-bottom: 8px; }
 </style>
 </head>
@@ -356,7 +93,6 @@
       <span class="hint" id="hint">Escolha costureira ou lote pra ver as notas em aberto</span>
     </div>
 
-    <!-- Busca cruzada -->
     <div class="busca-cruzada">
       <div class="campo">
         <label class="lbl">Costureira</label>
@@ -370,7 +106,6 @@
       </div>
     </div>
 
-    <!-- Chips das notas em aberto -->
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;padding:0 4px">
       <div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;font-weight:700">
         Notas em aberto <span id="contador-chips" style="color:var(--text-muted);font-weight:500;margin-left:4px">(0)</span>
@@ -381,7 +116,6 @@
       <span style="color:var(--text-muted);font-size:12px">carregando...</span>
     </div>
 
-    <!-- Painel da nota selecionada -->
     <div class="painel-nota" id="painel-nota">
       <div class="cabec-nota">
         <span class="lote-destaque"><span id="p-lote">—</span>/<span id="p-ref">—</span></span>
@@ -389,7 +123,6 @@
         <span class="info-extra">Nota <b id="p-num">#—</b> · <b id="p-total">0</b> peças saíram em <span id="p-data">—</span></span>
         <span class="valor" id="p-valor">R$ 0,00</span>
       </div>
-
       <div class="config-chegada">
         <div>
           <label class="lbl">Data chegada</label>
@@ -406,9 +139,7 @@
           1ª = só costura pronta (aguarda arremate)<br>2ª = arremate concluído (vira estoque)
         </div>
       </div>
-
       <div class="grade5" id="grade"></div>
-
       <div class="rodape-tot">
         <div class="col-totais" id="col-totais">
           <span class="ct" data-ct="RN">RN <b>0</b></span>
@@ -421,7 +152,6 @@
           <div>Chegando agora <b id="lbl-chegando">0</b> peças <small id="lbl-fora">—</small></div>
         </div>
       </div>
-
       <div class="acoes-nota">
         <div class="esq">
           <button class="btn btn-secondary" id="btn-fechar">← Fechar</button>
@@ -434,8 +164,6 @@
       </div>
     </div>
 
-
-    <!-- Bloco de notas finalizadas (retorno completo) -->
     <div class="bloco-finalizadas" id="bloco-finalizadas" style="display:none">
       <div class="titulo-fin" onclick="document.getElementById('lista-finalizadas').style.display = document.getElementById('lista-finalizadas').style.display === 'none' ? 'block' : 'none'">
         <span>✓ Retornos finalizados <span id="contador-finalizadas" style="color:var(--text-muted);font-weight:500">(0)</span></span>
@@ -450,7 +178,6 @@
     </div>
   </div>
 
-  <!-- Modal Trocar Costureira -->
   <div class="modal-nota" id="modal-trocar">
     <div class="caixa" style="max-width:420px;background:var(--surface-1);color:var(--text-primary)">
       <h3 style="margin-bottom:12px;color:var(--text-primary)">Trocar costureira</h3>
@@ -469,7 +196,6 @@
     </div>
   </div>
 
-  <!-- Modal Registrar Defeito -->
   <div class="modal-nota" id="modal-defeito">
     <div class="caixa" style="max-width:440px;background:var(--surface-1);color:var(--text-primary);font-family:inherit">
       <h3 style="margin-bottom:8px;color:var(--text-danger)">⚠ Registrar Defeito</h3>
@@ -496,6 +222,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="js/firebase-config.js"></script>
+  <script src="js/acesso.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/db.js"></script>
