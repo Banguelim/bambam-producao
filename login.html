@@ -58,15 +58,27 @@
       <div id="erro"></div>
     </form>
   </div>
-
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="js/firebase-config.js"></script>
+  <script src="js/acesso.js"></script>
   <script src="js/auth.js"></script>
   <script>
-    // Se já tá logado, manda pro index
-    auth.onAuthStateChanged(u => { if (u) window.location.href = 'index.html'; });
+    // Se já tá logado, valida permissão e redireciona pra tela inicial correta
+    auth.onAuthStateChanged(u => {
+      if (!u) return;
+      const email = (u.email || '').toLowerCase();
+      if (typeof PERMISSOES !== 'undefined') {
+        if (!(email in PERMISSOES)) {
+          auth.signOut();
+          return;
+        }
+        window.location.href = paginaInicialDoUsuario(email) || 'index.html';
+      } else {
+        window.location.href = 'index.html';
+      }
+    });
     document.getElementById('form').addEventListener('submit', async e => {
       e.preventDefault();
       const email = document.getElementById('email').value.trim();
@@ -74,7 +86,9 @@
       document.getElementById('btn-login').disabled = true;
       const erro = await fazerLogin(email, senha);
       if (erro) {
-        document.getElementById('erro').textContent = 'Falha no login. Verifique email e senha.';
+        document.getElementById('erro').textContent = erro.includes('não autorizado')
+          ? erro
+          : 'Falha no login. Verifique email e senha.';
         document.getElementById('btn-login').disabled = false;
       }
     });
