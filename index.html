@@ -125,15 +125,25 @@
         <span class="titulo">Pagamento</span>
         <span class="desc">Pagar costureira — com opção de adiantamento</span>
       </a>
-      <a class="card-tela" href="estoque-entrada.html">
+      <a class="card-tela" href="arremate.html">
         <span class="num">Tela 5</span>
-        <span class="titulo">Entrada no estoque</span>
-        <span class="desc">Arremate pronto — vira estoque vendável (por cor)</span>
+        <span class="titulo">Arremate</span>
+        <span class="desc">Distribuir peças que voltaram — estoque, defeito ou pendente</span>
+      </a>
+      <a class="card-tela" href="estoque.html">
+        <span class="num">Tela 6</span>
+        <span class="titulo">Estoque</span>
+        <span class="desc">Consultar quantidade de peças em estoque por referência</span>
       </a>
       <a class="card-tela" href="cadastros.html">
         <span class="num">Cadastros</span>
         <span class="titulo">Cadastros</span>
         <span class="desc">Referências, costureiras, preços</span>
+      </a>
+      <a class="card-tela" href="relatorios.html">
+        <span class="num">Relatórios</span>
+        <span class="titulo">Relatórios</span>
+        <span class="desc">O que está fora, pra mandar, histórico de pagamentos e retornos</span>
       </a>
     </div>
   </div>
@@ -142,6 +152,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="js/firebase-config.js"></script>
+  <script src="js/acesso.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/db.js"></script>
@@ -160,7 +171,6 @@
         let totalFora = 0;
         notasAbertas.forEach(d => totalFora += (d.data().total_saida || 0));
         document.getElementById('s-fora').textContent = totalFora;
-        // Aguardando arremate = peças chegou_1 mas não deu entrada estoque ainda (aprox)
         document.getElementById('s-arremate').textContent = '—';
       } catch (e) {
         console.warn('Falha ao carregar stats:', e);
