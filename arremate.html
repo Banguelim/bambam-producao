@@ -8,99 +8,38 @@
 <link rel="stylesheet" href="css/forms.css">
 <link rel="stylesheet" href="css/grade5.css">
 <style>
-  .busca-ref {
-    margin-bottom: 12px;
-  }
-  .busca-ref input {
-    padding: 10px 12px;
-    font-size: 14px;
-    font-weight: 600;
-    width: 100%;
-    max-width: 320px;
-  }
-
-  .chips-notas {
-    display:flex; gap:6px; flex-wrap:wrap; padding:10px;
-    background:var(--surface-2); border:0.5px dashed var(--border);
-    border-radius:8px; min-height:46px; margin-bottom:12px;
-  }
-  .chip-nota {
-    background:var(--surface-1); border:1px solid var(--border);
-    border-radius:6px; padding:7px 12px; cursor:pointer;
-    font-size:13px; font-weight:700; color:var(--text-primary);
-    display:flex; align-items:center; gap:8px;
-  }
+  .busca-ref { margin-bottom: 12px; }
+  .busca-ref input { padding: 10px 12px; font-size: 14px; font-weight: 600; width: 100%; max-width: 320px; }
+  .chips-notas { display:flex; gap:6px; flex-wrap:wrap; padding:10px; background:var(--surface-2); border:0.5px dashed var(--border); border-radius:8px; min-height:46px; margin-bottom:12px; }
+  .chip-nota { background:var(--surface-1); border:1px solid var(--border); border-radius:6px; padding:7px 12px; cursor:pointer; font-size:13px; font-weight:700; color:var(--text-primary); display:flex; align-items:center; gap:8px; }
   .chip-nota:hover { border-color:var(--border-accent); background:color-mix(in srgb,var(--bg-accent) 20%,var(--surface-1)); }
   .chip-nota .dot { width:8px; height:8px; border-radius:50%; background:var(--warning); flex-shrink:0; }
   .chip-nota .meta { color:var(--text-secondary); font-weight:500; font-size:11px; }
-
-  .painel-arremate {
-    background:var(--surface-1); border:1px solid var(--border-accent);
-    border-radius:10px; padding:14px; display:none;
-  }
+  .painel-arremate { background:var(--surface-1); border:1px solid var(--border-accent); border-radius:10px; padding:14px; display:none; }
   .painel-arremate.visivel { display:block; }
-
-  .cabec-arremate {
-    display:flex; gap:14px; align-items:center;
-    padding-bottom:12px; border-bottom:0.5px solid var(--border);
-    flex-wrap:wrap; margin-bottom:10px;
-  }
-  .cabec-arremate .lote-destaque {
-    background:var(--bg-accent-strong); color:white;
-    padding:8px 20px; border-radius:6px; font-weight:900;
-    font-size:26px; letter-spacing:2px;
-    font-family:'Courier New',monospace;
-  }
+  .cabec-arremate { display:flex; gap:14px; align-items:center; padding-bottom:12px; border-bottom:0.5px solid var(--border); flex-wrap:wrap; margin-bottom:10px; }
+  .cabec-arremate .lote-destaque { background:var(--bg-accent-strong); color:white; padding:8px 20px; border-radius:6px; font-weight:900; font-size:26px; letter-spacing:2px; font-family:'Courier New',monospace; }
   .cabec-arremate .info { font-size:13px; color:var(--text-secondary); }
   .cabec-arremate .info b { color:var(--text-primary); font-weight:700; }
-
-  .config-data {
-    display:flex; gap:14px; align-items:flex-end;
-    margin-bottom:10px; padding:10px 12px;
-    background:var(--surface-2); border-radius:6px;
-  }
-
+  .config-data { display:flex; gap:14px; align-items:flex-end; margin-bottom:10px; padding:10px 12px; background:var(--surface-2); border-radius:6px; }
   .entradas-arremate { display:flex; flex-direction:column; gap:4px; padding:6px 4px; }
   .campo-arremate { display:grid; grid-template-columns:auto 1fr; gap:4px; align-items:center; }
-  .campo-arremate label {
-    font-size:9px; font-weight:800; text-transform:uppercase;
-    letter-spacing:0.5px; width:50px; text-align:right; padding-right:4px;
-  }
+  .campo-arremate label { font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; width:50px; text-align:right; padding-right:4px; }
   .campo-arremate label.ok { color:var(--success); }
   .campo-arremate label.def { color:var(--text-danger); }
   .campo-arremate label.pend { color:var(--warning); }
-  .campo-arremate input {
-    padding:5px 6px; border-radius:4px;
-    border:0.5px solid var(--border);
-    background:var(--surface-2); font-size:13px;
-    font-weight:800; text-align:center;
-    color:var(--text-primary); width:100%; box-sizing:border-box;
-  }
+  .campo-arremate input { padding:5px 6px; border-radius:4px; border:0.5px solid var(--border); background:var(--surface-2); font-size:13px; font-weight:800; text-align:center; color:var(--text-primary); width:100%; box-sizing:border-box; }
   .campo-arremate input:focus { outline:none; border-color:var(--text-accent); background:white; color:#000; }
-
-  .rodape-resumo {
-    display:grid; grid-template-columns:repeat(3,1fr);
-    gap:10px; margin-top:10px; padding:12px;
-    background:var(--surface-2); border-radius:8px;
-  }
+  .rodape-resumo { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:10px; padding:12px; background:var(--surface-2); border-radius:8px; }
   .rodape-resumo .bloco { text-align:center; }
   .rodape-resumo .bloco .num { font-size:24px; font-weight:900; font-variant-numeric:tabular-nums; }
   .rodape-resumo .bloco .rot { font-size:10px; text-transform:uppercase; letter-spacing:0.5px; font-weight:700; margin-top:2px; }
-  .rodape-resumo .bloco.ok .num { color:var(--success); }
-  .rodape-resumo .bloco.ok .rot { color:var(--success); }
-  .rodape-resumo .bloco.def .num { color:var(--text-danger); }
-  .rodape-resumo .bloco.def .rot { color:var(--text-danger); }
-  .rodape-resumo .bloco.pend .num { color:var(--warning); }
-  .rodape-resumo .bloco.pend .rot { color:var(--warning); }
-
+  .rodape-resumo .bloco.ok .num, .rodape-resumo .bloco.ok .rot { color:var(--success); }
+  .rodape-resumo .bloco.def .num, .rodape-resumo .bloco.def .rot { color:var(--text-danger); }
+  .rodape-resumo .bloco.pend .num, .rodape-resumo .bloco.pend .rot { color:var(--warning); }
   .acoes-arremate { display:flex; justify-content:space-between; margin-top:12px; gap:8px; }
-
-  .estado-vazio {
-    padding:40px 20px; text-align:center; color:var(--text-muted);
-    background:var(--surface-1); border:0.5px dashed var(--border); border-radius:10px;
-  }
+  .estado-vazio { padding:40px 20px; text-align:center; color:var(--text-muted); background:var(--surface-1); border:0.5px dashed var(--border); border-radius:10px; }
   .estado-vazio .icone { font-size:32px; margin-bottom:8px; }
-
   .subtot-col .cell.ok b { color:var(--success); }
   .subtot-col .cell.def b { color:var(--text-danger); }
   .subtot-col .cell.pend b { color:var(--warning); }
@@ -132,12 +71,10 @@
       <span class="hint">Clica na referência pra distribuir no estoque</span>
     </div>
 
-    <!-- Busca por referência -->
     <div class="busca-ref">
       <input id="filtro-ref" placeholder="🔎 buscar por referência...">
     </div>
 
-    <!-- Chips por referência -->
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;padding:0 4px">
       <div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;font-weight:700">
         Refs com retorno aguardando arremate
@@ -149,18 +86,15 @@
       <span style="color:var(--text-muted);font-size:12px">carregando...</span>
     </div>
 
-    <!-- Painel de arremate -->
     <div class="painel-arremate" id="painel-arremate">
       <div class="cabec-arremate">
         <span class="lote-destaque"><span id="p-lote">—</span></span>
         <span class="info">
-          <b id="p-num">—</b> ·
-          <b id="p-cost">—</b> ·
+          <b id="p-num">—</b> · <b id="p-cost">—</b> ·
           <b id="p-chegou" style="color:var(--text-accent)">0</b> peças no retorno
           (<span id="p-chegada-tipo">—</span>)
         </span>
       </div>
-
       <div class="config-data">
         <div>
           <label class="lbl">Data arremate</label>
@@ -173,24 +107,12 @@
           <span style="color:var(--warning)">⏳ Pendente</span>
         </div>
       </div>
-
       <div class="grade5" id="grade"></div>
-
       <div class="rodape-resumo">
-        <div class="bloco ok">
-          <div class="num" id="tot-estoque">0</div>
-          <div class="rot">✓ Estoque</div>
-        </div>
-        <div class="bloco def">
-          <div class="num" id="tot-defeito">0</div>
-          <div class="rot">✗ Defeito</div>
-        </div>
-        <div class="bloco pend">
-          <div class="num" id="tot-pendente">0</div>
-          <div class="rot">⏳ Pendente</div>
-        </div>
+        <div class="bloco ok"><div class="num" id="tot-estoque">0</div><div class="rot">✓ Estoque</div></div>
+        <div class="bloco def"><div class="num" id="tot-defeito">0</div><div class="rot">✗ Defeito</div></div>
+        <div class="bloco pend"><div class="num" id="tot-pendente">0</div><div class="rot">⏳ Pendente</div></div>
       </div>
-
       <div class="acoes-arremate">
         <button class="btn btn-secondary" id="btn-fechar">← Fechar</button>
         <button class="btn btn-primary" id="btn-confirmar">✓ Confirmar arremate</button>
@@ -208,6 +130,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="js/firebase-config.js"></script>
+  <script src="js/acesso.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/db.js"></script>
