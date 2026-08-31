@@ -87,6 +87,51 @@ async function mostrarSelecao() {
   }
 }
 
+// Busca o lote em TODOS os cortes (qualquer status) e recalcula o status de
+// cada um comparando o total mesclado com o que já foi designado nas notas.
+// Corrige cortes que ficaram com status desatualizado (ex: acrescentaram
+// um tamanho a um corte já designado, numa versão anterior à correção que
+// passou a recalcular isso na hora).
+async function corrigirStatusDoLote(lote) {
+  try {
+    const snap = await colCortes().where('lote', '==', lote).get();
+    if (snap.empty) { toast(`Nenhum corte encontrado com lote "${lote}" (nem já designado)`, 'err'); return; }
+
+    let corrigidos = 0;
+    for (const doc of snap.docs) {
+      const c = doc.data();
+      const notasSnap = await colNotas().where('corte_id', '==', doc.id).get();
+      const designadoPorSku = {};
+      notasSnap.forEach(d => {
+        (d.data().itens || []).forEach(i => {
+          const chave = `${i.cor}_${i.tam}`;
+          designadoPorSku[chave] = (designadoPorSku[chave] || 0) + i.qtd;
+        });
+      });
+      const restante = (c.itens || []).reduce((a, i) => {
+        const desig = designadoPorSku[`${i.cor}_${i.tam}`] || 0;
+        return a + Math.max(0, i.qtd - desig);
+      }, 0);
+      const statusCerto = notasSnap.empty ? 'cortado' : (restante > 0 ? 'designado_parcial' : 'designado_total');
+      if (statusCerto !== c.status) {
+        await colCortes().doc(doc.id).update({ status: statusCerto });
+        corrigidos++;
+      }
+    }
+
+    if (corrigidos > 0) {
+      toast(`✓ ${corrigidos} corte(s) do lote "${lote}" corrigido(s) — atualizando lista`, 'ok');
+    } else {
+      toast(`Lote "${lote}" já estava com status correto — se não aparece, pode estar 100% designado mesmo`, '');
+    }
+    document.getElementById('busca-corte').value = '';
+    await mostrarSelecao();
+  } catch (e) {
+    console.error('Erro corrigindo status:', e);
+    toast('Erro ao verificar: ' + e.message, 'err');
+  }
+}
+
 function renderListaCortes(pendentes, infos, filtro) {
   const lista = document.getElementById('lista-cortes');
   const f = filtro.trim().toUpperCase();
@@ -100,7 +145,21 @@ function renderListaCortes(pendentes, infos, filtro) {
 
   lista.innerHTML = '';
   if (filtradas.length === 0) {
-    lista.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:20px">Nenhum corte encontrado</div>';
+    if (f) {
+      // Pode ser um corte com status desatualizado (ex: mesclado antes da
+      // correção de 31/08/2026) — oferece checar/corrigir em TODOS os cortes,
+      // não só nos que já estão marcados como pendentes.
+      const div = document.createElement('div');
+      div.style.cssText = 'text-align:center;padding:20px';
+      div.innerHTML = `
+        <div style="color:var(--text-muted);margin-bottom:10px">Nenhum corte pendente encontrado com "${f}"</div>
+        <button class="btn btn-secondary" id="btn-verificar-lote">🔧 Verificar/corrigir status do lote "${f}"</button>
+      `;
+      div.querySelector('#btn-verificar-lote').addEventListener('click', () => corrigirStatusDoLote(f));
+      lista.appendChild(div);
+    } else {
+      lista.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:20px">Nenhum corte encontrado</div>';
+    }
     return;
   }
 
