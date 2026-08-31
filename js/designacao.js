@@ -34,6 +34,13 @@ async function init() {
     }
   });
 
+  // Modal de editar corte
+  document.getElementById('edcorte-cancelar').addEventListener('click', () => {
+    document.getElementById('modal-editar-corte').classList.remove('visivel');
+    edCorteAtual = null;
+  });
+  document.getElementById('edcorte-salvar').addEventListener('click', salvarEdicaoCorte);
+
   // Ver se veio corte pela URL
   const params = new URLSearchParams(window.location.search);
   const corteId = params.get('corte');
@@ -186,14 +193,21 @@ function renderListaCortes(pendentes, infos, filtro) {
       <span class="info">${formatDataBR(c.data_corte)}</span>
       <span class="pecas">${c.total_pecas} peças</span>
       <span class="status ${statusClass}">${statusTxt}</span>
+      <button class="btn-editar-corte" title="Editar quantidades deste corte">✎</button>
       <button class="btn-excluir-corte" title="Excluir este corte">✕</button>
       ${detalheDesig}
     `;
 
-    // Clique na linha abre o corte (exceto no botão excluir)
+    // Clique na linha abre o corte (exceto nos botões editar/excluir)
     div.addEventListener('click', (e) => {
-      if (e.target.classList.contains('btn-excluir-corte')) return;
+      if (e.target.classList.contains('btn-excluir-corte') || e.target.classList.contains('btn-editar-corte')) return;
       abrirCorte(c.id);
+    });
+
+    // Botão editar (corrige qtd digitada errado, entrada de teste a mais, etc)
+    div.querySelector('.btn-editar-corte').addEventListener('click', (e) => {
+      e.stopPropagation();
+      abrirEditarCorte(c);
     });
 
     // Botão excluir
@@ -211,6 +225,101 @@ function renderListaCortes(pendentes, infos, filtro) {
 
     lista.appendChild(div);
   });
+}
+
+// ==== EDITAR CORTE (corrigir qtd digitada errado, entrada de teste a mais, etc) ====
+let edCorteAtual = null;
+let edItensAtual = [];
+let edCorteDesignadoPorSku = {};
+let edCorteTemNotas = false;
+
+async function abrirEditarCorte(corte) {
+  edCorteAtual = corte;
+  edItensAtual = (corte.itens || []).map(i => ({ ...i }));
+  document.getElementById('edcorte-titulo').textContent = `Editar corte — Lote ${corte.lote} / Ref ${(corte.refs || []).join('+')}`;
+
+  // Descobre quanto já foi designado por cor+tam — não deixa reduzir/remover abaixo disso
+  edCorteDesignadoPorSku = {};
+  try {
+    const notasSnap = await colNotas().where('corte_id', '==', corte.id).get();
+    edCorteTemNotas = !notasSnap.empty;
+    notasSnap.forEach(d => {
+      (d.data().itens || []).forEach(i => {
+        const chave = `${i.cor}_${i.tam}`;
+        edCorteDesignadoPorSku[chave] = (edCorteDesignadoPorSku[chave] || 0) + i.qtd;
+      });
+    });
+  } catch (e) { console.warn('Erro buscando notas do corte:', e); }
+
+  renderLinhasEditar();
+  document.getElementById('modal-editar-corte').classList.add('visivel');
+}
+
+function renderLinhasEditar() {
+  const cont = document.getElementById('edcorte-linhas');
+  cont.innerHTML = '';
+  edItensAtual.forEach((it, idx) => {
+    const chave = `${it.cor}_${it.tam}`;
+    const minQtd = edCorteDesignadoPorSku[chave] || 0;
+    const linha = document.createElement('div');
+    linha.className = 'linha-edcorte';
+    linha.innerHTML = `
+      <span>${it.cor}</span>
+      <span style="text-align:center;font-weight:700">${it.tam}</span>
+      <input type="number" min="${minQtd}" value="${it.qtd}">
+      <button class="x-linha" title="remover linha">×</button>
+    `;
+    const input = linha.querySelector('input');
+    input.addEventListener('input', () => {
+      let v = parseInt(input.value) || 0;
+      if (v < minQtd) {
+        v = minQtd;
+        input.value = v;
+        toast(`Não dá pra reduzir abaixo de ${minQtd} — já foi designado essa quantidade`, 'err');
+      }
+      edItensAtual[idx].qtd = v;
+      atualizarTotalEditar();
+    });
+    linha.querySelector('.x-linha').addEventListener('click', () => {
+      if (minQtd > 0) {
+        toast(`Não dá pra remover — ${minQtd} peça(s) de ${it.cor} ${it.tam} já foi designada`, 'err');
+        return;
+      }
+      if (!confirm(`Remover ${it.cor} ${it.tam} (${it.qtd} peças) do corte?`)) return;
+      edItensAtual.splice(idx, 1);
+      renderLinhasEditar();
+    });
+    cont.appendChild(linha);
+  });
+  atualizarTotalEditar();
+}
+
+function atualizarTotalEditar() {
+  document.getElementById('edcorte-total').textContent = edItensAtual.reduce((a, i) => a + i.qtd, 0);
+}
+
+async function salvarEdicaoCorte() {
+  if (!edCorteAtual) return;
+  const novoTotal = edItensAtual.reduce((a, i) => a + i.qtd, 0);
+  if (novoTotal === 0) {
+    toast('O corte precisa ter ao menos uma peça — pra remover tudo, exclua o corte inteiro na lista', 'err');
+    return;
+  }
+  try {
+    const restante = edItensAtual.reduce((a, i) => {
+      const desig = edCorteDesignadoPorSku[`${i.cor}_${i.tam}`] || 0;
+      return a + Math.max(0, i.qtd - desig);
+    }, 0);
+    const novoStatus = !edCorteTemNotas ? 'cortado' : (restante > 0 ? 'designado_parcial' : 'designado_total');
+    await colCortes().doc(edCorteAtual.id).update({ itens: edItensAtual, total_pecas: novoTotal, status: novoStatus });
+    toast(`✓ Corte ${edCorteAtual.lote} atualizado (${novoTotal} peças)`, 'ok');
+    document.getElementById('modal-editar-corte').classList.remove('visivel');
+    edCorteAtual = null;
+    await mostrarSelecao();
+  } catch (e) {
+    console.error('Erro salvando edição do corte:', e);
+    toast('Erro ao salvar: ' + e.message, 'err');
+  }
 }
 
 async function abrirCorte(id) {
