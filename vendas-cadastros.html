@@ -144,6 +144,22 @@
     </div>
 
     <div class="painel" data-painel="tabelas">
+      <div class="form-add">
+        <div class="campos">
+          <div class="campo">
+            <label class="lbl">Nova tabela de preço</label>
+            <input id="tabela-nome-novo" placeholder="ex: ATACADO, PROMOCIONAL" style="text-transform:uppercase">
+          </div>
+        </div>
+        <button class="btn-add" id="btn-tabela-add" disabled>+ Cadastrar</button>
+      </div>
+      <div class="lista-cad" style="margin-bottom:16px">
+        <div class="titulo">
+          <span class="rot">Tabelas cadastradas <span class="contagem" id="tabela-contagem">(0)</span></span>
+        </div>
+        <div class="itens" id="tabela-lista"></div>
+      </div>
+
       <div style="background:var(--surface-1);border:0.5px solid var(--border);border-radius:8px;padding:16px">
         <div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px">
           Consulta e edição do preço de venda — <b style="color:var(--text-primary)">referência × tabela</b>.
