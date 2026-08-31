@@ -354,7 +354,26 @@ async function salvarCorteBtn() {
           else itensMesclados.push(novo);
         });
         const novoTotal = itensMesclados.reduce((a, i) => a + i.qtd, 0);
-        batch.update(colCortes().doc(existente.id), { itens: itensMesclados, total_pecas: novoTotal });
+
+        // CORREÇÃO 31/08/2026: recalcula o status. Se o corte já estava
+        // 'designado_total' antes de acrescentar, ele SUMIA da tela de
+        // Designação pra sempre — a qtd nova nunca era vista como pendente
+        // porque o status antigo não mudava.
+        const notasSnap = await colNotas().where('corte_id', '==', existente.id).get();
+        const designadoPorSku = {};
+        notasSnap.forEach(d => {
+          (d.data().itens || []).forEach(i => {
+            const chave = `${i.cor}_${i.tam}`;
+            designadoPorSku[chave] = (designadoPorSku[chave] || 0) + i.qtd;
+          });
+        });
+        const restante = itensMesclados.reduce((a, i) => {
+          const desig = designadoPorSku[`${i.cor}_${i.tam}`] || 0;
+          return a + Math.max(0, i.qtd - desig);
+        }, 0);
+        const novoStatus = notasSnap.empty ? 'cortado' : (restante > 0 ? 'designado_parcial' : 'designado_total');
+
+        batch.update(colCortes().doc(existente.id), { itens: itensMesclados, total_pecas: novoTotal, status: novoStatus });
         refsAcrescentadas.push(ref);
       } else {
         const docRef = colCortes().doc(); // gera ID novo
