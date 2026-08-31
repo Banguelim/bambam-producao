@@ -72,14 +72,26 @@
 
     <div class="step">
       <h3>5. Clientes (Vendas)</h3>
-      <div class="info">Importa <b id="c-cli">—</b> clientes do <code>seed/clientes.json</code>.</div>
-      <button class="btn btn-primary" onclick="importarClientes()">Importar clientes</button>
+      <div class="info">Importa <b id="c-cli">—</b> clientes do <code>seed/clientes-completo.json</code> (base real da planilha). Cadastro é identificado pelo CNPJ — rodar de novo atualiza em vez de duplicar, e remove os 2 clientes de teste antigos se o CNPJ bater.</div>
+      <button class="btn btn-primary" onclick="importarClientesCompleto()">Importar clientes</button>
     </div>
 
     <div class="step">
       <h3>6. Tabelas de preço de venda (Vendas)</h3>
       <div class="info">Importa preço de venda de <b id="c-tprc">—</b> refs (matriz ref × tabela) do <code>seed/tabelas-precos.json</code>. Demora alguns minutos.</div>
       <button class="btn btn-primary" onclick="importarTabelasPrecos()">Importar tabelas de preço</button>
+    </div>
+
+    <div class="step">
+      <h3>7. Pedidos históricos (Vendas)</h3>
+      <div class="info">Importa <b id="c-ped">—</b> pedidos antigos (aba PEDIDO GUARDADO) como <b>status concluído</b>, só pra consulta — <b>NÃO baixa estoque nem gera contas a receber</b> (essas vêm do passo 8, com os dados reais). Rode o passo 5 antes, pra ligar cada pedido ao cliente certo.</div>
+      <button class="btn btn-primary" onclick="importarPedidosHistoricos()">Importar pedidos históricos</button>
+    </div>
+
+    <div class="step">
+      <h3>8. Contas a receber históricas (Vendas)</h3>
+      <div class="info">Importa <b id="c-cr">—</b> registros (aba CONT. RECEBER) com o status real de cada um (pago/aberto). Demora alguns minutos.</div>
+      <button class="btn btn-primary" onclick="importarContasReceberHistorico()">Importar contas a receber</button>
     </div>
 
     <div id="log" class="log">Aguardando...</div>
@@ -104,7 +116,7 @@
     }
 
     let seedRefs = [], seedCost = [], seedPrc = {}, seedLotes = [];
-    let seedClientes = [], seedTabPrecos = {};
+    let seedClientesCompleto = [], seedTabPrecos = {}, seedPedidosHist = [], seedContasHist = [];
 
     async function carregarSeeds() {
       try {
@@ -112,29 +124,79 @@
         seedCost  = await (await fetch('../seed/costureiras.json')).json();
         seedPrc   = await (await fetch('../seed/precos.json')).json();
         seedLotes = await (await fetch('../seed/lotes-fora.json')).json();
-        seedClientes  = await (await fetch('../seed/clientes.json')).json();
+        seedClientesCompleto = await (await fetch('../seed/clientes-completo.json')).json();
         seedTabPrecos = await (await fetch('../seed/tabelas-precos.json')).json();
+        seedPedidosHist = await (await fetch('../seed/pedidos-historicos.json')).json();
+        seedContasHist = await (await fetch('../seed/contas-receber-historico.json')).json();
         document.getElementById('c-refs').textContent = seedRefs.length;
         document.getElementById('c-cost').textContent = seedCost.length;
         const nPrc = Object.values(seedPrc).reduce((a, o) => a + Object.keys(o).length, 0);
         document.getElementById('c-prc').textContent = nPrc.toLocaleString('pt-BR');
         document.getElementById('c-lote').textContent = seedLotes.length;
-        document.getElementById('c-cli').textContent = seedClientes.length;
+        document.getElementById('c-cli').textContent = seedClientesCompleto.length;
         document.getElementById('c-tprc').textContent = Object.keys(seedTabPrecos).length.toLocaleString('pt-BR');
+        document.getElementById('c-ped').textContent = seedPedidosHist.length;
+        document.getElementById('c-cr').textContent = seedContasHist.length.toLocaleString('pt-BR');
         log('✓ Seeds carregados', 'ok');
       } catch (e) {
         log('Erro carregando seeds: ' + e.message, 'err');
       }
     }
 
-    async function importarClientes() {
-      log('Importando clientes...');
-      const batch = db.batch();
-      for (const c of seedClientes) {
-        batch.set(colClientes().doc(), c);
+    // Cadastro identificado pelo CNPJ (id do doc = CNPJ só com dígitos) — rodar
+    // de novo atualiza em vez de duplicar. Remove cadastro antigo (ID aleatório)
+    // do mesmo CNPJ, se houver — ex: os 2 clientes de teste da primeira importação.
+    async function importarClientesCompleto() {
+      log('Importando clientes (base completa)...');
+      try {
+        const existentes = await colClientes().get();
+        const idsNovos = new Set(seedClientesCompleto.map(c => c.id));
+        let removidos = 0;
+        for (const doc of existentes.docs) {
+          const cnpjDigits = (doc.data().cnpj || '').replace(/\D/g, '');
+          if (cnpjDigits && idsNovos.has(cnpjDigits) && doc.id !== cnpjDigits) {
+            await colClientes().doc(doc.id).delete();
+            removidos++;
+          }
+        }
+        if (removidos > 0) log(`  removidos ${removidos} cadastro(s) duplicado(s) antigo(s)`);
+      } catch (e) { console.warn('Erro limpando duplicados:', e); }
+
+      let n = 0, batch = db.batch(), inBatch = 0;
+      for (const c of seedClientesCompleto) {
+        batch.set(colClientes().doc(c.id), c);
+        n++; inBatch++;
+        if (inBatch >= 400) { await batch.commit(); log(`  ${n}/${seedClientesCompleto.length}`); batch = db.batch(); inBatch = 0; }
       }
-      await batch.commit();
-      log(`✓ ${seedClientes.length} clientes importados`, 'ok');
+      if (inBatch > 0) await batch.commit();
+      log(`✓ ${n} clientes importados`, 'ok');
+    }
+
+    // Só histórico/consulta — status 'concluido' mas NÃO baixa estoque nem
+    // gera contas a receber (essas vêm do passo 8, com os valores reais da
+    // planilha). Numeração com prefixo H pra nunca colidir com pedidos novos.
+    async function importarPedidosHistoricos() {
+      log('Importando pedidos históricos (não baixa estoque nem gera financeiro)...');
+      let n = 0, batch = db.batch(), inBatch = 0;
+      for (const p of seedPedidosHist) {
+        batch.set(colPedidos().doc(p.numero), p);
+        n++; inBatch++;
+        if (inBatch >= 400) { await batch.commit(); log(`  ${n}/${seedPedidosHist.length}`); batch = db.batch(); inBatch = 0; }
+      }
+      if (inBatch > 0) await batch.commit();
+      log(`✓ ${n} pedidos históricos importados`, 'ok');
+    }
+
+    async function importarContasReceberHistorico() {
+      log('Importando contas a receber históricas (pode levar alguns minutos)...');
+      let n = 0, batch = db.batch(), inBatch = 0;
+      for (const c of seedContasHist) {
+        batch.set(colContasReceber().doc(), c);
+        n++; inBatch++;
+        if (inBatch >= 400) { await batch.commit(); log(`  ${n}/${seedContasHist.length}`); batch = db.batch(); inBatch = 0; }
+      }
+      if (inBatch > 0) await batch.commit();
+      log(`✓ ${n} contas a receber importadas`, 'ok');
     }
 
     async function importarTabelasPrecos() {
