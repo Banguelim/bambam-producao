@@ -79,8 +79,16 @@
   .item-corte .status.cortado { background: color-mix(in srgb, var(--text-accent) 20%, transparent); color: var(--text-accent); }
   .item-corte .status.parcial { background: color-mix(in srgb, var(--warning) 20%, transparent); color: var(--warning); }
   .item-corte .status.total { background: color-mix(in srgb, var(--success) 20%, transparent); color: var(--success); }
-  .btn-excluir-corte { padding: 3px 8px; background: none; border: 0.5px solid var(--border); border-radius: 4px; color: var(--text-muted); cursor: pointer; font-size: 11px; font-weight: 700; }
+  .btn-excluir-corte, .btn-editar-corte { padding: 3px 8px; background: none; border: 0.5px solid var(--border); border-radius: 4px; color: var(--text-muted); cursor: pointer; font-size: 11px; font-weight: 700; margin-right: 4px; }
   .btn-excluir-corte:hover { color: var(--text-danger); border-color: var(--text-danger); }
+  .btn-editar-corte:hover { color: var(--text-accent); border-color: var(--text-accent); }
+  .modal-editar { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+  .modal-editar.visivel { display: flex; }
+  .caixa-editar { background: white; color: #000; border-radius: 10px; padding: 18px 22px; max-width: 480px; width: 100%; max-height: 92vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.6); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .linha-edcorte { display: grid; grid-template-columns: 1fr 50px 70px 30px; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid #eee; font-size: 13px; }
+  .linha-edcorte input[type="number"] { width: 100%; padding: 5px 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; text-align: center; }
+  .linha-edcorte .x-linha { background: none; border: none; color: #999; cursor: pointer; font-size: 15px; }
+  .linha-edcorte .x-linha:hover { color: #d33; }
   .modal-nota { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
   .modal-nota.visivel { display: flex; }
   .modal-nota .caixa { background: white; color: #000; border-radius: 10px; padding: 18px 22px; max-width: 620px; width: 100%; max-height: 92vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.6); font-family: 'Courier New', ui-monospace, monospace; }
@@ -204,6 +212,21 @@
 
   <div class="modal-nota" id="modal-nota">
     <div class="caixa" id="caixa-nota"></div>
+  </div>
+
+  <div class="modal-editar" id="modal-editar-corte">
+    <div class="caixa-editar">
+      <h3 id="edcorte-titulo" style="margin-bottom:4px">Editar corte</h3>
+      <div style="font-size:12px;color:#666;margin-bottom:12px">Ajusta ou remove uma linha (ex: quantidade digitada errado, entrada de teste a mais)</div>
+      <div id="edcorte-linhas"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:10px;border-top:1px solid #ddd">
+        <div>Total: <b id="edcorte-total">0</b> peças</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn-cont" id="edcorte-cancelar" style="background:#888">Cancelar</button>
+          <button class="btn-cont" id="edcorte-salvar">✓ Salvar alterações</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
