@@ -39,9 +39,14 @@ async function init() {
     });
   } catch (e) { console.warn('Cores não carregadas:', e); }
 
+  // Grade de 5 colunas (RN P M G GG) pra digitar cor+qtd rápido — igual ao Novo Corte
+  const grade = document.getElementById('grade-item');
+  TAMS.forEach(tam => grade.appendChild(buildColItem(tam)));
+  recalcItem();
+
   document.getElementById('p-cliente').addEventListener('change', onClienteChange);
   document.getElementById('it-ref').addEventListener('change', onRefChange);
-  document.getElementById('btn-add-item').addEventListener('click', adicionarItem);
+  document.getElementById('btn-add-ref').addEventListener('click', confirmarRefNoPedido);
   document.getElementById('btn-novo-pedido').addEventListener('click', () => { if (confirm('Descartar e começar um pedido novo?')) limparFormulario(); });
   document.getElementById('btn-salvar-pedido').addEventListener('click', () => salvarPedidoBtn(false));
   document.getElementById('btn-concluir-pedido').addEventListener('click', concluirPedidoBtn);
@@ -100,39 +105,170 @@ async function onRefChange() {
   } catch (e) { console.warn('Preço não encontrado:', e); }
 }
 
-// ==== ITENS ====
-function adicionarItem() {
-  const ref = document.getElementById('it-ref').value.trim().toUpperCase();
-  const cor = document.getElementById('it-cor').value.trim().toUpperCase();
-  const preco = parseFloat(document.getElementById('it-preco').value) || 0;
-  const qtds = {
-    RN: parseInt(document.getElementById('it-rn').value) || 0,
-    P:  parseInt(document.getElementById('it-p').value) || 0,
-    M:  parseInt(document.getElementById('it-m').value) || 0,
-    G:  parseInt(document.getElementById('it-g').value) || 0,
-    GG: parseInt(document.getElementById('it-gg').value) || 0
-  };
-  const qtdTotal = Object.values(qtds).reduce((a, v) => a + v, 0);
+// ==== GRADE DE ENTRADA (5 colunas RN/P/M/G/GG, igual ao Novo Corte) ====
+// Cada coluna guarda suas próprias linhas cor+qtd, de forma independente
+// (aqui NÃO replica pras outras colunas — cada tamanho tem sua quantidade,
+// porque num pedido de venda os tamanhos raramente vêm iguais).
 
-  if (!ref || !cor) { toast('Preencha ref e cor', 'err'); return; }
-  if (qtdTotal === 0) { toast('Preencha ao menos uma quantidade', 'err'); return; }
-  if (!preco) { toast('Preencha o preço (ou cadastre a ref na tabela de preço)', 'err'); return; }
+function buildColItem(tam) {
+  const col = document.createElement('div');
+  col.className = 'col';
+  col.dataset.tam = tam;
+  col.innerHTML = `
+    <div class="col-h">
+      <span>${tam} <span class="check">✓</span></span>
+    </div>
+    <div class="entradas"></div>
+    <div class="nova-entrada">
+      <div class="cor-field">
+        <input list="cores-list" class="cor-input" placeholder="cor">
+        <span class="arrow">▾</span>
+      </div>
+      <input type="number" class="qty-input" placeholder="qtd">
+    </div>
+    <button class="confirmar-btn">desabilitar ${tam}</button>
+    <div class="subtot-col">
+      <div class="cell"><span>total</span><b data-total>0</b></div>
+    </div>
+  `;
 
-  // Salva cor nova pro autocomplete, se for o caso
+  const corInput = col.querySelector('.cor-input');
+  const qtyInput = col.querySelector('.qty-input');
+  corInput.addEventListener('keydown', e => {
+    if ((e.key === 'Enter' || e.key === 'Tab') && corInput.value.trim()) {
+      e.preventDefault(); qtyInput.focus();
+    }
+  });
+  qtyInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); salvarEntradaNovaEmColItem(col); }
+  });
+
+  col.querySelector('.confirmar-btn').addEventListener('click', () => {
+    col.classList.toggle('desabilitada');
+    col.querySelector('.entradas').style.opacity = col.classList.contains('desabilitada') ? '0.3' : '1';
+    corInput.disabled = qtyInput.disabled = col.classList.contains('desabilitada');
+    atualizarBtnColItem(col);
+    recalcItem();
+  });
+
+  atualizarBtnColItem(col);
+  return col;
+}
+
+function salvarEntradaNovaEmColItem(col) {
+  const corInput = col.querySelector('.cor-input');
+  const qtyInput = col.querySelector('.qty-input');
+  const cor = corInput.value.trim().toUpperCase();
+  const q = parseInt(qtyInput.value);
+  if (!cor || !q) return;
+
+  addEntradaItem(col, cor, q);
   salvarCorSeNova(cor);
 
-  const existente = pedidoItens.find(i => i.ref === ref && i.cor === cor && i.preco === preco);
-  if (existente) {
-    TAMS.forEach(t => existente.qtds[t] = (existente.qtds[t] || 0) + qtds[t]);
-    existente.qtd = Object.values(existente.qtds).reduce((a, v) => a + v, 0);
-    existente.subtotal = Math.round(existente.qtd * existente.preco * 100) / 100;
-  } else {
-    pedidoItens.push({ ref, cor, qtds, qtd: qtdTotal, preco, subtotal: Math.round(qtdTotal * preco * 100) / 100 });
-  }
+  corInput.value = '';
+  qtyInput.value = '';
+  corInput.focus();
+  atualizarBtnColItem(col);
+  recalcItem();
+}
 
-  ['it-cor', 'it-rn', 'it-p', 'it-m', 'it-g', 'it-gg', 'it-preco'].forEach(id => document.getElementById(id).value = '');
+function addEntradaItem(col, cor, q) {
+  const e = document.createElement('div');
+  e.className = 'cor-linha';
+  e.innerHTML = `
+    <span class="cor" title="${cor}">${abrevCor(cor)}</span>
+    <span class="q" contenteditable="true" spellcheck="false" inputmode="numeric"
+          style="min-width:28px;text-align:right;cursor:text;border-bottom:1px dashed var(--border-accent)">${q}</span>
+    <button class="x">×</button>
+  `;
+  const qEl = e.querySelector('.q');
+  qEl.addEventListener('focus', () => selecionarTudo(qEl));
+  qEl.addEventListener('input', () => { sanitizarQtd(qEl); atualizarBtnColItem(col); recalcItem(); });
+  qEl.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); qEl.blur(); } });
+  e.querySelector('.x').addEventListener('click', () => { e.remove(); atualizarBtnColItem(col); recalcItem(); });
+  col.querySelector('.entradas').appendChild(e);
+}
+
+function atualizarBtnColItem(col) {
+  const btn = col.querySelector('.confirmar-btn');
+  const tam = col.dataset.tam;
+  const desabilitada = col.classList.contains('desabilitada');
+  btn.textContent = desabilitada ? `habilitar ${tam}` : `desabilitar ${tam}`;
+  btn.style.opacity = desabilitada ? '0.6' : '1';
+}
+
+function recalcItem() {
+  let totGeral = 0;
+  TAMS.forEach(tam => {
+    const col = document.querySelector(`#grade-item .col[data-tam="${tam}"]`);
+    const desabilitada = col.classList.contains('desabilitada');
+    let c = 0;
+    if (!desabilitada) col.querySelectorAll('.cor-linha .q').forEach(q => c += parseInt(q.textContent) || 0);
+    col.querySelector('[data-total]').textContent = desabilitada ? '—' : c;
+    const ct = document.querySelector(`#col-totais-item .ct[data-ct="${tam}"]`);
+    ct.querySelector('b').textContent = desabilitada ? '—' : c;
+    totGeral += desabilitada ? 0 : c;
+  });
+  document.getElementById('lbl-t-item').textContent = totGeral;
+}
+
+function limparGradeItem() {
   document.getElementById('it-ref').value = '';
+  document.getElementById('it-preco').value = '';
+  document.querySelectorAll('#grade-item .col').forEach(col => {
+    col.querySelector('.entradas').innerHTML = '';
+    col.querySelector('.cor-input').value = '';
+    col.querySelector('.qty-input').value = '';
+    col.classList.remove('desabilitada');
+    col.querySelector('.entradas').style.opacity = '1';
+    col.querySelector('.cor-input').disabled = false;
+    col.querySelector('.qty-input').disabled = false;
+    atualizarBtnColItem(col);
+  });
+  recalcItem();
   document.getElementById('it-ref').focus();
+}
+
+// Lê as 5 colunas, agrupa por cor (juntando os tamanhos) e joga no pedido —
+// tudo com a mesma ref e o mesmo preço (o preço do campo acima da grade).
+function confirmarRefNoPedido() {
+  const ref = document.getElementById('it-ref').value.trim().toUpperCase();
+  const preco = parseFloat(document.getElementById('it-preco').value) || 0;
+  if (!ref) { toast('Preencha a referência', 'err'); return; }
+  if (!preco) { toast('Preencha o preço (ou cadastre a ref na tabela de preço)', 'err'); return; }
+
+  const porCor = {}; // { COR: {RN,P,M,G,GG} }
+  TAMS.forEach(tam => {
+    const col = document.querySelector(`#grade-item .col[data-tam="${tam}"]`);
+    if (col.classList.contains('desabilitada')) return;
+    col.querySelectorAll('.cor-linha').forEach(e => {
+      const cor = e.querySelector('.cor').title || e.querySelector('.cor').textContent;
+      const q = parseInt(e.querySelector('.q').textContent) || 0;
+      if (q <= 0) return;
+      if (!porCor[cor]) porCor[cor] = { RN: 0, P: 0, M: 0, G: 0, GG: 0 };
+      porCor[cor][tam] += q;
+    });
+  });
+
+  const cores = Object.keys(porCor);
+  if (cores.length === 0) { toast('Adicione ao menos uma cor + quantidade CONFIRMADA', 'err'); return; }
+
+  cores.forEach(cor => {
+    const qtds = porCor[cor];
+    const qtd = Object.values(qtds).reduce((a, v) => a + v, 0);
+    const subtotal = Math.round(qtd * preco * 100) / 100;
+    const existente = pedidoItens.find(i => i.ref === ref && i.cor === cor && i.preco === preco);
+    if (existente) {
+      TAMS.forEach(t => existente.qtds[t] += qtds[t]);
+      existente.qtd = Object.values(existente.qtds).reduce((a, v) => a + v, 0);
+      existente.subtotal = Math.round(existente.qtd * existente.preco * 100) / 100;
+    } else {
+      pedidoItens.push({ ref, cor, qtds, qtd, preco, subtotal });
+    }
+  });
+
+  toast(`✓ ${cores.length} cor(es) da ref ${ref} adicionadas ao pedido`, 'ok');
+  limparGradeItem();
   renderItens();
 }
 
@@ -283,7 +419,7 @@ function atualizarCabecalhoNumero() {
   document.getElementById('lbl-num-pedido').textContent = numeroPedidoAtual || 'novo';
   document.getElementById('lbl-status-pedido').textContent = statusPedidoAtual === 'concluido' ? '✓ concluído' : 'rascunho';
   const bloqueado = statusPedidoAtual === 'concluido';
-  document.getElementById('btn-add-item').disabled = bloqueado;
+  document.getElementById('btn-add-ref').disabled = bloqueado;
   document.getElementById('btn-salvar-pedido').style.display = bloqueado ? 'none' : '';
   document.getElementById('btn-concluir-pedido').style.display = bloqueado ? 'none' : '';
 }
@@ -298,6 +434,7 @@ function limparFormulario() {
   document.getElementById('p-data').value = hojeISO();
   document.getElementById('p-parcelas').value = 1;
   sugerirVencimento();
+  limparGradeItem();
   atualizarCabecalhoNumero();
   renderItens();
   history.replaceState(null, '', location.pathname);
@@ -345,6 +482,7 @@ async function abrirPedido(numero) {
     document.getElementById('p-parcelas').value = p.parcelas || 1;
     document.getElementById('p-vencimento').value = p.data_vencimento_base || '';
     pedidoItens = (p.itens || []).map(i => ({ ...i }));
+    limparGradeItem();
     atualizarCabecalhoNumero();
     renderItens();
     window.scrollTo({ top: 0, behavior: 'smooth' });

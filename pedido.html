@@ -6,6 +6,7 @@
 <title>BAMBAM · Pedido</title>
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/forms.css">
+<link rel="stylesheet" href="css/grade5.css">
 <style>
   .cabec-pedido {
     display: grid;
@@ -24,28 +25,24 @@
   .num-pedido { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; }
   .num-pedido b { color: var(--text-accent); font-size: 14px; }
 
-  .linha-add {
-    display: flex;
-    gap: 6px;
+  .cabec-item {
+    display: grid;
+    grid-template-columns: auto auto 1fr;
+    gap: 14px;
     align-items: flex-end;
-    background: var(--surface-1);
-    border: 0.5px dashed var(--border-accent);
-    border-radius: 8px;
-    padding: 12px 14px;
-    margin-bottom: 12px;
-    flex-wrap: wrap;
+    padding: 0 4px;
+    margin-bottom: 8px;
   }
-  .linha-add .campo { display: flex; flex-direction: column; gap: 3px; }
-  .linha-add label { font-size: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.4px; font-weight: 700; }
-  .linha-add input#it-ref { width: 100px; text-transform: uppercase; font-weight: 700; }
-  .linha-add input#it-cor { width: 130px; text-transform: uppercase; font-weight: 700; }
-  .linha-add .tam-in { width: 46px; text-align: center; padding: 9px 4px; }
-  .linha-add input#it-preco { width: 80px; text-align: right; }
-  .linha-add .btn-add-item {
-    padding: 10px 18px; background: var(--bg-accent-strong); color: white;
+  .cabec-item input#it-ref { width: 110px; font-weight: 700; text-transform: uppercase; }
+  .cabec-item input#it-preco { width: 100px; font-weight: 700; text-align: right; }
+  .cabec-item .info-item { font-size: 12px; color: var(--text-secondary); }
+  .cabec-item .info-item b { color: var(--text-primary); }
+  .btn-add-ref {
+    padding: 10px 20px; background: var(--bg-accent-strong); color: white;
     border: none; border-radius: var(--radius); font-weight: 700; font-size: 13px;
   }
-  .linha-add .btn-add-item:disabled { opacity: 0.5; }
+  .btn-add-ref:disabled { opacity: 0.5; }
+  .bloco-item { margin-bottom: 22px; }
 
   .tabela-itens { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 13px; }
   .tabela-itens th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-secondary); padding: 6px 8px; border-bottom: 0.5px solid var(--border); }
@@ -93,7 +90,7 @@
   @media print {
     @page { size: A4 portrait; margin: 10mm; }
     body { background: white !important; }
-    .topbar, .cabec-pedido, .linha-add, .tabela-itens, .rodape-pedido, .acoes-pedido, .lista-pedidos, .num-pedido, h1, .hint { display: none !important; }
+    .topbar, .cabec-pedido, .bloco-item, .tabela-itens, .rodape-pedido, .acoes-pedido, .lista-pedidos, .num-pedido, h1, .hint { display: none !important; }
     .wrap { padding: 0 !important; margin: 0 !important; max-width: none !important; }
     .folha { display: none; padding: 0 !important; }
     .folha.imprimindo { display: block !important; }
@@ -162,18 +159,34 @@
       </div>
     </div>
 
-    <div class="linha-add">
-      <div class="campo"><label>Ref</label><input list="refs-list" id="it-ref" placeholder="ref"></div>
-      <div class="campo"><label>Cor</label><input list="cores-list" id="it-cor" placeholder="cor"></div>
-      <div class="campo"><label>RN</label><input type="number" class="tam-in" id="it-rn" min="0"></div>
-      <div class="campo"><label>P</label><input type="number" class="tam-in" id="it-p" min="0"></div>
-      <div class="campo"><label>M</label><input type="number" class="tam-in" id="it-m" min="0"></div>
-      <div class="campo"><label>G</label><input type="number" class="tam-in" id="it-g" min="0"></div>
-      <div class="campo"><label>GG</label><input type="number" class="tam-in" id="it-gg" min="0"></div>
-      <div class="campo"><label>Preço (peça)</label><input type="number" id="it-preco" step="0.01" min="0" placeholder="0,00"></div>
-      <button class="btn-add-item" id="btn-add-item">+ Adicionar item</button>
+    <div class="bloco-item">
+      <div class="cabec-item">
+        <div><label class="lbl">Referência</label><input list="refs-list" id="it-ref" placeholder="ex: 205"></div>
+        <div><label class="lbl">Preço (peça)</label><input type="number" id="it-preco" step="0.01" min="0" placeholder="0,00"></div>
+        <div class="info-item">Digita cor + qtd numa coluna, aperta Enter — repete pra outras cores/tamanhos da mesma ref, depois clica em <b>Adicionar ao pedido</b></div>
+      </div>
+
+      <div class="grade5" id="grade-item"></div>
+
+      <div class="rodape-tot" id="rodape-item">
+        <div class="col-totais" id="col-totais-item">
+          <span class="ct" data-ct="RN">RN <b>0</b></span>
+          <span class="ct" data-ct="P">P <b>0</b></span>
+          <span class="ct" data-ct="M">M <b>0</b></span>
+          <span class="ct" data-ct="G">G <b>0</b></span>
+          <span class="ct" data-ct="GG">GG <b>0</b></span>
+        </div>
+        <div class="total-geral">
+          <div>Total <b id="lbl-t-item">0</b> peças <small id="lbl-t-item-sub"></small></div>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;margin-top:10px">
+        <button class="btn-add-ref" id="btn-add-ref">✓ Adicionar ao pedido</button>
+      </div>
     </div>
 
+    <h3 style="margin-bottom:8px">Itens do pedido</h3>
     <table class="tabela-itens" id="tabela-itens">
       <thead>
         <tr><th>Ref</th><th>Cor</th><th>Tamanhos</th><th>Qtd</th><th>Preço</th><th>Subtotal</th><th></th></tr>
