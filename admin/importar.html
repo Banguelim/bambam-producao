@@ -49,49 +49,49 @@
     <div class="step">
       <h3>1. Referências</h3>
       <div class="info">Importa <b id="c-refs">—</b> refs do <code>seed/refs.json</code></div>
-      <button class="btn btn-primary" onclick="importarRefs()">Importar refs</button>
+      <button class="btn btn-primary" onclick="rodar(this, importarRefs)">Importar refs</button>
     </div>
 
     <div class="step">
       <h3>2. Costureiras</h3>
       <div class="info">Importa <b id="c-cost">—</b> costureiras do <code>seed/costureiras.json</code></div>
-      <button class="btn btn-primary" onclick="importarCostureiras()">Importar costureiras</button>
+      <button class="btn btn-primary" onclick="rodar(this, importarCostureiras)">Importar costureiras</button>
     </div>
 
     <div class="step">
       <h3>3. Preços</h3>
       <div class="info">Importa matriz costureira × ref (<b id="c-prc">—</b> preços) do <code>seed/precos.json</code>. Demora alguns minutos.</div>
-      <button class="btn btn-primary" onclick="importarPrecos()">Importar preços</button>
+      <button class="btn btn-primary" onclick="rodar(this, importarPrecos)">Importar preços</button>
     </div>
 
     <div class="step">
       <h3>4. Lotes ativos (FORA)</h3>
       <div class="info">Importa <b id="c-lote">—</b> lotes que estão com as costureiras como <b>notas em aberto</b>.</div>
-      <button class="btn btn-primary" onclick="importarLotes()">Importar lotes</button>
+      <button class="btn btn-primary" onclick="rodar(this, importarLotes)">Importar lotes</button>
     </div>
 
     <div class="step">
       <h3>5. Clientes (Vendas)</h3>
       <div class="info">Importa <b id="c-cli">—</b> clientes do <code>seed/clientes-completo.json</code> (base real da planilha). Cadastro é identificado pelo CNPJ — rodar de novo atualiza em vez de duplicar, e remove os 2 clientes de teste antigos se o CNPJ bater.</div>
-      <button class="btn btn-primary" onclick="importarClientesCompleto()">Importar clientes</button>
+      <button class="btn btn-primary" onclick="rodar(this, importarClientesCompleto)">Importar clientes</button>
     </div>
 
     <div class="step">
       <h3>6. Tabelas de preço de venda (Vendas)</h3>
       <div class="info">Importa preço de venda de <b id="c-tprc">—</b> refs (matriz ref × tabela) do <code>seed/tabelas-precos.json</code>. Demora alguns minutos.</div>
-      <button class="btn btn-primary" onclick="importarTabelasPrecos()">Importar tabelas de preço</button>
+      <button class="btn btn-primary" onclick="rodar(this, importarTabelasPrecos)">Importar tabelas de preço</button>
     </div>
 
     <div class="step">
       <h3>7. Pedidos históricos (Vendas)</h3>
       <div class="info">Importa <b id="c-ped">—</b> pedidos antigos (aba PEDIDO GUARDADO) como <b>status concluído</b>, só pra consulta — <b>NÃO baixa estoque nem gera contas a receber</b> (essas vêm do passo 8, com os dados reais). Rode o passo 5 antes, pra ligar cada pedido ao cliente certo.</div>
-      <button class="btn btn-primary" onclick="importarPedidosHistoricos()">Importar pedidos históricos</button>
+      <button class="btn btn-primary" onclick="rodar(this, importarPedidosHistoricos)">Importar pedidos históricos</button>
     </div>
 
     <div class="step">
       <h3>8. Contas a receber históricas (Vendas)</h3>
       <div class="info">Importa <b id="c-cr">—</b> registros (aba CONT. RECEBER) com o status real de cada um (pago/aberto). Demora alguns minutos.</div>
-      <button class="btn btn-primary" onclick="importarContasReceberHistorico()">Importar contas a receber</button>
+      <button class="btn btn-primary" onclick="rodar(this, importarContasReceberHistorico)">Importar contas a receber</button>
     </div>
 
     <div id="log" class="log">Aguardando...</div>
@@ -113,6 +113,33 @@
       if (tipo) p.classList.add(tipo);
       logEl.appendChild(p);
       logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    // Roda uma importação com proteção: desabilita o botão (evita clique duplo
+    // rodando duas vezes ao mesmo tempo) e SEMPRE mostra erro na tela — antes,
+    // um erro (ex: permissão negada no Firestore) ficava mudo, só no console
+    // do navegador, e o log parecia travado pra sempre em "Importando...".
+    let importando = false;
+    async function rodar(btn, fn) {
+      if (importando) { log('⏳ Já tem uma importação rodando — espera terminar', 'err'); return; }
+      importando = true;
+      btn.disabled = true;
+      const textoOriginal = btn.textContent;
+      btn.textContent = '⏳ importando...';
+      try {
+        await fn();
+      } catch (e) {
+        console.error(e);
+        let msg = e.message || String(e);
+        if (e.code === 'permission-denied' || /permission/i.test(msg)) {
+          msg += ' — provavelmente falta liberar a coleção "vendas_dados" nas Regras do Firestore (Firebase Console → Firestore Database → Regras)';
+        }
+        log('✗ Erro: ' + msg, 'err');
+      } finally {
+        importando = false;
+        btn.disabled = false;
+        btn.textContent = textoOriginal;
+      }
     }
 
     let seedRefs = [], seedCost = [], seedPrc = {}, seedLotes = [];
