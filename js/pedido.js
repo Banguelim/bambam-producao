@@ -46,6 +46,8 @@ async function init() {
 
   document.getElementById('p-cliente').addEventListener('change', onClienteChange);
   document.getElementById('it-ref').addEventListener('change', onRefChange);
+  document.getElementById('it-tabela').addEventListener('change', onRefChange);
+  document.getElementById('p-desconto').addEventListener('input', renderItens);
   document.getElementById('btn-add-ref').addEventListener('click', confirmarRefNoPedido);
   document.getElementById('btn-novo-pedido').addEventListener('click', () => { if (confirm('Descartar e começar um pedido novo?')) limparFormulario(); });
   document.getElementById('btn-salvar-pedido').addEventListener('click', () => salvarPedidoBtn(false));
@@ -75,9 +77,13 @@ function popularDatalistsCabecalho(refs) {
   dlRef.innerHTML = '';
   refs.forEach(r => { const o = document.createElement('option'); o.value = r.ref; dlRef.appendChild(o); });
 
-  const sel = document.getElementById('p-tabela');
-  sel.innerHTML = '';
-  pTabelas.forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = t; sel.appendChild(o); });
+  // Tabela do cabeçalho do pedido (padrão do cliente) e tabela da entrada de
+  // item (pode ser trocada por ref/leva — ex: essa ref sai pela tabela B)
+  ['p-tabela', 'it-tabela'].forEach(id => {
+    const sel = document.getElementById(id);
+    sel.innerHTML = '';
+    pTabelas.forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = t; sel.appendChild(o); });
+  });
 }
 
 function sugerirVencimento() {
@@ -91,13 +97,19 @@ function onClienteChange() {
   const c = pClientes.find(x => x.nome.toUpperCase() === nome.toUpperCase());
   if (c) {
     document.getElementById('p-vendedor').value = c.vendedor || '';
-    if (c.tabela_preco) document.getElementById('p-tabela').value = c.tabela_preco;
+    if (c.tabela_preco) {
+      document.getElementById('p-tabela').value = c.tabela_preco;
+      document.getElementById('it-tabela').value = c.tabela_preco;
+    }
   }
 }
 
+// Preço puxado pela tabela escolhida NA ENTRADA DE ITEM (it-tabela), que
+// pode ser diferente da tabela padrão do cabeçalho — ex: cliente é tabela A
+// mas essa ref específica sai pela tabela B.
 async function onRefChange() {
   const ref = document.getElementById('it-ref').value.trim().toUpperCase();
-  const tabela = document.getElementById('p-tabela').value;
+  const tabela = document.getElementById('it-tabela').value;
   if (!ref || !tabela) return;
   try {
     const p = await precoVendaDe(ref, tabela);
@@ -277,10 +289,22 @@ function removerItem(idx) {
   renderItens();
 }
 
+// Desconto (%) do pedido — aplicado em cima do preço de CADA item, então
+// reflete no valor individual de cada linha (não só no total geral).
+function descontoAtual() {
+  const v = parseFloat(document.getElementById('p-desconto').value);
+  if (!v || v < 0) return 0;
+  return Math.min(v, 100);
+}
+function precoComDesconto(preco, desconto) {
+  return Math.round(preco * (1 - desconto / 100) * 10000) / 10000; // 4 casas pra não perder centavo no arredondamento do subtotal
+}
+
 function renderItens() {
   const corpo = document.getElementById('itens-corpo');
   const tabela = document.getElementById('tabela-itens');
   const vazio = document.getElementById('itens-vazio');
+  const desconto = descontoAtual();
   corpo.innerHTML = '';
 
   if (pedidoItens.length === 0) {
@@ -291,14 +315,16 @@ function renderItens() {
     vazio.style.display = 'none';
     pedidoItens.forEach((it, idx) => {
       const tamsStr = TAMS.filter(t => it.qtds[t] > 0).map(t => `${t}:${it.qtds[t]}`).join(' ');
+      const precoFinal = desconto > 0 ? precoComDesconto(it.preco, desconto) : it.preco;
+      const subtotalFinal = Math.round(it.qtd * precoFinal * 100) / 100;
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td class="ref">${it.ref}</td>
         <td>${it.cor}</td>
         <td class="qtds">${tamsStr}</td>
         <td class="num">${it.qtd}</td>
-        <td class="num preco">${formatBRL(it.preco)}</td>
-        <td class="num sub">${formatBRL(it.subtotal)}</td>
+        <td class="num preco" ${desconto > 0 ? `title="Preço de tabela: ${formatBRL(it.preco)}"` : ''}>${formatBRL(precoFinal)}</td>
+        <td class="num sub">${formatBRL(subtotalFinal)}</td>
         <td><button class="btn-x" title="remover">×</button></td>
       `;
       tr.querySelector('.btn-x').addEventListener('click', () => removerItem(idx));
@@ -306,14 +332,32 @@ function renderItens() {
     });
   }
 
+  document.getElementById('th-preco').textContent = desconto > 0 ? `Preço (-${desconto}%)` : 'Preço';
+
   const totalPecas = pedidoItens.reduce((a, i) => a + i.qtd, 0);
-  const totalValor = Math.round(pedidoItens.reduce((a, i) => a + i.subtotal, 0) * 100) / 100;
+  const totalSemDesconto = Math.round(pedidoItens.reduce((a, i) => a + i.subtotal, 0) * 100) / 100;
+  const totalValor = totalPedido();
   document.getElementById('lbl-total-pecas').textContent = totalPecas;
   document.getElementById('lbl-total-valor').textContent = formatBRL(totalValor);
+
+  const infoDesc = document.getElementById('lbl-desconto-info');
+  if (desconto > 0 && totalSemDesconto > 0) {
+    infoDesc.style.display = '';
+    document.getElementById('lbl-desconto-pct').textContent = desconto + '%';
+    document.getElementById('lbl-total-sem-desconto').textContent = formatBRL(totalSemDesconto);
+  } else {
+    infoDesc.style.display = 'none';
+  }
 }
 
+// Total do pedido já com o desconto aplicado item a item (soma dos subtotais
+// finais, não desconta em cima do total bruto — evita diferença de centavos).
 function totalPedido() {
-  return Math.round(pedidoItens.reduce((a, i) => a + i.subtotal, 0) * 100) / 100;
+  const desconto = descontoAtual();
+  return Math.round(pedidoItens.reduce((a, i) => {
+    const precoFinal = desconto > 0 ? precoComDesconto(i.preco, desconto) : i.preco;
+    return a + i.qtd * precoFinal;
+  }, 0) * 100) / 100;
 }
 
 // ==== MONTAR / SALVAR PEDIDO ====
@@ -329,6 +373,7 @@ function montarPedidoObj() {
     data_pedido: document.getElementById('p-data').value,
     itens: pedidoItens,
     total_pecas: pedidoItens.reduce((a, i) => a + i.qtd, 0),
+    desconto_pct: descontoAtual(),
     total_valor: totalPedido(),
     parcelas: parseInt(document.getElementById('p-parcelas').value) || 1,
     data_vencimento_base: document.getElementById('p-vencimento').value,
@@ -433,6 +478,7 @@ function limparFormulario() {
   document.getElementById('p-tabela').selectedIndex = 0;
   document.getElementById('p-data').value = hojeISO();
   document.getElementById('p-parcelas').value = 1;
+  document.getElementById('p-desconto').value = 0;
   sugerirVencimento();
   limparGradeItem();
   atualizarCabecalhoNumero();
@@ -481,6 +527,7 @@ async function abrirPedido(numero) {
     document.getElementById('p-data').value = p.data_pedido || hojeISO();
     document.getElementById('p-parcelas').value = p.parcelas || 1;
     document.getElementById('p-vencimento').value = p.data_vencimento_base || '';
+    document.getElementById('p-desconto').value = p.desconto_pct || 0;
     pedidoItens = (p.itens || []).map(i => ({ ...i }));
     limparGradeItem();
     atualizarCabecalhoNumero();

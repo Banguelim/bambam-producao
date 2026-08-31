@@ -26,6 +26,11 @@ async function init() {
   document.getElementById('btn-vend-add').addEventListener('click', tentarAddVendedor);
 
   // Tabelas de preço
+  document.getElementById('tabela-nome-novo').addEventListener('input', () => {
+    document.getElementById('btn-tabela-add').disabled = !document.getElementById('tabela-nome-novo').value.trim();
+  });
+  document.getElementById('tabela-nome-novo').addEventListener('keydown', e => { if (e.key === 'Enter') tentarAddTabela(); });
+  document.getElementById('btn-tabela-add').addEventListener('click', tentarAddTabela);
   document.getElementById('btn-buscar-preco-venda').addEventListener('click', buscarPrecoVendaBtn);
   document.getElementById('btn-salvar-preco-venda').addEventListener('click', salvarPrecoVendaBtn);
   document.getElementById('btn-nova-tabela').addEventListener('click', criarTabelaNova);
@@ -50,6 +55,7 @@ async function carregarTudo() {
     vTabelas = ts || [];
     renderClientes();
     renderVendedores();
+    renderTabelas();
     popularSelectsTabela();
     popularDatalists(refs || []);
   } catch (e) {
@@ -251,6 +257,48 @@ function renderVendedores() {
 }
 
 // ==== TABELAS DE PREÇO ====
+async function tentarAddTabela() {
+  const nome = document.getElementById('tabela-nome-novo').value.trim().toUpperCase();
+  if (!nome) return;
+  if (vTabelas.includes(nome)) { toast(`Tabela ${nome} já existe`, 'err'); return; }
+  try {
+    await salvarTabelaSeNova(nome);
+    toast(`✓ Tabela ${nome} cadastrada`, 'ok');
+    document.getElementById('tabela-nome-novo').value = '';
+    document.getElementById('btn-tabela-add').disabled = true;
+    await carregarTudo();
+  } catch (e) {
+    toast('Erro: ' + e.message, 'err');
+  }
+}
+async function excluirTabela(nome) {
+  if (!confirm(`Excluir a tabela ${nome}?\n\nOs preços já cadastrados nela ficam guardados, só não aparece mais pra escolher.`)) return;
+  try {
+    await deletarTabela(nome);
+    toast(`Tabela ${nome} excluída`, 'ok');
+    await carregarTudo();
+  } catch (e) {
+    toast('Erro: ' + e.message, 'err');
+  }
+}
+function renderTabelas() {
+  const lista = document.getElementById('tabela-lista');
+  document.getElementById('tabela-contagem').textContent = `(${vTabelas.length})`;
+  lista.innerHTML = '';
+  vTabelas.forEach(nome => {
+    const padrao = TABELAS_PADRAO.includes(nome);
+    const item = document.createElement('div');
+    item.className = 'item-cad';
+    item.innerHTML = `
+      <span class="nome-cad">${nome}</span>
+      <span class="badge ${padrao ? 'inativa' : 'ativa'}">${padrao ? 'padrão' : 'personalizada'}</span>
+      <div class="acoes-btn">${padrao ? '' : '<button class="btn-mini danger" data-acao="excluir">✗ excluir</button>'}</div>
+    `;
+    if (!padrao) item.querySelector('[data-acao="excluir"]').addEventListener('click', () => excluirTabela(nome));
+    lista.appendChild(item);
+  });
+}
+
 async function criarTabelaNova() {
   const nome = prompt('Nome da nova tabela de preço (ex: ATACADO):');
   if (!nome || !nome.trim()) return;
@@ -260,6 +308,7 @@ async function criarTabelaNova() {
     toast(`✓ Tabela ${n} criada`, 'ok');
     vTabelas = await listarTabelas();
     popularSelectsTabela();
+    renderTabelas();
     document.getElementById('tab-nome').value = n;
   } catch (e) {
     toast('Erro: ' + e.message, 'err');

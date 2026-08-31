@@ -10,7 +10,7 @@
 <style>
   .cabec-pedido {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr auto auto auto;
+    grid-template-columns: 2fr 1fr 1fr auto auto auto auto;
     gap: 12px;
     align-items: flex-end;
     background: var(--surface-2);
@@ -27,13 +27,14 @@
 
   .cabec-item {
     display: grid;
-    grid-template-columns: auto auto 1fr;
+    grid-template-columns: auto auto auto 1fr;
     gap: 14px;
     align-items: flex-end;
     padding: 0 4px;
     margin-bottom: 8px;
   }
   .cabec-item input#it-ref { width: 110px; font-weight: 700; text-transform: uppercase; }
+  .cabec-item select#it-tabela { min-width: 110px; }
   .cabec-item input#it-preco { width: 100px; font-weight: 700; text-align: right; }
   .cabec-item .info-item { font-size: 12px; color: var(--text-secondary); }
   .cabec-item .info-item b { color: var(--text-primary); }
@@ -157,11 +158,16 @@
         <label class="lbl">1º vencimento</label>
         <input type="date" id="p-vencimento">
       </div>
+      <div class="campo">
+        <label class="lbl">Desconto (%)</label>
+        <input type="number" id="p-desconto" min="0" max="100" step="0.01" value="0" style="width:70px;text-align:center">
+      </div>
     </div>
 
     <div class="bloco-item">
       <div class="cabec-item">
         <div><label class="lbl">Referência</label><input list="refs-list" id="it-ref" placeholder="ex: 205"></div>
+        <div><label class="lbl">Tabela</label><select id="it-tabela"></select></div>
         <div><label class="lbl">Preço (peça)</label><input type="number" id="it-preco" step="0.01" min="0" placeholder="0,00"></div>
         <div class="info-item">Digita cor + qtd numa coluna, aperta Enter — repete pra outras cores/tamanhos da mesma ref, depois clica em <b>Adicionar ao pedido</b></div>
       </div>
@@ -189,7 +195,7 @@
     <h3 style="margin-bottom:8px">Itens do pedido</h3>
     <table class="tabela-itens" id="tabela-itens">
       <thead>
-        <tr><th>Ref</th><th>Cor</th><th>Tamanhos</th><th>Qtd</th><th>Preço</th><th>Subtotal</th><th></th></tr>
+        <tr><th>Ref</th><th>Cor</th><th>Tamanhos</th><th>Qtd</th><th id="th-preco">Preço</th><th>Subtotal</th><th></th></tr>
       </thead>
       <tbody id="itens-corpo"></tbody>
     </table>
@@ -197,6 +203,7 @@
 
     <div class="rodape-pedido">
       <div class="totais">Total de peças: <b id="lbl-total-pecas">0</b></div>
+      <div class="totais" id="lbl-desconto-info" style="display:none">Desconto: <b id="lbl-desconto-pct">0%</b> — de <s id="lbl-total-sem-desconto">R$ 0,00</s></div>
       <div class="totais">Valor do pedido: <span class="v" id="lbl-total-valor">R$ 0,00</span></div>
     </div>
 

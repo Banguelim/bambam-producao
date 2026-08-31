@@ -58,6 +58,10 @@ async function salvarTabelaSeNova(nome) {
   if (!n) return;
   await colTabelas().doc(n).set({ nome: n, ativa: true }, { merge: true });
 }
+// Só remove tabelas criadas pelo usuário (as padrão nem têm doc — ver TABELAS_PADRAO)
+async function deletarTabela(nome) {
+  await colTabelas().doc(nome).delete();
+}
 
 // ============ PREÇOS DE VENDA (ref × tabela) ============
 async function precoVendaDe(ref, tabela) {

@@ -299,58 +299,84 @@ async function salvarCorteBtn() {
   const refs = [refPrincipal, ...refsExtras];
   const totalPecasPorRef = itensBase.reduce((a, i) => a + i.qtd, 0);
 
-  // Valida duplicidade de todas as refs de uma vez
+  // Valida duplicidade de todas as refs de uma vez — mas em vez de só bloquear,
+  // pergunta se quer ACRESCENTAR os itens novos (ex: um tamanho que faltou) ao
+  // corte que já existe pra esse lote+ref. CORREÇÃO 31/08/2026.
+  const existentesPorRef = {}; // { ref: {id, data} }
   try {
     const cortesExistentes = await colCortes().where('lote', '==', lote).get();
-    const conflitantes = [];
     cortesExistentes.forEach(doc => {
       const c = doc.data();
-      const refsExistentes = c.refs || [];
-      refs.forEach(r => {
-        if (refsExistentes.includes(r)) conflitantes.push(r);
+      (c.refs || []).forEach(r => {
+        if (refs.includes(r)) existentesPorRef[r] = { id: doc.id, data: c };
       });
     });
-    if (conflitantes.length > 0) {
-      const conflict = [...new Set(conflitantes)].join(', ');
-      toast(`Já existe corte com Lote ${lote} e Ref ${conflict}. Não dá pra duplicar.`, 'err');
+  } catch (e) {
+    console.warn('Erro validando duplicidade:', e);
+  }
+
+  const refsConflitantes = Object.keys(existentesPorRef);
+  if (refsConflitantes.length > 0) {
+    const lista = refsConflitantes.join(', ');
+    const acrescentar = confirm(
+      `Já existe corte com Lote ${lote} e Ref ${lista}.\n\n` +
+      `[OK] ACRESCENTA as cores/tamanhos digitados agora ao corte que já existe (ex: um tamanho que faltou)\n` +
+      `[Cancelar] cancela — nada é salvo`
+    );
+    if (!acrescentar) {
+      toast('Cancelado — nada foi salvo', '');
       btn.disabled = false;
       return;
     }
-  } catch (e) {
-    console.warn('Erro validando duplicidade:', e);
   }
 
   // === CORREÇÃO 19/08/2026 ===
   // Cria UM corte separado por ref, tudo dentro de um batch atômico.
   // Antes: um único corte com refs: [X, Y, Z]. Agora: N cortes, cada um refs: [X].
+  // === CORREÇÃO 31/08/2026 === refs que já existem pro lote são ACRESCENTADAS
+  // ao corte existente (soma qtd se já tinha a mesma cor+tam, senão adiciona
+  // a linha nova) em vez de criar um corte duplicado.
   try {
     const db = firebase.firestore();
     const batch = db.batch();
-    const cortesCriados = [];
+    let refsNovas = [], refsAcrescentadas = [];
 
     for (const ref of refs) {
-      const docRef = colCortes().doc(); // gera ID novo
-      const itens = itensBase.map(i => ({ ref, ...i })); // cada item ganha a ref deste corte
-      const corte = {
-        lote,
-        refs: [ref],           // array com uma ref só (mantém compat com o resto do sistema)
-        data_corte: data,
-        itens,
-        total_pecas: totalPecasPorRef,
-        status: 'cortado'
-      };
-      batch.set(docRef, corte);
-      cortesCriados.push({ id: docRef.id, ref });
+      const itensNovos = itensBase.map(i => ({ ref, ...i }));
+      const existente = existentesPorRef[ref];
+
+      if (existente) {
+        // Mescla no corte existente: soma qtd se cor+tam já tinha, senão adiciona linha
+        const itensMesclados = [...(existente.data.itens || [])];
+        itensNovos.forEach(novo => {
+          const igual = itensMesclados.find(i => i.cor === novo.cor && i.tam === novo.tam);
+          if (igual) igual.qtd += novo.qtd;
+          else itensMesclados.push(novo);
+        });
+        const novoTotal = itensMesclados.reduce((a, i) => a + i.qtd, 0);
+        batch.update(colCortes().doc(existente.id), { itens: itensMesclados, total_pecas: novoTotal });
+        refsAcrescentadas.push(ref);
+      } else {
+        const docRef = colCortes().doc(); // gera ID novo
+        const corte = {
+          lote,
+          refs: [ref],           // array com uma ref só (mantém compat com o resto do sistema)
+          data_corte: data,
+          itens: itensNovos,
+          total_pecas: totalPecasPorRef,
+          status: 'cortado'
+        };
+        batch.set(docRef, corte);
+        refsNovas.push(ref);
+      }
     }
 
     await batch.commit();
 
-    const refsStr = refs.join(', ');
-    if (refs.length === 1) {
-      toast(`✓ Corte ${lote}/${refPrincipal} salvo (${totalPecasPorRef} peças)`, 'ok');
-    } else {
-      toast(`✓ ${refs.length} cortes do lote ${lote} salvos: ${refsStr} (${totalPecasPorRef} peças cada)`, 'ok');
-    }
+    const partes = [];
+    if (refsNovas.length > 0) partes.push(`${refsNovas.length} corte(s) novo(s) (${refsNovas.join(', ')})`);
+    if (refsAcrescentadas.length > 0) partes.push(`acrescentado no corte existente de ${refsAcrescentadas.join(', ')}`);
+    toast(`✓ Lote ${lote}: ${partes.join(' · ')} (${totalPecasPorRef} peças por ref)`, 'ok');
 
     // Salva cores novas no Firestore pra próxima vez aparecerem no autocomplete
     try {
