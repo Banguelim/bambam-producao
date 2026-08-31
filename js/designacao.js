@@ -50,8 +50,7 @@ async function mostrarSelecao() {
   document.getElementById('hint-tela').textContent = 'Escolha um corte pra designar';
 
   try {
-    const cortes = await listarCortesRecentes(200);
-    const pendentes = cortes.filter(c => c.status !== 'designado_total');
+    const pendentes = await listarCortesPendentes();
     if (pendentes.length === 0) {
       document.getElementById('lista-cortes').innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:20px">Nenhum corte pendente. Crie um novo em <a href="novo-corte.html">Novo corte</a></div>';
       return;

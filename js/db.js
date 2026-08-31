@@ -114,6 +114,21 @@ async function listarCortesRecentes(limite = 100) {
   return cortes.slice(0, limite);
 }
 
+// Lista TODOS os cortes ainda não 100% designados (sem limite de quantidade) —
+// usado na tela de Designação. CORREÇÃO 31/08/2026: antes usava
+// listarCortesRecentes(200), que corta pros 200 mais recentes ANTES de
+// filtrar os já designados — um corte pendente mais antigo que os 200
+// últimos ficava invisível na lista pra sempre. Aqui filtra primeiro,
+// então nada pendente se perde.
+async function listarCortesPendentes() {
+  const snap = await colCortes().get();
+  const pendentes = snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .filter(c => c.status !== 'designado_total');
+  pendentes.sort((a, b) => (b.data_corte || '').localeCompare(a.data_corte || ''));
+  return pendentes;
+}
+
 // ============ NOTAS ============
 async function proximoNumeroNota(peek = false) {
   // Contador simples — pega o maior numero atual e +1
