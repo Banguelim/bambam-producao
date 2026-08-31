@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BAMBAM · Financeiro</title>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/forms.css">
+<style>
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+  .stat-card { background: var(--surface-1); border: 0.5px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+  .stat-card .k { font-size: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; }
+  .stat-card .v { font-size: 20px; font-weight: 900; color: var(--text-primary); font-variant-numeric: tabular-nums; margin-top: 4px; }
+  .stat-card .v.danger { color: var(--text-danger); }
+  .stat-card .v.warn { color: var(--warning); }
+  .stat-card .v.ok { color: var(--success); }
+
+  .filtros { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 12px; background: var(--surface-2); border: 0.5px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+  .filtros .campo { display: flex; flex-direction: column; gap: 4px; }
+  .filtros select, .filtros input { padding: 8px 10px; font-size: 13px; }
+
+  .tabela-contas { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .tabela-contas th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-secondary); padding: 8px; border-bottom: 0.5px solid var(--border); position: sticky; top: 48px; background: var(--bg); }
+  .tabela-contas td { padding: 9px 8px; border-bottom: 0.5px dashed var(--border); }
+  .tabela-contas tr.vencida td { color: var(--text-danger); }
+  .tabela-contas tr.paga { opacity: 0.55; }
+  .tabela-contas td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .tabela-contas td.cliente { font-weight: 700; color: var(--text-primary); }
+  .tabela-contas .badge { padding: 3px 8px; border-radius: 999px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+  .tabela-contas .badge.aberto { background: color-mix(in srgb, var(--warning) 20%, transparent); color: var(--warning); }
+  .tabela-contas .badge.vencido { background: color-mix(in srgb, var(--text-danger) 20%, transparent); color: var(--text-danger); }
+  .tabela-contas .badge.pago { background: color-mix(in srgb, var(--success) 20%, transparent); color: var(--success); }
+  .btn-mini { padding: 4px 9px; border-radius: 4px; font-size: 10px; font-weight: 700; cursor: pointer; border: 0.5px solid var(--border); background: none; color: var(--text-secondary); }
+  .btn-mini:hover { color: var(--text-primary); border-color: var(--border-accent); }
+  .btn-mini.success { color: var(--success); border-color: var(--success); }
+  .vazio { padding: 30px; text-align: center; color: var(--text-muted); font-size: 13px; }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <span class="logo">BAMBAM <b>BABY</b></span>
+    <nav class="nav">
+      <a href="index.html">Painel</a>
+      <a href="novo-corte.html">Novo corte</a>
+      <a href="designacao.html">Designação</a>
+      <a href="retorno.html">Retorno</a>
+      <a href="pagamento.html">Pagamento</a>
+      <a href="arremate.html">Arremate</a>
+      <a href="estoque.html">Estoque</a>
+      <a href="cadastros.html">Cadastros</a>
+      <a href="relatorios.html">Relatórios</a>
+      <a href="pedido.html">Pedidos</a>
+      <a href="vendas-cadastros.html">Clientes</a>
+      <a href="contas-receber.html" class="ativo">Financeiro</a>
+    </nav>
+    <div class="user">
+      <span id="user-email">—</span>
+      <button class="logout" onclick="logout()">sair</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <h1 style="margin-bottom:10px">Contas a Receber</h1>
+
+    <div class="stats">
+      <div class="stat-card"><div class="k">Em aberto</div><div class="v warn" id="s-aberto">—</div></div>
+      <div class="stat-card"><div class="k">Vencidas</div><div class="v danger" id="s-vencido">—</div></div>
+      <div class="stat-card"><div class="k">Recebido (pago)</div><div class="v ok" id="s-pago">—</div></div>
+      <div class="stat-card"><div class="k">Total de parcelas</div><div class="v" id="s-total">—</div></div>
+    </div>
+
+    <div class="filtros">
+      <div class="campo">
+        <label class="lbl">Status</label>
+        <select id="f-status">
+          <option value="pendentes" selected>Em aberto + vencidas</option>
+          <option value="aberto">Só em aberto</option>
+          <option value="vencido">Só vencidas</option>
+          <option value="pago">Só pagas</option>
+          <option value="todos">Todas</option>
+        </select>
+      </div>
+      <div class="campo" style="flex:1;min-width:200px">
+        <label class="lbl">Buscar cliente / pedido</label>
+        <input id="f-busca" placeholder="🔎 nome do cliente ou nº do pedido">
+      </div>
+    </div>
+
+    <table class="tabela-contas" id="tabela-contas">
+      <thead>
+        <tr><th>Pedido</th><th>Cliente</th><th>Parcela</th><th>Vencimento</th><th>Valor</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody id="contas-corpo"></tbody>
+    </table>
+    <div class="vazio" id="contas-vazio" style="display:none">Nenhuma conta encontrada</div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/acesso.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/db-vendas.js"></script>
+  <script src="js/contas-receber.js"></script>
+</body>
+</html>

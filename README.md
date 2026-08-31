@@ -45,6 +45,54 @@ bambam-producao/
     └── importar.html       ← página de admin pra rodar o import inicial
 ```
 
+## Módulo de Vendas / Financeiro
+
+Extraído do controle de vendas em planilha (pedidos + contas a receber), vive nas
+mesmas telas/estilo do sistema de produção, mas em coleções Firestore separadas
+(`vendas_dados/`) pra não misturar com `producao_dados/`.
+
+```
+vendas-cadastros.html    ← abas: Clientes, Vendedores, Tabelas de preço de venda
+pedido.html               ← novo pedido / pedidos em aberto — itens por ref/cor/tamanho,
+                             preço puxado da tabela do cliente (ou digitado manual),
+                             romaneio de separação (detalhado) e de conferência (resumido)
+contas-receber.html       ← parcelas geradas ao concluir um pedido — dar baixa/reabrir
+js/db-vendas.js           ← toda a camada Firestore do módulo (100% autônomo)
+```
+
+### `/vendas_dados/meta/clientes/{id}`
+```
+{ nome, cnpj, cidade, estado, telefone, email, vendedor, tabela_preco, ativo }
+```
+
+### `/vendas_dados/meta/vendedores/{nome}` — `{ nome, ativo }`
+
+### `/vendas_dados/meta/tabelas/{nome}` — nomes de tabela de preço além das padrão
+(`BASE, NT, BRAULIO, MERCADAO, SD, ND, ESPECIAL, MEIA NOTA, NOVA`)
+
+### `/vendas_dados/meta/precos_venda/{ref}` — `{ ref, nome, precos: { <tabela>: valor } }`
+
+### `/vendas_dados/op/pedidos/{numero}`
+```
+{
+  numero, cliente, cliente_id, vendedor, tabela_preco, data_pedido,
+  itens: [ { ref, cor, qtds: {RN,P,M,G,GG}, qtd, preco, subtotal } ],
+  total_pecas, total_valor, parcelas, data_vencimento_base,
+  status: "aberto" | "concluido", concluido_em
+}
+```
+Ao **concluir** um pedido: dá baixa no estoque de produção (`producao_dados/op/estoque`,
+mesma coleção que a tela Arremate alimenta) e gera as parcelas em Contas a Receber.
+
+### `/vendas_dados/op/contas_receber/{id}`
+```
+{
+  pedido_id, cliente, cliente_id, parcela_num, parcelas_total, valor,
+  data_emissao, data_vencimento, status: "aberto" | "pago",
+  data_pagamento, valor_pago
+}
+```
+
 ## Modelo de dados Firestore
 
 Todas as coleções em `/producao/{docId}` pra não misturar com o `bambam-ponto`.

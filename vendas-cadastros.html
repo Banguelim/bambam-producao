@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BAMBAM · Cadastros</title>
+<title>BAMBAM · Cadastros de Vendas</title>
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/forms.css">
 <style>
@@ -15,8 +15,8 @@
   .painel.ativo { display: block; }
   .form-add { background: var(--surface-2); border: 0.5px solid var(--border); border-radius: 8px; padding: 14px 18px; margin-bottom: 14px; display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: flex-end; }
   .form-add .campos { display: flex; gap: 12px; flex-wrap: wrap; }
-  .form-add .campo { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 180px; }
-  .form-add input { padding: 9px 12px; font-size: 14px; font-weight: 600; }
+  .form-add .campo { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 160px; }
+  .form-add input, .form-add select { padding: 9px 12px; font-size: 14px; font-weight: 600; }
   .form-add .btn-add { padding: 9px 20px; background: var(--bg-accent-strong); color: white; border: none; border-radius: var(--radius); font-weight: 700; cursor: pointer; font-size: 13px; white-space: nowrap; }
   .form-add .btn-add:disabled { opacity: 0.5; cursor: default; }
   .lista-cad { background: var(--surface-1); border: 0.5px solid var(--border); border-radius: 8px; overflow: hidden; }
@@ -25,16 +25,16 @@
   .lista-cad .titulo .contagem { color: var(--text-muted); font-weight: 500; margin-left: 4px; }
   .lista-cad .busca-filtro { padding: 10px 14px; border-bottom: 0.5px solid var(--border); }
   .lista-cad .busca-filtro input { width: 100%; padding: 7px 12px; font-size: 13px; }
-  .lista-cad .itens { max-height: 500px; overflow-y: auto; }
-  .item-cad { display: grid; grid-template-columns: 1fr auto auto auto; gap: 10px; padding: 10px 14px; border-bottom: 0.5px dashed var(--border); align-items: center; font-size: 13px; }
+  .lista-cad .itens { max-height: 520px; overflow-y: auto; }
+  .item-cad { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; padding: 10px 14px; border-bottom: 0.5px dashed var(--border); align-items: center; font-size: 13px; }
   .item-cad:last-child { border-bottom: none; }
   .item-cad:hover { background: color-mix(in srgb, var(--bg-accent) 15%, transparent); }
   .item-cad.inativa { opacity: 0.5; }
   .item-cad .nome-cad { font-weight: 700; color: var(--text-primary); font-size: 14px; }
+  .item-cad .info-extra { font-size: 11px; color: var(--text-secondary); line-height: 1.5; }
   .item-cad .badge { padding: 3px 8px; border-radius: 999px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
   .item-cad .badge.ativa { background: color-mix(in srgb, var(--success) 20%, transparent); color: var(--success); }
   .item-cad .badge.inativa { background: color-mix(in srgb, var(--text-muted) 20%, transparent); color: var(--text-muted); }
-  .item-cad .info-extra { font-size: 11px; color: var(--text-secondary); }
   .item-cad .acoes-btn { display: flex; gap: 4px; }
   .item-cad .btn-mini { padding: 4px 9px; border-radius: 4px; font-size: 10px; font-weight: 700; cursor: pointer; border: 0.5px solid var(--border); background: none; color: var(--text-secondary); letter-spacing: 0.3px; white-space: nowrap; }
   .item-cad .btn-mini:hover { color: var(--text-primary); border-color: var(--border-accent); }
@@ -54,10 +54,10 @@
       <a href="pagamento.html">Pagamento</a>
       <a href="arremate.html">Arremate</a>
       <a href="estoque.html">Estoque</a>
-      <a href="cadastros.html" class="ativo">Cadastros</a>
+      <a href="cadastros.html">Cadastros</a>
       <a href="relatorios.html">Relatórios</a>
       <a href="pedido.html">Pedidos</a>
-      <a href="vendas-cadastros.html">Clientes</a>
+      <a href="vendas-cadastros.html" class="ativo">Clientes</a>
       <a href="contas-receber.html">Financeiro</a>
     </nav>
     <div class="user">
@@ -67,138 +67,112 @@
   </div>
 
   <div class="wrap">
-    <h1 style="margin-bottom:10px">Cadastros</h1>
+    <h1 style="margin-bottom:10px">Cadastros de Vendas</h1>
 
     <div class="abas">
-      <button class="ativa" data-aba="costureiras">Costureiras</button>
-      <button data-aba="refs">Referências</button>
-      <button data-aba="cores">Cores</button>
-      <button data-aba="precos">Preços</button>
-      <button data-aba="backup">Backup</button>
+      <button class="ativa" data-aba="clientes">Clientes</button>
+      <button data-aba="vendedores">Vendedores</button>
+      <button data-aba="tabelas">Tabelas de Preço</button>
     </div>
 
-    <div class="painel ativo" data-painel="costureiras">
+    <div class="painel ativo" data-painel="clientes">
+      <div class="form-add">
+        <div class="campos">
+          <div class="campo" style="flex:2;min-width:220px">
+            <label class="lbl">Razão social / nome</label>
+            <input id="cli-nome" placeholder="ex: 123 MINHA VEZ KIDS LTDA">
+          </div>
+          <div class="campo">
+            <label class="lbl">CNPJ/CPF</label>
+            <input id="cli-cnpj" placeholder="00.000.000/0000-00">
+          </div>
+          <div class="campo">
+            <label class="lbl">Cidade</label>
+            <input id="cli-cidade" placeholder="cidade" style="text-transform:uppercase">
+          </div>
+          <div class="campo">
+            <label class="lbl">Estado</label>
+            <input id="cli-estado" placeholder="UF/estado" style="text-transform:uppercase">
+          </div>
+          <div class="campo">
+            <label class="lbl">Telefone</label>
+            <input id="cli-telefone" placeholder="(00) 00000-0000">
+          </div>
+          <div class="campo">
+            <label class="lbl">E-mail</label>
+            <input id="cli-email" placeholder="email@cliente.com">
+          </div>
+          <div class="campo">
+            <label class="lbl">Vendedor</label>
+            <input list="vend-list" id="cli-vendedor" placeholder="digite ou escolha">
+          </div>
+          <div class="campo">
+            <label class="lbl">Tabela de preço padrão</label>
+            <select id="cli-tabela"></select>
+          </div>
+        </div>
+        <button class="btn-add" id="btn-cli-add" disabled>+ Cadastrar</button>
+      </div>
+      <datalist id="vend-list"></datalist>
+      <div class="lista-cad">
+        <div class="titulo">
+          <span class="rot">Clientes cadastrados <span class="contagem" id="cli-contagem">(0)</span></span>
+        </div>
+        <div class="busca-filtro">
+          <input id="cli-busca" placeholder="🔎 buscar por nome, cidade ou vendedor">
+        </div>
+        <div class="itens" id="cli-lista"></div>
+      </div>
+    </div>
+
+    <div class="painel" data-painel="vendedores">
       <div class="form-add">
         <div class="campos">
           <div class="campo">
-            <label class="lbl">Nome da nova costureira</label>
-            <input id="cost-nome" placeholder="ex: MARIA JOSÉ" style="text-transform:uppercase">
+            <label class="lbl">Novo vendedor</label>
+            <input id="vend-nome" placeholder="ex: SERGIO" style="text-transform:uppercase">
           </div>
         </div>
-        <button class="btn-add" id="btn-cost-add" disabled>+ Cadastrar</button>
+        <button class="btn-add" id="btn-vend-add" disabled>+ Cadastrar</button>
       </div>
       <div class="lista-cad">
         <div class="titulo">
-          <span class="rot">Costureiras cadastradas <span class="contagem" id="cost-contagem">(0)</span></span>
+          <span class="rot">Vendedores cadastrados <span class="contagem" id="vend-contagem">(0)</span></span>
         </div>
-        <div class="busca-filtro">
-          <input id="cost-busca" placeholder="🔎 buscar por nome">
-        </div>
-        <div class="itens" id="cost-lista"></div>
+        <div class="itens" id="vend-lista"></div>
       </div>
     </div>
 
-    <div class="painel" data-painel="refs">
-      <div class="form-add">
-        <div class="campos">
-          <div class="campo">
-            <label class="lbl">Nova referência</label>
-            <input id="ref-nome" placeholder="ex: 205, 205MT, 001PC" style="text-transform:uppercase">
-          </div>
-        </div>
-        <button class="btn-add" id="btn-ref-add" disabled>+ Cadastrar</button>
-      </div>
-      <div class="lista-cad">
-        <div class="titulo">
-          <span class="rot">Referências cadastradas <span class="contagem" id="ref-contagem">(0)</span></span>
-        </div>
-        <div class="busca-filtro">
-          <input id="ref-busca" placeholder="🔎 buscar por código">
-        </div>
-        <div class="itens" id="ref-lista"></div>
-      </div>
-    </div>
-
-    <div class="painel" data-painel="cores">
-      <div class="form-add">
-        <div class="campos">
-          <div class="campo">
-            <label class="lbl">Nova cor</label>
-            <input id="cor-nome" placeholder="ex: TURQUESA, PINK" style="text-transform:uppercase">
-          </div>
-        </div>
-        <button class="btn-add" id="btn-cor-add" disabled>+ Cadastrar</button>
-      </div>
-      <div class="lista-cad">
-        <div class="titulo">
-          <span class="rot">Cores cadastradas <span class="contagem" id="cor-contagem">(0)</span></span>
-        </div>
-        <div class="busca-filtro">
-          <input id="cor-busca" placeholder="🔎 buscar por nome">
-        </div>
-        <div class="itens" id="cor-lista"></div>
-      </div>
-    </div>
-
-    <div class="painel" data-painel="precos">
+    <div class="painel" data-painel="tabelas">
       <div style="background:var(--surface-1);border:0.5px solid var(--border);border-radius:8px;padding:16px">
         <div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px">
-          Consulta e edição da matriz de preços (custo por peça) — <b style="color:var(--text-primary)">costureira × referência</b>
+          Consulta e edição do preço de venda — <b style="color:var(--text-primary)">referência × tabela</b>.
+          Cada tabela é um preço diferente pro mesmo produto (ex: BASE, MERCADAO, ESPECIAL...).
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:flex-end;margin-bottom:14px">
           <div>
-            <label class="lbl">Costureira</label>
-            <input list="cost-preco-list" id="preco-cost" placeholder="digite ou escolha">
+            <label class="lbl">Referência</label>
+            <input list="ref-tab-list" id="tab-ref" placeholder="digite ou escolha">
           </div>
           <div>
-            <label class="lbl">Referência</label>
-            <input list="ref-preco-list" id="preco-ref" placeholder="digite ou escolha">
+            <label class="lbl">Tabela</label>
+            <div style="display:flex;gap:6px">
+              <select id="tab-nome" style="flex:1"></select>
+              <button class="btn btn-secondary" id="btn-nova-tabela" title="Criar tabela nova">+ nova</button>
+            </div>
           </div>
-          <button class="btn btn-secondary" id="btn-buscar-preco">🔎 Buscar</button>
+          <button class="btn btn-secondary" id="btn-buscar-preco-venda">🔎 Buscar</button>
         </div>
-        <datalist id="cost-preco-list"></datalist>
-        <datalist id="ref-preco-list"></datalist>
+        <datalist id="ref-tab-list"></datalist>
 
-        <div id="painel-preco-result" style="display:none;padding:14px;background:var(--surface-2);border-radius:6px">
-          <div style="margin-bottom:10px;font-size:13px" id="preco-info">—</div>
+        <div id="painel-preco-venda-result" style="display:none;padding:14px;background:var(--surface-2);border-radius:6px">
+          <div style="margin-bottom:10px;font-size:13px" id="preco-venda-info">—</div>
           <div style="display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center">
             <label class="lbl" style="margin:0">Novo preço:</label>
-            <input type="number" id="preco-valor" step="0.01" min="0" placeholder="0,00" style="padding:9px 12px">
-            <button class="btn btn-primary" id="btn-salvar-preco">✓ Salvar preço</button>
+            <input type="number" id="preco-venda-valor" step="0.01" min="0" placeholder="0,00" style="padding:9px 12px">
+            <button class="btn btn-primary" id="btn-salvar-preco-venda">✓ Salvar preço</button>
           </div>
         </div>
-      </div>
-    </div>
-
-    <div class="painel" data-painel="backup">
-      <div style="background:var(--surface-1);border:0.5px solid var(--border);border-radius:8px;padding:20px">
-        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:14px;line-height:1.6">
-          Baixe uma cópia completa dos dados do sistema em formato Excel (.xlsx).<br>
-          Recomendado fazer <b style="color:var(--text-primary)">1 vez por semana</b> — guarde no computador ou OneDrive.<br>
-          Contém: cortes, notas, pagamentos, adiantamentos, costureiras, refs, preços e estoque.
-        </div>
-        <button class="btn btn-primary" id="btn-backup" style="padding:12px 24px;font-size:14px">
-          📥 Gerar backup Excel agora
-        </button>
-        <div id="backup-status" style="margin-top:12px;font-size:12px;color:var(--text-muted)"></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="modal-nota" id="modal-duplicidade">
-    <div class="caixa" style="max-width:460px;background:var(--surface-1);color:var(--text-primary);font-family:inherit">
-      <h3 style="margin-bottom:12px;color:var(--warning)">⚠ Nome parecido encontrado</h3>
-      <div style="font-size:13px;color:var(--text-secondary);margin-bottom:14px">
-        Você tá tentando cadastrar <b id="dup-novo" style="color:var(--text-primary);font-size:15px">?</b>,
-        mas já existe <b id="dup-existente" style="color:var(--text-primary);font-size:15px">?</b> cadastrado.
-      </div>
-      <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">
-        Isso pode ser um erro de digitação. O que você quer fazer?
-      </div>
-      <div style="display:flex;flex-direction:column;gap:8px">
-        <button class="btn btn-primary" id="dup-usar-existente">Usar <b id="dup-usar-nome">?</b> (que já existe)</button>
-        <button class="btn btn-secondary" id="dup-cadastrar-novo">Cadastrar <b id="dup-cad-nome">?</b> como novo mesmo assim</button>
-        <button class="btn btn-secondary" id="dup-cancelar">Cancelar</button>
       </div>
     </div>
   </div>
@@ -206,11 +180,8 @@
   <div class="modal-nota" id="modal-editar">
     <div class="caixa" style="max-width:420px;background:var(--surface-1);color:var(--text-primary);font-family:inherit">
       <h3 style="margin-bottom:12px" id="edit-titulo">Editar</h3>
-      <div style="font-size:12px;color:var(--text-secondary);margin-bottom:14px" id="edit-aviso">
-        ⚠ Renomear pode afetar registros antigos que usam esse nome.
-      </div>
       <label class="lbl">Novo nome</label>
-      <input id="edit-nome" style="width:100%;padding:9px 12px;margin-bottom:16px;text-transform:uppercase">
+      <input id="edit-nome" style="width:100%;padding:9px 12px;margin-bottom:16px">
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button class="btn btn-secondary" onclick="document.getElementById('modal-editar').classList.remove('visivel')">Cancelar</button>
         <button class="btn btn-primary" id="btn-confirmar-editar">✓ Salvar</button>
@@ -226,6 +197,7 @@
   <script src="js/auth.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/db.js"></script>
-  <script src="js/cadastros.js"></script>
+  <script src="js/db-vendas.js"></script>
+  <script src="js/vendas-cadastros.js"></script>
 </body>
 </html>
