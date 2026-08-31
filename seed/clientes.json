@@ -1,0 +1,28 @@
+[
+  {
+    "nome": "123 MINHA VEZ KIDS LTDA",
+    "cnpj": "31.299.087/0001-73",
+    "estado": "RIO DE JANEIRO",
+    "cidade": "RIO DE JANEIRO",
+    "observacao": "",
+    "telefone": "",
+    "vendedor": "",
+    "email": "",
+    "nome_fantasia": "123 MINHA VEZ KIDS LTDA",
+    "tabela_preco": "BASE",
+    "ativo": true
+  },
+  {
+    "nome": "46.585.559 GALEGA BABY LTDA",
+    "cnpj": "46.585.559/0001-21",
+    "estado": "BAHIA",
+    "cidade": "SEABRA",
+    "observacao": "",
+    "telefone": "",
+    "vendedor": "",
+    "email": "jaidesassessoria@outlook.com",
+    "nome_fantasia": "46.585.559 GALEGA BABY LTDA",
+    "tabela_preco": "BASE",
+    "ativo": true
+  }
+]

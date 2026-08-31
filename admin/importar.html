@@ -70,6 +70,18 @@
       <button class="btn btn-primary" onclick="importarLotes()">Importar lotes</button>
     </div>
 
+    <div class="step">
+      <h3>5. Clientes (Vendas)</h3>
+      <div class="info">Importa <b id="c-cli">—</b> clientes do <code>seed/clientes.json</code>.</div>
+      <button class="btn btn-primary" onclick="importarClientes()">Importar clientes</button>
+    </div>
+
+    <div class="step">
+      <h3>6. Tabelas de preço de venda (Vendas)</h3>
+      <div class="info">Importa preço de venda de <b id="c-tprc">—</b> refs (matriz ref × tabela) do <code>seed/tabelas-precos.json</code>. Demora alguns minutos.</div>
+      <button class="btn btn-primary" onclick="importarTabelasPrecos()">Importar tabelas de preço</button>
+    </div>
+
     <div id="log" class="log">Aguardando...</div>
   </div>
 
@@ -80,6 +92,7 @@
   <script src="../js/auth.js"></script>
   <script src="../js/utils.js"></script>
   <script src="../js/db.js"></script>
+  <script src="../js/db-vendas.js"></script>
   <script>
     const logEl = document.getElementById('log');
     function log(msg, tipo = '') {
@@ -91,6 +104,7 @@
     }
 
     let seedRefs = [], seedCost = [], seedPrc = {}, seedLotes = [];
+    let seedClientes = [], seedTabPrecos = {};
 
     async function carregarSeeds() {
       try {
@@ -98,15 +112,47 @@
         seedCost  = await (await fetch('../seed/costureiras.json')).json();
         seedPrc   = await (await fetch('../seed/precos.json')).json();
         seedLotes = await (await fetch('../seed/lotes-fora.json')).json();
+        seedClientes  = await (await fetch('../seed/clientes.json')).json();
+        seedTabPrecos = await (await fetch('../seed/tabelas-precos.json')).json();
         document.getElementById('c-refs').textContent = seedRefs.length;
         document.getElementById('c-cost').textContent = seedCost.length;
         const nPrc = Object.values(seedPrc).reduce((a, o) => a + Object.keys(o).length, 0);
         document.getElementById('c-prc').textContent = nPrc.toLocaleString('pt-BR');
         document.getElementById('c-lote').textContent = seedLotes.length;
+        document.getElementById('c-cli').textContent = seedClientes.length;
+        document.getElementById('c-tprc').textContent = Object.keys(seedTabPrecos).length.toLocaleString('pt-BR');
         log('✓ Seeds carregados', 'ok');
       } catch (e) {
         log('Erro carregando seeds: ' + e.message, 'err');
       }
+    }
+
+    async function importarClientes() {
+      log('Importando clientes...');
+      const batch = db.batch();
+      for (const c of seedClientes) {
+        batch.set(colClientes().doc(), c);
+      }
+      await batch.commit();
+      log(`✓ ${seedClientes.length} clientes importados`, 'ok');
+    }
+
+    async function importarTabelasPrecos() {
+      log('Importando tabelas de preço de venda (pode levar alguns minutos)...');
+      let n = 0, batch = db.batch(), inBatch = 0;
+      for (const ref in seedTabPrecos) {
+        const { nome, precos } = seedTabPrecos[ref];
+        batch.set(colPrecosVenda().doc(ref), { ref, nome, precos });
+        n++; inBatch++;
+        if (inBatch >= 400) {
+          await batch.commit();
+          log(`  ${n} refs...`);
+          batch = db.batch(); inBatch = 0;
+        }
+      }
+      if (inBatch > 0) await batch.commit();
+      for (const t of TABELAS_PADRAO) await salvarTabelaSeNova(t);
+      log(`✓ Preços de venda de ${n} refs importados`, 'ok');
     }
 
     async function importarRefs() {

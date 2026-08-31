@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BAMBAM · Pedido</title>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/forms.css">
+<style>
+  .cabec-pedido {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr auto auto auto;
+    gap: 12px;
+    align-items: flex-end;
+    background: var(--surface-2);
+    border: 0.5px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+  }
+  .cabec-pedido .campo { display: flex; flex-direction: column; gap: 4px; }
+  .cabec-pedido input, .cabec-pedido select { padding: 9px 10px; font-size: 14px; font-weight: 600; }
+  .cabec-pedido input#p-cliente { min-width: 200px; text-transform: uppercase; }
+  .num-pedido { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; }
+  .num-pedido b { color: var(--text-accent); font-size: 14px; }
+
+  .linha-add {
+    display: flex;
+    gap: 6px;
+    align-items: flex-end;
+    background: var(--surface-1);
+    border: 0.5px dashed var(--border-accent);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .linha-add .campo { display: flex; flex-direction: column; gap: 3px; }
+  .linha-add label { font-size: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.4px; font-weight: 700; }
+  .linha-add input#it-ref { width: 100px; text-transform: uppercase; font-weight: 700; }
+  .linha-add input#it-cor { width: 130px; text-transform: uppercase; font-weight: 700; }
+  .linha-add .tam-in { width: 46px; text-align: center; padding: 9px 4px; }
+  .linha-add input#it-preco { width: 80px; text-align: right; }
+  .linha-add .btn-add-item {
+    padding: 10px 18px; background: var(--bg-accent-strong); color: white;
+    border: none; border-radius: var(--radius); font-weight: 700; font-size: 13px;
+  }
+  .linha-add .btn-add-item:disabled { opacity: 0.5; }
+
+  .tabela-itens { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 13px; }
+  .tabela-itens th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-secondary); padding: 6px 8px; border-bottom: 0.5px solid var(--border); }
+  .tabela-itens td { padding: 7px 8px; border-bottom: 0.5px dashed var(--border); }
+  .tabela-itens td.ref { font-weight: 800; color: var(--text-primary); }
+  .tabela-itens td.qtds { color: var(--text-secondary); font-size: 12px; }
+  .tabela-itens td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .tabela-itens td.preco { color: var(--text-accent); }
+  .tabela-itens td.sub { font-weight: 700; color: var(--success); }
+  .tabela-itens .btn-x { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px; }
+  .tabela-itens .btn-x:hover { color: var(--text-danger); }
+  .vazio-itens { padding: 24px; text-align: center; color: var(--text-muted); font-size: 13px; background: var(--surface-1); border-radius: 8px; margin-bottom: 12px; }
+
+  .rodape-pedido {
+    background: var(--surface-2); border: 0.5px solid var(--border); border-radius: var(--radius);
+    padding: 10px 16px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;
+  }
+  .rodape-pedido .totais { font-size: 13px; color: var(--text-secondary); }
+  .rodape-pedido .totais b { color: var(--text-primary); font-size: 16px; }
+  .rodape-pedido .totais .v { color: var(--success); font-size: 18px; font-weight: 800; }
+
+  .acoes-pedido { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; margin-bottom: 24px; }
+
+  .lista-pedidos { background: var(--surface-1); border: 0.5px solid var(--border); border-radius: 10px; padding: 16px; }
+  .lista-pedidos h3 { margin-bottom: 10px; }
+  .item-pedido { display: flex; align-items: center; gap: 12px; padding: 9px 12px; background: var(--surface-2); border: 0.5px solid var(--border); border-radius: 6px; margin-bottom: 6px; cursor: pointer; font-size: 13px; }
+  .item-pedido:hover { border-color: var(--border-accent); }
+  .item-pedido .num { font-weight: 800; color: var(--text-accent); min-width: 50px; }
+  .item-pedido .cli { font-weight: 700; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .item-pedido .val { font-weight: 700; color: var(--success); }
+
+  /* Folha de impressão (romaneio) */
+  .folha { display: none; background: white; color: black; padding: 20px 24px; border-radius: 8px; font-family: Arial, Helvetica, sans-serif; }
+  .folha-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 2px solid black; gap: 12px; flex-wrap: wrap; }
+  .folha-header .empresa { font-size: 20px; font-weight: 900; letter-spacing: 1px; }
+  .folha-header .sub { font-size: 13px; font-weight: 700; }
+  .folha-tabela { width: 100%; border-collapse: collapse; font-size: 12px; color: black; }
+  .folha-tabela th, .folha-tabela td { border: 1px solid #333; padding: 5px 6px; text-align: center; }
+  .folha-tabela thead th { background: #e5e5e5; font-weight: 700; font-size: 11px; text-transform: uppercase; }
+  .folha-tabela td.ref { font-family: 'Courier New', monospace; font-weight: 900; text-align: left; }
+  .folha-tabela tfoot td { background: #ffeb99; font-weight: 900; }
+  .assinaturas { margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 60px; font-size: 12px; }
+  .assinatura { border-top: 1px solid black; padding-top: 6px; text-align: center; }
+
+  @media print {
+    @page { size: A4 portrait; margin: 10mm; }
+    body { background: white !important; }
+    .topbar, .cabec-pedido, .linha-add, .tabela-itens, .rodape-pedido, .acoes-pedido, .lista-pedidos, .num-pedido, h1, .hint { display: none !important; }
+    .wrap { padding: 0 !important; margin: 0 !important; max-width: none !important; }
+    .folha { display: none; padding: 0 !important; }
+    .folha.imprimindo { display: block !important; }
+  }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <span class="logo">BAMBAM <b>BABY</b></span>
+    <nav class="nav">
+      <a href="index.html">Painel</a>
+      <a href="novo-corte.html">Novo corte</a>
+      <a href="designacao.html">Designação</a>
+      <a href="retorno.html">Retorno</a>
+      <a href="pagamento.html">Pagamento</a>
+      <a href="arremate.html">Arremate</a>
+      <a href="estoque.html">Estoque</a>
+      <a href="cadastros.html">Cadastros</a>
+      <a href="relatorios.html">Relatórios</a>
+      <a href="pedido.html" class="ativo">Pedidos</a>
+      <a href="vendas-cadastros.html">Clientes</a>
+      <a href="contas-receber.html">Financeiro</a>
+    </nav>
+    <div class="user">
+      <span id="user-email">—</span>
+      <button class="logout" onclick="logout()">sair</button>
+    </div>
+  </div>
+
+  <datalist id="clientes-list"></datalist>
+  <datalist id="vendedores-list"></datalist>
+  <datalist id="refs-list"></datalist>
+  <datalist id="cores-list"></datalist>
+
+  <div class="wrap">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+      <h1 style="margin:0">Pedido de venda</h1>
+      <span class="hint">Escolha o cliente, adicione os itens e conclua o pedido</span>
+    </div>
+    <div class="num-pedido">Pedido <b id="lbl-num-pedido">novo</b> — <span id="lbl-status-pedido">rascunho</span></div>
+
+    <div class="cabec-pedido">
+      <div class="campo">
+        <label class="lbl">Cliente</label>
+        <input list="clientes-list" id="p-cliente" placeholder="digite ou escolha">
+      </div>
+      <div class="campo">
+        <label class="lbl">Vendedor</label>
+        <input list="vendedores-list" id="p-vendedor" placeholder="vendedor">
+      </div>
+      <div class="campo">
+        <label class="lbl">Tabela de preço</label>
+        <select id="p-tabela"></select>
+      </div>
+      <div class="campo">
+        <label class="lbl">Data</label>
+        <input type="date" id="p-data">
+      </div>
+      <div class="campo">
+        <label class="lbl">Parcelas</label>
+        <input type="number" id="p-parcelas" min="1" value="1" style="width:60px;text-align:center">
+      </div>
+      <div class="campo">
+        <label class="lbl">1º vencimento</label>
+        <input type="date" id="p-vencimento">
+      </div>
+    </div>
+
+    <div class="linha-add">
+      <div class="campo"><label>Ref</label><input list="refs-list" id="it-ref" placeholder="ref"></div>
+      <div class="campo"><label>Cor</label><input list="cores-list" id="it-cor" placeholder="cor"></div>
+      <div class="campo"><label>RN</label><input type="number" class="tam-in" id="it-rn" min="0"></div>
+      <div class="campo"><label>P</label><input type="number" class="tam-in" id="it-p" min="0"></div>
+      <div class="campo"><label>M</label><input type="number" class="tam-in" id="it-m" min="0"></div>
+      <div class="campo"><label>G</label><input type="number" class="tam-in" id="it-g" min="0"></div>
+      <div class="campo"><label>GG</label><input type="number" class="tam-in" id="it-gg" min="0"></div>
+      <div class="campo"><label>Preço (peça)</label><input type="number" id="it-preco" step="0.01" min="0" placeholder="0,00"></div>
+      <button class="btn-add-item" id="btn-add-item">+ Adicionar item</button>
+    </div>
+
+    <table class="tabela-itens" id="tabela-itens">
+      <thead>
+        <tr><th>Ref</th><th>Cor</th><th>Tamanhos</th><th>Qtd</th><th>Preço</th><th>Subtotal</th><th></th></tr>
+      </thead>
+      <tbody id="itens-corpo"></tbody>
+    </table>
+    <div class="vazio-itens" id="itens-vazio">Nenhum item adicionado ainda</div>
+
+    <div class="rodape-pedido">
+      <div class="totais">Total de peças: <b id="lbl-total-pecas">0</b></div>
+      <div class="totais">Valor do pedido: <span class="v" id="lbl-total-valor">R$ 0,00</span></div>
+    </div>
+
+    <div class="acoes-pedido">
+      <button class="btn btn-secondary" id="btn-novo-pedido">+ novo pedido</button>
+      <button class="btn btn-secondary" id="btn-romaneio-separacao">🖨️ Romaneio de separação</button>
+      <button class="btn btn-secondary" id="btn-romaneio-conferencia">🖨️ Romaneio de conferência</button>
+      <button class="btn btn-secondary" id="btn-salvar-pedido">💾 Salvar</button>
+      <button class="btn btn-primary" id="btn-concluir-pedido">✓ Concluir pedido</button>
+    </div>
+
+    <div class="lista-pedidos">
+      <h3>Pedidos em aberto</h3>
+      <div id="lista-pedidos-abertos"><div class="vazio-itens">Carregando...</div></div>
+    </div>
+  </div>
+
+  <!-- Romaneio de separação: detalhado por ref/cor/tamanho -->
+  <div class="folha" id="folha-separacao">
+    <div class="folha-header">
+      <div class="empresa">BAMBAM BABY</div>
+      <div class="sub">Romaneio de Separação — Pedido <span id="rs-num">—</span></div>
+    </div>
+    <div style="margin-bottom:10px;font-size:13px">Cliente: <b id="rs-cliente">—</b> · Data: <b id="rs-data">—</b></div>
+    <table class="folha-tabela">
+      <thead><tr><th>Ref</th><th>Cor</th><th>RN</th><th>P</th><th>M</th><th>G</th><th>GG</th><th>Total</th></tr></thead>
+      <tbody id="rs-corpo"></tbody>
+      <tfoot><tr><td colspan="7" style="text-align:right">TOTAL GERAL</td><td id="rs-total"></td></tr></tfoot>
+    </table>
+    <div class="assinaturas">
+      <div class="assinatura">Separado por</div>
+      <div class="assinatura">Conferido por</div>
+    </div>
+  </div>
+
+  <!-- Romaneio de conferência: resumido por ref -->
+  <div class="folha" id="folha-conferencia">
+    <div class="folha-header">
+      <div class="empresa">BAMBAM BABY</div>
+      <div class="sub">Romaneio de Conferência — Pedido <span id="rc-num">—</span></div>
+    </div>
+    <div style="margin-bottom:10px;font-size:13px">Cliente: <b id="rc-cliente">—</b> · Data: <b id="rc-data">—</b></div>
+    <table class="folha-tabela">
+      <thead><tr><th>Ref</th><th>Quantidade</th></tr></thead>
+      <tbody id="rc-corpo"></tbody>
+      <tfoot><tr><td style="text-align:right">TOTAL GERAL</td><td id="rc-total"></td></tr></tfoot>
+    </table>
+    <div class="assinaturas">
+      <div class="assinatura">Entregue por</div>
+      <div class="assinatura">Recebido por</div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/acesso.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/db-vendas.js"></script>
+  <script src="js/pedido.js"></script>
+</body>
+</html>
