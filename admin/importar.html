@@ -94,6 +94,12 @@
       <button class="btn btn-primary" onclick="rodar(this, importarContasReceberHistorico)">Importar contas a receber</button>
     </div>
 
+    <div class="step">
+      <h3>9. Pedidos em aberto (Vendas)</h3>
+      <div class="info">Importa <b id="c-pab">—</b> pedidos da aba <b>PEDIDO</b> (diferente de PEDIDO GUARDADO — esses ainda não foram concluídos) como <b>status aberto</b>. Aparecem em Pedidos → "Pedidos em aberto", prontos pra continuar/concluir normalmente (aí sim baixa estoque e gera contas a receber). Rode o passo 5 antes.</div>
+      <button class="btn btn-primary" onclick="rodar(this, importarPedidosAbertos)">Importar pedidos em aberto</button>
+    </div>
+
     <div id="log" class="log">Aguardando...</div>
   </div>
 
@@ -143,7 +149,7 @@
     }
 
     let seedRefs = [], seedCost = [], seedPrc = {}, seedLotes = [];
-    let seedClientesCompleto = [], seedTabPrecos = {}, seedPedidosHist = [], seedContasHist = [];
+    let seedClientesCompleto = [], seedTabPrecos = {}, seedPedidosHist = [], seedContasHist = [], seedPedidosAbertos = [];
 
     async function carregarSeeds() {
       try {
@@ -155,6 +161,7 @@
         seedTabPrecos = await (await fetch('../seed/tabelas-precos.json')).json();
         seedPedidosHist = await (await fetch('../seed/pedidos-historicos.json')).json();
         seedContasHist = await (await fetch('../seed/contas-receber-historico.json')).json();
+        seedPedidosAbertos = await (await fetch('../seed/pedidos-abertos.json')).json();
         document.getElementById('c-refs').textContent = seedRefs.length;
         document.getElementById('c-cost').textContent = seedCost.length;
         const nPrc = Object.values(seedPrc).reduce((a, o) => a + Object.keys(o).length, 0);
@@ -164,10 +171,23 @@
         document.getElementById('c-tprc').textContent = Object.keys(seedTabPrecos).length.toLocaleString('pt-BR');
         document.getElementById('c-ped').textContent = seedPedidosHist.length;
         document.getElementById('c-cr').textContent = seedContasHist.length.toLocaleString('pt-BR');
+        document.getElementById('c-pab').textContent = seedPedidosAbertos.length;
         log('✓ Seeds carregados', 'ok');
       } catch (e) {
         log('Erro carregando seeds: ' + e.message, 'err');
       }
+    }
+
+    async function importarPedidosAbertos() {
+      log('Importando pedidos em aberto...');
+      let n = 0, batch = db.batch(), inBatch = 0;
+      for (const p of seedPedidosAbertos) {
+        batch.set(colPedidos().doc(p.numero), p);
+        n++; inBatch++;
+        if (inBatch >= 400) { await batch.commit(); log(`  ${n}/${seedPedidosAbertos.length}`); batch = db.batch(); inBatch = 0; }
+      }
+      if (inBatch > 0) await batch.commit();
+      log(`✓ ${n} pedidos em aberto importados`, 'ok');
     }
 
     // Cadastro identificado pelo CNPJ (id do doc = CNPJ só com dígitos) — rodar
