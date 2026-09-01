@@ -79,6 +79,36 @@ async function salvarPrecoVenda(ref, tabela, valor) {
   await salvarTabelaSeNova(tabela);
 }
 
+// ============ PRODUTOS DE VENDA (ref + descrição + preços) ============
+// Lista de produtos cadastrados — usada na aba Produtos de Cadastros de Vendas.
+async function listarProdutosVenda() {
+  const snap = await colPrecosVenda().orderBy('ref').get();
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+// Cadastra um produto novo (ref ainda não existe). Não usar pra editar um
+// já existente — isso apagaria os preços que ele já tinha.
+async function salvarProdutoNovo(ref, nome) {
+  await colPrecosVenda().doc(ref).set({
+    ref, nome, precos: {},
+    criado_em: firebase.firestore.FieldValue.serverTimestamp()
+  });
+}
+// Salva a descrição + todos os preços de um produto de uma vez (o modal de
+// preços manda TODAS as tabelas conhecidas; valor null remove o preço
+// daquela tabela em vez de só deixar de atualizar — undefined/omitido
+// preservaria o valor antigo, null fazendo FieldValue.delete() garante que
+// uma tabela deixada em branco no formulário realmente some).
+async function salvarPrecosProduto(ref, nome, precosMap) {
+  const data = { ref, nome, atualizado_em: firebase.firestore.FieldValue.serverTimestamp() };
+  Object.entries(precosMap).forEach(([tabela, valor]) => {
+    data[`precos.${tabela}`] = (valor && valor > 0) ? Number(valor) : firebase.firestore.FieldValue.delete();
+  });
+  await colPrecosVenda().doc(ref).update(data);
+}
+async function deletarProdutoVenda(ref) {
+  await colPrecosVenda().doc(ref).delete();
+}
+
 // ============ PEDIDOS ============
 async function proximoNumeroPedido() {
   const meta = await VENDAS.doc('meta').get();

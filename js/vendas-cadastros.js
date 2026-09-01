@@ -1,9 +1,11 @@
-// Tela de Cadastros de Vendas — clientes, vendedores, tabelas de preço
+// Tela de Cadastros de Vendas — clientes, vendedores, produtos/preços de venda
 
 let vClientes = [];
 let vVendedores = [];
 let vTabelas = [];
+let vProdutos = [];
 let acaoEdit = null;
+let produtoEmEdicao = null;
 
 async function init() {
   await protegerRota();
@@ -25,15 +27,21 @@ async function init() {
   document.getElementById('vend-nome').addEventListener('keydown', e => { if (e.key === 'Enter') tentarAddVendedor(); });
   document.getElementById('btn-vend-add').addEventListener('click', tentarAddVendedor);
 
-  // Tabelas de preço
-  document.getElementById('tabela-nome-novo').addEventListener('input', () => {
-    document.getElementById('btn-tabela-add').disabled = !document.getElementById('tabela-nome-novo').value.trim();
-  });
+  // Tabelas de preço (faixa compacta no topo da aba de produtos)
   document.getElementById('tabela-nome-novo').addEventListener('keydown', e => { if (e.key === 'Enter') tentarAddTabela(); });
   document.getElementById('btn-tabela-add').addEventListener('click', tentarAddTabela);
-  document.getElementById('btn-buscar-preco-venda').addEventListener('click', buscarPrecoVendaBtn);
-  document.getElementById('btn-salvar-preco-venda').addEventListener('click', salvarPrecoVendaBtn);
-  document.getElementById('btn-nova-tabela').addEventListener('click', criarTabelaNova);
+
+  // Produtos
+  ['prod-ref', 'prod-nome'].forEach(id => document.getElementById(id).addEventListener('input', atualizarBtnProd));
+  document.getElementById('prod-ref').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('prod-nome').focus(); });
+  document.getElementById('prod-nome').addEventListener('keydown', e => { if (e.key === 'Enter') tentarAddProduto(); });
+  document.getElementById('btn-prod-add').addEventListener('click', tentarAddProduto);
+  document.getElementById('prod-busca').addEventListener('input', renderProdutos);
+
+  // Modal de preços do produto
+  document.getElementById('mp-cancelar').addEventListener('click', fecharModalPrecos);
+  document.getElementById('mp-salvar').addEventListener('click', salvarModalPrecos);
+  document.getElementById('mp-excluir').addEventListener('click', excluirProdutoModal);
 
   document.getElementById('btn-confirmar-editar').addEventListener('click', () => {
     if (acaoEdit) acaoEdit(document.getElementById('edit-nome').value.trim());
@@ -44,27 +52,29 @@ async function init() {
 
 async function carregarTudo() {
   try {
-    const [cs, vs, ts, refs] = await Promise.all([
+    const [cs, vs, ts, ps] = await Promise.all([
       listarClientes(),
       listarVendedores(),
       listarTabelas(),
-      listarRefs()
+      listarProdutosVenda()
     ]);
     vClientes = cs || [];
     vVendedores = vs || [];
     vTabelas = ts || [];
+    vProdutos = ps || [];
     renderClientes();
     renderVendedores();
-    renderTabelas();
+    renderChipsTabelas();
+    renderProdutos();
     popularSelectsTabela();
-    popularDatalists(refs || []);
+    popularDatalists();
   } catch (e) {
     console.error('Erro carregando cadastros de vendas:', e);
     toast('Erro: ' + e.message, 'err');
   }
 }
 
-function popularDatalists(refs) {
+function popularDatalists() {
   const dlVend = document.getElementById('vend-list');
   dlVend.innerHTML = '';
   vVendedores.forEach(v => {
@@ -72,28 +82,19 @@ function popularDatalists(refs) {
     opt.value = v.nome;
     dlVend.appendChild(opt);
   });
-  const dlRef = document.getElementById('ref-tab-list');
-  dlRef.innerHTML = '';
-  refs.forEach(r => {
-    const opt = document.createElement('option');
-    opt.value = r.ref;
-    dlRef.appendChild(opt);
-  });
 }
 
 function popularSelectsTabela() {
-  ['cli-tabela', 'tab-nome'].forEach(id => {
-    const sel = document.getElementById(id);
-    const atual = sel.value;
-    sel.innerHTML = '';
-    vTabelas.forEach(t => {
-      const opt = document.createElement('option');
-      opt.value = t;
-      opt.textContent = t;
-      sel.appendChild(opt);
-    });
-    if (atual && vTabelas.includes(atual)) sel.value = atual;
+  const sel = document.getElementById('cli-tabela');
+  const atual = sel.value;
+  sel.innerHTML = '';
+  vTabelas.forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t;
+    opt.textContent = t;
+    sel.appendChild(opt);
   });
+  if (atual && vTabelas.includes(atual)) sel.value = atual;
 }
 
 function trocarAba(aba) {
@@ -256,88 +257,154 @@ function renderVendedores() {
   });
 }
 
-// ==== TABELAS DE PREÇO ====
+// ==== TABELAS DE PREÇO (faixa compacta de chips) ====
 async function tentarAddTabela() {
   const nome = document.getElementById('tabela-nome-novo').value.trim().toUpperCase();
   if (!nome) return;
   if (vTabelas.includes(nome)) { toast(`Tabela ${nome} já existe`, 'err'); return; }
   try {
     await salvarTabelaSeNova(nome);
-    toast(`✓ Tabela ${nome} cadastrada`, 'ok');
+    toast(`✓ Tabela ${nome} criada`, 'ok');
     document.getElementById('tabela-nome-novo').value = '';
-    document.getElementById('btn-tabela-add').disabled = true;
-    await carregarTudo();
+    vTabelas = await listarTabelas();
+    renderChipsTabelas();
+    popularSelectsTabela();
   } catch (e) {
     toast('Erro: ' + e.message, 'err');
   }
 }
-async function excluirTabela(nome) {
-  if (!confirm(`Excluir a tabela ${nome}?\n\nOs preços já cadastrados nela ficam guardados, só não aparece mais pra escolher.`)) return;
-  try {
-    await deletarTabela(nome);
-    toast(`Tabela ${nome} excluída`, 'ok');
-    await carregarTudo();
-  } catch (e) {
-    toast('Erro: ' + e.message, 'err');
-  }
-}
-function renderTabelas() {
-  const lista = document.getElementById('tabela-lista');
-  document.getElementById('tabela-contagem').textContent = `(${vTabelas.length})`;
-  lista.innerHTML = '';
+function renderChipsTabelas() {
+  const cont = document.getElementById('chips-tabelas');
+  cont.innerHTML = '';
   vTabelas.forEach(nome => {
-    const padrao = TABELAS_PADRAO.includes(nome);
-    const item = document.createElement('div');
-    item.className = 'item-cad';
-    item.innerHTML = `
-      <span class="nome-cad">${nome}</span>
-      <span class="badge ${padrao ? 'inativa' : 'ativa'}">${padrao ? 'padrão' : 'personalizada'}</span>
-      <div class="acoes-btn">${padrao ? '' : '<button class="btn-mini danger" data-acao="excluir">✗ excluir</button>'}</div>
-    `;
-    if (!padrao) item.querySelector('[data-acao="excluir"]').addEventListener('click', () => excluirTabela(nome));
-    lista.appendChild(item);
+    const chip = document.createElement('span');
+    chip.className = 'chip';
+    chip.textContent = nome;
+    cont.appendChild(chip);
   });
 }
 
-async function criarTabelaNova() {
-  const nome = prompt('Nome da nova tabela de preço (ex: ATACADO):');
-  if (!nome || !nome.trim()) return;
-  const n = nome.trim().toUpperCase();
+// ==== PRODUTOS (referência + descrição + preço por tabela) ====
+function atualizarBtnProd() {
+  const ref = document.getElementById('prod-ref').value.trim();
+  const nome = document.getElementById('prod-nome').value.trim();
+  document.getElementById('btn-prod-add').disabled = !(ref && nome);
+}
+
+async function tentarAddProduto() {
+  const ref = document.getElementById('prod-ref').value.trim().toUpperCase();
+  const nome = document.getElementById('prod-nome').value.trim();
+  if (!ref || !nome) return;
+  if (vProdutos.some(p => p.ref === ref)) {
+    toast(`Já existe um produto com a referência ${ref} — abre ele na lista pra editar`, 'err');
+    return;
+  }
   try {
-    await salvarTabelaSeNova(n);
-    toast(`✓ Tabela ${n} criada`, 'ok');
-    vTabelas = await listarTabelas();
-    popularSelectsTabela();
-    renderTabelas();
-    document.getElementById('tab-nome').value = n;
+    await salvarProdutoNovo(ref, nome);
+    toast(`✓ Produto ${ref} cadastrado`, 'ok');
+    document.getElementById('prod-ref').value = '';
+    document.getElementById('prod-nome').value = '';
+    document.getElementById('btn-prod-add').disabled = true;
+    await carregarTudo();
   } catch (e) {
     toast('Erro: ' + e.message, 'err');
   }
 }
-async function buscarPrecoVendaBtn() {
-  const ref = document.getElementById('tab-ref').value.trim().toUpperCase();
-  const tabela = document.getElementById('tab-nome').value;
-  if (!ref || !tabela) { toast('Preencha referência e tabela', 'err'); return; }
+
+function renderProdutos() {
+  const lista = document.getElementById('prod-lista');
+  const busca = (document.getElementById('prod-busca').value || '').toUpperCase();
+  const filtrados = busca
+    ? vProdutos.filter(p => p.ref.includes(busca) || (p.nome || '').toUpperCase().includes(busca))
+    : vProdutos;
+  document.getElementById('prod-contagem').textContent = `(${filtrados.length}${busca ? ` de ${vProdutos.length}` : ''})`;
+
+  if (filtrados.length === 0) {
+    lista.innerHTML = '<div class="vazio">Nenhum produto encontrado</div>';
+    return;
+  }
+  lista.innerHTML = '';
+  filtrados.slice(0, 200).forEach(p => {
+    const nPrecos = Object.keys(p.precos || {}).length;
+    const item = document.createElement('div');
+    item.className = 'item-cad';
+    item.innerHTML = `
+      <div>
+        <span class="nome-cad">${p.ref}</span>
+        <div class="desc-cad">${p.nome || '<i style="color:var(--text-muted)">sem descrição</i>'}</div>
+      </div>
+      <span class="badge ${nPrecos > 0 ? 'ativa' : 'inativa'}">${nPrecos}/${vTabelas.length} tabelas</span>
+      <div class="acoes-btn">
+        <button class="btn-mini" data-acao="precos">✎ preços</button>
+      </div>
+    `;
+    item.querySelector('[data-acao="precos"]').addEventListener('click', () => abrirModalPrecos(p));
+    lista.appendChild(item);
+  });
+  if (filtrados.length > 200) {
+    const info = document.createElement('div');
+    info.className = 'vazio';
+    info.textContent = `... e mais ${filtrados.length - 200}. Use a busca pra filtrar.`;
+    lista.appendChild(info);
+  }
+}
+
+// ==== MODAL DE PREÇOS DE UM PRODUTO ====
+function abrirModalPrecos(produto) {
+  produtoEmEdicao = produto;
+  document.getElementById('mp-ref').textContent = produto.ref;
+  document.getElementById('mp-nome').value = produto.nome || '';
+
+  const grid = document.getElementById('mp-precos-grid');
+  grid.innerHTML = '';
+  vTabelas.forEach(t => {
+    const valor = (produto.precos || {})[t];
+    const campo = document.createElement('div');
+    campo.className = 'campo-preco';
+    campo.innerHTML = `
+      <label>${t}</label>
+      <input type="number" step="0.01" min="0" placeholder="—" data-tabela="${t}" value="${valor ? valor : ''}">
+    `;
+    grid.appendChild(campo);
+  });
+
+  document.getElementById('modal-precos').classList.add('visivel');
+}
+
+function fecharModalPrecos() {
+  document.getElementById('modal-precos').classList.remove('visivel');
+  produtoEmEdicao = null;
+}
+
+async function salvarModalPrecos() {
+  if (!produtoEmEdicao) return;
+  const nome = document.getElementById('mp-nome').value.trim();
+  if (!nome) { toast('Preencha a descrição', 'err'); return; }
+
+  const precos = {};
+  document.querySelectorAll('#mp-precos-grid input').forEach(input => {
+    const v = parseFloat(input.value);
+    precos[input.dataset.tabela] = (v && v > 0) ? v : null;
+  });
+
   try {
-    const p = await precoVendaDe(ref, tabela);
-    document.getElementById('painel-preco-venda-result').style.display = 'block';
-    document.getElementById('preco-venda-info').innerHTML = p !== null && p > 0
-      ? `Preço atual da ref <b>${ref}</b> na tabela <b>${tabela}</b>: <b style="color:var(--success)">${formatBRL(p)}/peça</b>`
-      : `Ref <b>${ref}</b> ainda não tem preço cadastrado na tabela <b>${tabela}</b>. Digite abaixo pra cadastrar:`;
-    document.getElementById('preco-venda-valor').value = p && p > 0 ? p.toFixed(2) : '';
-    document.getElementById('preco-venda-valor').focus();
+    await salvarPrecosProduto(produtoEmEdicao.ref, nome, precos);
+    toast(`✓ Preços de ${produtoEmEdicao.ref} salvos`, 'ok');
+    fecharModalPrecos();
+    await carregarTudo();
   } catch (e) {
     toast('Erro: ' + e.message, 'err');
   }
 }
-async function salvarPrecoVendaBtn() {
-  const ref = document.getElementById('tab-ref').value.trim().toUpperCase();
-  const tabela = document.getElementById('tab-nome').value;
-  const v = parseFloat(document.getElementById('preco-venda-valor').value);
-  if (!ref || !tabela || !v || v <= 0) { toast('Preencha tudo', 'err'); return; }
+
+async function excluirProdutoModal() {
+  if (!produtoEmEdicao) return;
+  if (!confirm(`Excluir o produto ${produtoEmEdicao.ref} e todos os preços cadastrados dele?`)) return;
   try {
-    await salvarPrecoVenda(ref, tabela, v);
-    toast(`✓ Preço de ${ref} × ${tabela}: ${formatBRL(v)} salvo`, 'ok');
+    await deletarProdutoVenda(produtoEmEdicao.ref);
+    toast(`Produto ${produtoEmEdicao.ref} excluído`, 'ok');
+    fecharModalPrecos();
+    await carregarTudo();
   } catch (e) {
     toast('Erro: ' + e.message, 'err');
   }
