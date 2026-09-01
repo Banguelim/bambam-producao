@@ -6,6 +6,15 @@ async function init() {
   await protegerRota();
   document.getElementById('f-status').addEventListener('change', render);
   document.getElementById('f-busca').addEventListener('input', render);
+  document.getElementById('f-data-de').addEventListener('change', render);
+  document.getElementById('f-data-ate').addEventListener('change', render);
+  document.getElementById('btn-limpar-filtros').addEventListener('click', () => {
+    document.getElementById('f-status').value = 'pendentes';
+    document.getElementById('f-busca').value = '';
+    document.getElementById('f-data-de').value = '';
+    document.getElementById('f-data-ate').value = '';
+    render();
+  });
   await carregar();
 }
 
@@ -27,6 +36,8 @@ function statusReal(c) {
 function render() {
   const filtro = document.getElementById('f-status').value;
   const busca = (document.getElementById('f-busca').value || '').toUpperCase();
+  const dataDe = document.getElementById('f-data-de').value;
+  const dataAte = document.getElementById('f-data-ate').value;
 
   const filtradas = todasContas.filter(c => {
     const st = statusReal(c);
@@ -34,12 +45,25 @@ function render() {
     if (filtro === 'vencido' && st !== 'vencido') return false;
     if (filtro === 'pago' && st !== 'pago') return false;
     if (filtro === 'pendentes' && st === 'pago') return false;
+    if (dataDe && (!c.data_vencimento || c.data_vencimento < dataDe)) return false;
+    if (dataAte && (!c.data_vencimento || c.data_vencimento > dataAte)) return false;
     if (busca) {
       const alvo = `${c.cliente || ''} ${c.pedido_id || ''}`.toUpperCase();
       if (!alvo.includes(busca)) return false;
     }
     return true;
   });
+
+  // Total do período (só aparece quando tem filtro de data ativo)
+  const infoPeriodo = document.getElementById('total-periodo');
+  if (dataDe || dataAte) {
+    const total = filtradas.reduce((a, c) => a + (statusReal(c) === 'pago' ? (c.valor_pago ?? c.valor ?? 0) : (c.valor || 0)), 0);
+    document.getElementById('total-periodo-valor').textContent = formatBRL(total);
+    document.getElementById('total-periodo-qtd').textContent = filtradas.length;
+    infoPeriodo.style.display = '';
+  } else {
+    infoPeriodo.style.display = 'none';
+  }
 
   // Estatísticas sobre TODAS as contas (não só as filtradas)
   let somaAberto = 0, somaVencido = 0, somaPago = 0;

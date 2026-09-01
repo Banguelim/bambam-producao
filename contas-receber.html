@@ -80,10 +80,26 @@
           <option value="todos">Todas</option>
         </select>
       </div>
+      <div class="campo">
+        <label class="lbl">Vencimento de</label>
+        <input type="date" id="f-data-de">
+      </div>
+      <div class="campo">
+        <label class="lbl">até</label>
+        <input type="date" id="f-data-ate">
+      </div>
       <div class="campo" style="flex:1;min-width:200px">
         <label class="lbl">Buscar cliente / pedido</label>
         <input id="f-busca" placeholder="🔎 nome do cliente ou nº do pedido">
       </div>
+      <div class="campo">
+        <button class="btn btn-secondary" id="btn-limpar-filtros" style="padding:8px 14px">✕ limpar</button>
+      </div>
+    </div>
+
+    <div class="totais" id="total-periodo" style="display:none;margin-bottom:10px;font-size:13px;color:var(--text-secondary)">
+      Total no período filtrado: <b id="total-periodo-valor" style="color:var(--text-primary)">R$ 0,00</b>
+      (<span id="total-periodo-qtd">0</span> parcela(s))
     </div>
 
     <table class="tabela-contas" id="tabela-contas">
