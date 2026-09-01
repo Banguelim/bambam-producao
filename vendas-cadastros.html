@@ -41,6 +41,14 @@
   .item-cad .btn-mini.danger:hover { color: var(--text-danger); border-color: var(--text-danger); }
   .item-cad .btn-mini.success:hover { color: var(--success); border-color: var(--success); }
   .vazio { padding: 30px 20px; text-align: center; color: var(--text-muted); font-size: 13px; }
+  .faixa-tabelas { display: flex; align-items: center; gap: 10px; background: var(--surface-2); border: 0.5px solid var(--border); border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; flex-wrap: wrap; }
+  .faixa-tabelas .rot-inline { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; white-space: nowrap; }
+  .faixa-tabelas .chips-area { padding: 0; background: none; border: none; min-height: 0; }
+  .faixa-tabelas .chip { padding: 4px 10px; font-size: 12px; cursor: default; }
+  .item-cad .desc-cad { color: var(--text-secondary); font-size: 12px; margin-top: 2px; }
+  .campo-preco { display: flex; align-items: center; gap: 8px; }
+  .campo-preco label { flex: 1; font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+  .campo-preco input { width: 90px; padding: 7px 8px; text-align: right; }
 </style>
 </head>
 <body>
@@ -72,7 +80,7 @@
     <div class="abas">
       <button class="ativa" data-aba="clientes">Clientes</button>
       <button data-aba="vendedores">Vendedores</button>
-      <button data-aba="tabelas">Tabelas de Preço</button>
+      <button data-aba="tabelas">Produtos</button>
     </div>
 
     <div class="painel ativo" data-painel="clientes">
@@ -144,50 +152,53 @@
     </div>
 
     <div class="painel" data-painel="tabelas">
+      <div class="faixa-tabelas">
+        <span class="rot-inline">Tabelas de preço:</span>
+        <div class="chips-area" id="chips-tabelas" style="flex:1"></div>
+        <div style="display:flex;gap:6px">
+          <input id="tabela-nome-novo" placeholder="nova tabela (ex: ATACADO)" style="text-transform:uppercase;width:180px">
+          <button class="btn btn-secondary" id="btn-tabela-add">+ criar</button>
+        </div>
+      </div>
+
       <div class="form-add">
         <div class="campos">
           <div class="campo">
-            <label class="lbl">Nova tabela de preço</label>
-            <input id="tabela-nome-novo" placeholder="ex: ATACADO, PROMOCIONAL" style="text-transform:uppercase">
+            <label class="lbl">Referência (código do produto)</label>
+            <input id="prod-ref" placeholder="ex: 205" style="text-transform:uppercase;font-weight:800">
+          </div>
+          <div class="campo" style="flex:2">
+            <label class="lbl">Descrição</label>
+            <input id="prod-nome" placeholder="ex: CAMISETA PV VIEIS (RN,P,M,G,GG)">
           </div>
         </div>
-        <button class="btn-add" id="btn-tabela-add" disabled>+ Cadastrar</button>
+        <button class="btn-add" id="btn-prod-add" disabled>+ Cadastrar produto</button>
       </div>
-      <div class="lista-cad" style="margin-bottom:16px">
+
+      <div class="lista-cad">
         <div class="titulo">
-          <span class="rot">Tabelas cadastradas <span class="contagem" id="tabela-contagem">(0)</span></span>
+          <span class="rot">Produtos cadastrados <span class="contagem" id="prod-contagem">(0)</span></span>
         </div>
-        <div class="itens" id="tabela-lista"></div>
+        <div class="busca-filtro">
+          <input id="prod-busca" placeholder="🔎 buscar por referência ou descrição">
+        </div>
+        <div class="itens" id="prod-lista"></div>
       </div>
+    </div>
+  </div>
 
-      <div style="background:var(--surface-1);border:0.5px solid var(--border);border-radius:8px;padding:16px">
-        <div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px">
-          Consulta e edição do preço de venda — <b style="color:var(--text-primary)">referência × tabela</b>.
-          Cada tabela é um preço diferente pro mesmo produto (ex: BASE, MERCADAO, ESPECIAL...).
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:flex-end;margin-bottom:14px">
-          <div>
-            <label class="lbl">Referência</label>
-            <input list="ref-tab-list" id="tab-ref" placeholder="digite ou escolha">
-          </div>
-          <div>
-            <label class="lbl">Tabela</label>
-            <div style="display:flex;gap:6px">
-              <select id="tab-nome" style="flex:1"></select>
-              <button class="btn btn-secondary" id="btn-nova-tabela" title="Criar tabela nova">+ nova</button>
-            </div>
-          </div>
-          <button class="btn btn-secondary" id="btn-buscar-preco-venda">🔎 Buscar</button>
-        </div>
-        <datalist id="ref-tab-list"></datalist>
-
-        <div id="painel-preco-venda-result" style="display:none;padding:14px;background:var(--surface-2);border-radius:6px">
-          <div style="margin-bottom:10px;font-size:13px" id="preco-venda-info">—</div>
-          <div style="display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center">
-            <label class="lbl" style="margin:0">Novo preço:</label>
-            <input type="number" id="preco-venda-valor" step="0.01" min="0" placeholder="0,00" style="padding:9px 12px">
-            <button class="btn btn-primary" id="btn-salvar-preco-venda">✓ Salvar preço</button>
-          </div>
+  <div class="modal-nota" id="modal-precos">
+    <div class="caixa" style="max-width:520px;background:var(--surface-1);color:var(--text-primary);font-family:inherit">
+      <h3 style="margin-bottom:2px">Preços — <span id="mp-ref" style="color:var(--text-accent)">—</span></h3>
+      <div style="font-size:12px;color:var(--text-secondary);margin-bottom:14px">Um preço por tabela. Deixa em branco a tabela que esse produto não tem.</div>
+      <label class="lbl">Descrição</label>
+      <input id="mp-nome" style="width:100%;padding:9px 12px;margin-bottom:14px">
+      <div id="mp-precos-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px"></div>
+      <div style="display:flex;gap:8px;justify-content:space-between">
+        <button class="btn btn-secondary" id="mp-excluir" style="color:var(--text-danger);border-color:var(--text-danger)">✗ excluir produto</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary" id="mp-cancelar">Cancelar</button>
+          <button class="btn btn-primary" id="mp-salvar">✓ Salvar</button>
         </div>
       </div>
     </div>
