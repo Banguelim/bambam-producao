@@ -49,12 +49,17 @@
   .tabela-itens th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-secondary); padding: 6px 8px; border-bottom: 0.5px solid var(--border); }
   .tabela-itens td { padding: 7px 8px; border-bottom: 0.5px dashed var(--border); }
   .tabela-itens td.ref { font-weight: 800; color: var(--text-primary); }
+  .tabela-itens td.desc { color: var(--text-secondary); font-size: 12px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tabela-itens td.qtds { color: var(--text-secondary); font-size: 12px; }
   .tabela-itens td.num { text-align: right; font-variant-numeric: tabular-nums; }
   .tabela-itens td.preco { color: var(--text-accent); }
   .tabela-itens td.sub { font-weight: 700; color: var(--success); }
   .tabela-itens .btn-x { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px; }
   .tabela-itens .btn-x:hover { color: var(--text-danger); }
+  .tabela-itens .tam-chip { display: inline-block; margin-right: 6px; white-space: nowrap; }
+  .tabela-itens .editavel { cursor: text; border-bottom: 1px dashed var(--border-accent); padding: 0 2px; outline: none; }
+  .tabela-itens .editavel:hover { background: var(--surface-2); }
+  .tabela-itens .editavel:focus { background: white; color: #000; }
   .vazio-itens { padding: 24px; text-align: center; color: var(--text-muted); font-size: 13px; background: var(--surface-1); border-radius: 8px; margin-bottom: 12px; }
 
   .rodape-pedido {
@@ -169,7 +174,10 @@
         <div><label class="lbl">Referência</label><input list="refs-list" id="it-ref" placeholder="ex: 205"></div>
         <div><label class="lbl">Tabela</label><select id="it-tabela"></select></div>
         <div><label class="lbl">Preço (peça)</label><input type="number" id="it-preco" step="0.01" min="0" placeholder="0,00"></div>
-        <div class="info-item">Digita cor + qtd numa coluna, aperta Enter — repete pra outras cores/tamanhos da mesma ref, depois clica em <b>Adicionar ao pedido</b></div>
+        <div class="info-item">
+          Digita cor + qtd numa coluna, aperta Enter — repete pra outras cores/tamanhos da mesma ref, depois clica em <b>Adicionar ao pedido</b>
+          <div id="it-descricao-linha" style="display:none;margin-top:4px">📦 <b id="it-descricao-texto" style="color:var(--text-primary)"></b></div>
+        </div>
       </div>
 
       <div class="grade5" id="grade-item"></div>
@@ -195,7 +203,7 @@
     <h3 style="margin-bottom:8px">Itens do pedido</h3>
     <table class="tabela-itens" id="tabela-itens">
       <thead>
-        <tr><th>Ref</th><th>Cor</th><th>Tamanhos</th><th>Qtd</th><th id="th-preco">Preço</th><th>Subtotal</th><th></th></tr>
+        <tr><th>Ref</th><th>Descrição</th><th>Cor</th><th>Tamanhos</th><th>Qtd</th><th id="th-preco">Preço</th><th>Subtotal</th><th></th></tr>
       </thead>
       <tbody id="itens-corpo"></tbody>
     </table>
@@ -209,6 +217,8 @@
 
     <div class="acoes-pedido">
       <button class="btn btn-secondary" id="btn-novo-pedido">+ novo pedido</button>
+      <button class="btn btn-secondary" id="btn-confirmacao">🖨️ Confirmação do pedido</button>
+      <button class="btn btn-secondary" id="btn-email-cliente" title="Abre um rascunho de e-mail pro cliente confirmar">📧 enviar por e-mail</button>
       <button class="btn btn-secondary" id="btn-romaneio-separacao">🖨️ Romaneio de separação</button>
       <button class="btn btn-secondary" id="btn-romaneio-conferencia">🖨️ Romaneio de conferência</button>
       <button class="btn btn-secondary" id="btn-salvar-pedido">💾 Salvar</button>
@@ -221,6 +231,32 @@
         <input id="busca-pedido-aberto" placeholder="🔎 buscar por cliente ou nº do pedido" style="min-width:260px;padding:8px 12px">
       </div>
       <div id="lista-pedidos-abertos"><div class="vazio-itens">Carregando...</div></div>
+    </div>
+  </div>
+
+  <!-- Confirmação de pedido: documento comercial pro cliente aprovar (com preço) -->
+  <div class="folha" id="folha-confirmacao">
+    <div class="folha-header">
+      <div class="empresa">BAMBAM BABY</div>
+      <div class="sub">Confirmação de Pedido Nº <span id="cf-num">—</span></div>
+    </div>
+    <div style="margin-bottom:10px;font-size:13px;display:flex;flex-wrap:wrap;gap:16px">
+      <span>Cliente: <b id="cf-cliente">—</b></span>
+      <span>Vendedor: <b id="cf-vendedor">—</b></span>
+      <span>Data: <b id="cf-data">—</b></span>
+    </div>
+    <table class="folha-tabela">
+      <thead><tr><th>Ref</th><th style="text-align:left">Descrição</th><th>Cor</th><th>RN</th><th>P</th><th>M</th><th>G</th><th>GG</th><th>Qtd</th><th>Preço</th><th>Subtotal</th></tr></thead>
+      <tbody id="cf-corpo"></tbody>
+      <tfoot>
+        <tr id="cf-linha-desconto" style="display:none"><td colspan="10" style="text-align:right">Desconto</td><td id="cf-desconto"></td></tr>
+        <tr><td colspan="10" style="text-align:right">TOTAL DO PEDIDO</td><td id="cf-total" style="font-size:14px"></td></tr>
+      </tfoot>
+    </table>
+    <div style="margin-top:10px;font-size:12px" id="cf-parcelas"></div>
+    <div class="assinaturas">
+      <div class="assinatura">Confirmo o pedido acima — Assinatura do cliente</div>
+      <div class="assinatura">Data</div>
     </div>
   </div>
 

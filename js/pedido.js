@@ -7,9 +7,10 @@
 let pClientes = [];
 let pVendedores = [];
 let pTabelas = [];
-let pedidoItens = [];      // [{ref, cor, qtds:{RN,P,M,G,GG}, qtd, preco, subtotal}]
+let pedidoItens = [];      // [{ref, cor, descricao, qtds:{RN,P,M,G,GG}, qtd, preco, subtotal}]
 let numeroPedidoAtual = null;
 let statusPedidoAtual = 'aberto';
+let itDescricaoAtual = '';  // descrição do produto da ref sendo digitada agora
 
 async function init() {
   await protegerRota();
@@ -54,6 +55,8 @@ async function init() {
   document.getElementById('btn-concluir-pedido').addEventListener('click', concluirPedidoBtn);
   document.getElementById('btn-romaneio-separacao').addEventListener('click', () => imprimirRomaneio('separacao'));
   document.getElementById('btn-romaneio-conferencia').addEventListener('click', () => imprimirRomaneio('conferencia'));
+  document.getElementById('btn-confirmacao').addEventListener('click', imprimirConfirmacao);
+  document.getElementById('btn-email-cliente').addEventListener('click', enviarPorEmail);
   document.getElementById('busca-pedido-aberto').addEventListener('input', renderPedidosAbertos);
 
   renderItens();
@@ -107,11 +110,23 @@ function onClienteChange() {
 
 // Preço puxado pela tabela escolhida NA ENTRADA DE ITEM (it-tabela), que
 // pode ser diferente da tabela padrão do cabeçalho — ex: cliente é tabela A
-// mas essa ref específica sai pela tabela B.
+// mas essa ref específica sai pela tabela B. Também busca a descrição do
+// produto cadastrado, pra mostrar o que é essa ref enquanto digita.
 async function onRefChange() {
   const ref = document.getElementById('it-ref').value.trim().toUpperCase();
   const tabela = document.getElementById('it-tabela').value;
-  if (!ref || !tabela) return;
+  itDescricaoAtual = '';
+  document.getElementById('it-descricao-linha').style.display = 'none';
+  if (!ref) return;
+  try {
+    const produto = await buscarProdutoVenda(ref);
+    if (produto && produto.nome) {
+      itDescricaoAtual = produto.nome;
+      document.getElementById('it-descricao-texto').textContent = produto.nome;
+      document.getElementById('it-descricao-linha').style.display = '';
+    }
+  } catch (e) { console.warn('Produto não encontrado:', e); }
+  if (!tabela) return;
   try {
     const p = await precoVendaDe(ref, tabela);
     if (p !== null && p > 0) document.getElementById('it-preco').value = p.toFixed(2);
@@ -228,6 +243,8 @@ function recalcItem() {
 function limparGradeItem() {
   document.getElementById('it-ref').value = '';
   document.getElementById('it-preco').value = '';
+  itDescricaoAtual = '';
+  document.getElementById('it-descricao-linha').style.display = 'none';
   document.querySelectorAll('#grade-item .col').forEach(col => {
     col.querySelector('.entradas').innerHTML = '';
     col.querySelector('.cor-input').value = '';
@@ -276,7 +293,7 @@ function confirmarRefNoPedido() {
       existente.qtd = Object.values(existente.qtds).reduce((a, v) => a + v, 0);
       existente.subtotal = Math.round(existente.qtd * existente.preco * 100) / 100;
     } else {
-      pedidoItens.push({ ref, cor, qtds, qtd, preco, subtotal });
+      pedidoItens.push({ ref, cor, descricao: itDescricaoAtual, qtds, qtd, preco, subtotal });
     }
   });
 
@@ -287,6 +304,34 @@ function confirmarRefNoPedido() {
 
 function removerItem(idx) {
   pedidoItens.splice(idx, 1);
+  renderItens();
+}
+
+// Corrige a quantidade de UM tamanho de um item já adicionado. Se zerar
+// todos os tamanhos do item, remove a linha inteira (não faz sentido ficar
+// uma linha com 0 peças).
+function editarQtdItem(idx, tam, valorDigitado) {
+  const it = pedidoItens[idx];
+  if (!it) return;
+  const v = Math.max(0, parseInt(valorDigitado) || 0);
+  it.qtds[tam] = v;
+  it.qtd = Object.values(it.qtds).reduce((a, x) => a + x, 0);
+  it.subtotal = Math.round(it.qtd * it.preco * 100) / 100;
+  if (it.qtd === 0) {
+    pedidoItens.splice(idx, 1);
+    toast(`Linha de ${it.ref} ${it.cor} removida (quantidade zerada)`, '');
+  }
+  renderItens();
+}
+
+// Corrige o preço (peça) de um item já adicionado.
+function editarPrecoItem(idx, valorDigitado) {
+  const it = pedidoItens[idx];
+  if (!it) return;
+  const v = parseFloat(valorDigitado);
+  if (!v || v <= 0) { toast('Preço inválido', 'err'); renderItens(); return; }
+  it.preco = v;
+  it.subtotal = Math.round(it.qtd * it.preco * 100) / 100;
   renderItens();
 }
 
@@ -301,11 +346,16 @@ function precoComDesconto(preco, desconto) {
   return Math.round(preco * (1 - desconto / 100) * 10000) / 10000; // 4 casas pra não perder centavo no arredondamento do subtotal
 }
 
+// Enquanto o pedido está aberto (não concluído), dá pra corrigir direto na
+// tabela: quantidade de cada tamanho (clica no número, digita, Enter/sai do
+// campo) e o preço (peça) — útil enquanto o pedido ainda está sendo separado
+// e precisa de um ajuste. Depois de concluído, fica só leitura.
 function renderItens() {
   const corpo = document.getElementById('itens-corpo');
   const tabela = document.getElementById('tabela-itens');
   const vazio = document.getElementById('itens-vazio');
   const desconto = descontoAtual();
+  const editavel = statusPedidoAtual !== 'concluido';
   corpo.innerHTML = '';
 
   if (pedidoItens.length === 0) {
@@ -315,20 +365,39 @@ function renderItens() {
     tabela.style.display = '';
     vazio.style.display = 'none';
     pedidoItens.forEach((it, idx) => {
-      const tamsStr = TAMS.filter(t => it.qtds[t] > 0).map(t => `${t}:${it.qtds[t]}`).join(' ');
       const precoFinal = desconto > 0 ? precoComDesconto(it.preco, desconto) : it.preco;
       const subtotalFinal = Math.round(it.qtd * precoFinal * 100) / 100;
+
+      const tamsHtml = TAMS.filter(t => it.qtds[t] > 0).map(t => editavel
+        ? `<span class="tam-chip">${t}:<span class="editavel" contenteditable="true" spellcheck="false" inputmode="numeric" data-idx="${idx}" data-tam="${t}">${it.qtds[t]}</span></span>`
+        : `<span class="tam-chip">${t}:${it.qtds[t]}</span>`
+      ).join(' ');
+
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td class="ref">${it.ref}</td>
+        <td class="desc" title="${it.descricao || ''}">${it.descricao || '—'}</td>
         <td>${it.cor}</td>
-        <td class="qtds">${tamsStr}</td>
+        <td class="qtds">${tamsHtml}</td>
         <td class="num">${it.qtd}</td>
-        <td class="num preco" ${desconto > 0 ? `title="Preço de tabela: ${formatBRL(it.preco)}"` : ''}>${formatBRL(precoFinal)}</td>
+        <td class="num preco">${editavel
+          ? `<input type="number" class="preco-input" step="0.01" min="0" value="${it.preco}" data-idx="${idx}" style="width:72px;text-align:right;padding:3px 5px;font-weight:700">`
+          : formatBRL(precoFinal)}</td>
         <td class="num sub">${formatBRL(subtotalFinal)}</td>
         <td><button class="btn-x" title="remover">×</button></td>
       `;
       tr.querySelector('.btn-x').addEventListener('click', () => removerItem(idx));
+
+      if (editavel) {
+        tr.querySelectorAll('.qtds .editavel').forEach(span => {
+          span.addEventListener('focus', () => selecionarTudo(span));
+          span.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); span.blur(); } });
+          span.addEventListener('blur', () => editarQtdItem(parseInt(span.dataset.idx), span.dataset.tam, span.textContent));
+        });
+        const precoInput = tr.querySelector('.preco-input');
+        precoInput.addEventListener('change', () => editarPrecoItem(idx, precoInput.value));
+        precoInput.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); precoInput.blur(); } });
+      }
       corpo.appendChild(tr);
     });
   }
@@ -557,6 +626,74 @@ async function abrirPedido(numero) {
   } catch (e) {
     toast('Erro ao abrir pedido: ' + e.message, 'err');
   }
+}
+
+// ==== CONFIRMAÇÃO DE PEDIDO (impressão pro cliente aprovar) ====
+// Documento comercial com preço — diferente dos romaneios (que só tem
+// quantidade, pra separação/conferência do estoque). Pensado pra imprimir,
+// salvar como PDF e mandar pro cliente confirmar o pedido antes de liberar.
+function imprimirConfirmacao() {
+  if (pedidoItens.length === 0) { toast('Adicione itens antes de imprimir', 'err'); return; }
+  const desconto = descontoAtual();
+
+  document.getElementById('cf-num').textContent = numeroPedidoAtual || '(rascunho)';
+  document.getElementById('cf-cliente').textContent = document.getElementById('p-cliente').value.trim() || '—';
+  document.getElementById('cf-vendedor').textContent = document.getElementById('p-vendedor').value.trim() || '—';
+  document.getElementById('cf-data').textContent = formatDataBR(document.getElementById('p-data').value);
+
+  const corpo = document.getElementById('cf-corpo');
+  corpo.innerHTML = '';
+  pedidoItens.forEach(it => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="ref">${it.ref}</td><td style="text-align:left">${it.descricao || ''}</td><td>${it.cor}</td>
+      <td>${it.qtds.RN || ''}</td><td>${it.qtds.P || ''}</td><td>${it.qtds.M || ''}</td>
+      <td>${it.qtds.G || ''}</td><td>${it.qtds.GG || ''}</td><td><b>${it.qtd}</b></td>
+      <td>${formatBRL(it.preco)}</td><td><b>${formatBRL(it.subtotal)}</b></td>
+    `;
+    corpo.appendChild(tr);
+  });
+
+  const linhaDesc = document.getElementById('cf-linha-desconto');
+  if (desconto > 0) {
+    linhaDesc.style.display = '';
+    document.getElementById('cf-desconto').textContent = `-${desconto}%`;
+  } else {
+    linhaDesc.style.display = 'none';
+  }
+  document.getElementById('cf-total').textContent = formatBRL(totalPedido());
+
+  const parcelas = parseInt(document.getElementById('p-parcelas').value) || 1;
+  document.getElementById('cf-parcelas').textContent = parcelas > 1
+    ? `Pagamento em ${parcelas}x, 1ª parcela em ${formatDataBR(document.getElementById('p-vencimento').value)}`
+    : `Pagamento à vista — vencimento em ${formatDataBR(document.getElementById('p-vencimento').value)}`;
+
+  dispararImpressao('folha-confirmacao');
+}
+
+// Abre um rascunho de e-mail (o navegador chama o programa de e-mail do
+// computador) já endereçado pro cliente, com o resumo do pedido no corpo.
+// Não anexa arquivo (e-mail comum não deixa um site fazer isso sozinho) —
+// a orientação é imprimir a Confirmação em PDF primeiro e anexar à mão.
+function enviarPorEmail() {
+  if (pedidoItens.length === 0) { toast('Adicione itens antes de enviar', 'err'); return; }
+  const nomeCliente = document.getElementById('p-cliente').value.trim();
+  const cliObj = pClientes.find(c => c.nome.toUpperCase() === nomeCliente.toUpperCase());
+  if (!cliObj || !cliObj.email) {
+    toast(`${nomeCliente || 'Esse cliente'} não tem e-mail cadastrado — cadastra em Clientes primeiro`, 'err');
+    return;
+  }
+  const linhas = pedidoItens.map(it =>
+    `${it.ref} ${it.descricao ? '- ' + it.descricao + ' ' : ''}(${it.cor}) — ${it.qtd} pç × ${formatBRL(it.preco)} = ${formatBRL(it.subtotal)}`
+  ).join('\n');
+  const assunto = `Confirmação de Pedido ${numeroPedidoAtual || ''} — BAMBAM BABY`;
+  const corpo =
+    `Olá, ${nomeCliente}!\n\nSegue o resumo do seu pedido pra confirmação:\n\n${linhas}\n\n` +
+    `TOTAL: ${formatBRL(totalPedido())}\n\n` +
+    `Por favor confirme respondendo este e-mail. Segue em anexo o PDF (imprima a Confirmação do Pedido e anexe antes de enviar).\n\nObrigado!\nBAMBAM BABY`;
+  const link = `mailto:${encodeURIComponent(cliObj.email)}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
+  window.location.href = link;
+  toast('Abrindo seu programa de e-mail — lembra de anexar o PDF da Confirmação (imprime ela primeiro)', '');
 }
 
 // ==== ROMANEIOS (impressão) ====

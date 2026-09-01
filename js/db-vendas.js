@@ -80,6 +80,12 @@ async function salvarPrecoVenda(ref, tabela, valor) {
 }
 
 // ============ PRODUTOS DE VENDA (ref + descrição + preços) ============
+// Busca um produto só (ref + descrição + preços) — usado na tela de Pedido
+// pra mostrar a descrição enquanto digita.
+async function buscarProdutoVenda(ref) {
+  const doc = await colPrecosVenda().doc(ref).get();
+  return doc.exists ? doc.data() : null;
+}
 // Lista de produtos cadastrados — usada na aba Produtos de Cadastros de Vendas.
 async function listarProdutosVenda() {
   const snap = await colPrecosVenda().orderBy('ref').get();
