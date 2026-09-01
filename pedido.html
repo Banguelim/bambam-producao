@@ -216,7 +216,10 @@
     </div>
 
     <div class="lista-pedidos">
-      <h3>Pedidos em aberto</h3>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:12px;flex-wrap:wrap">
+        <h3 style="margin:0">Pedidos em aberto <span id="lbl-pedidos-abertos-total" style="color:var(--text-muted);font-weight:500;font-size:13px"></span></h3>
+        <input id="busca-pedido-aberto" placeholder="🔎 buscar por cliente ou nº do pedido" style="min-width:260px;padding:8px 12px">
+      </div>
       <div id="lista-pedidos-abertos"><div class="vazio-itens">Carregando...</div></div>
     </div>
   </div>

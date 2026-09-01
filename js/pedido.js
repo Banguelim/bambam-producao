@@ -54,6 +54,7 @@ async function init() {
   document.getElementById('btn-concluir-pedido').addEventListener('click', concluirPedidoBtn);
   document.getElementById('btn-romaneio-separacao').addEventListener('click', () => imprimirRomaneio('separacao'));
   document.getElementById('btn-romaneio-conferencia').addEventListener('click', () => imprimirRomaneio('conferencia'));
+  document.getElementById('busca-pedido-aberto').addEventListener('input', renderPedidosAbertos);
 
   renderItens();
   await carregarPedidosAbertos();
@@ -487,32 +488,52 @@ function limparFormulario() {
 }
 
 // ==== LISTA DE PEDIDOS EM ABERTO ====
+let pedidosAbertosCache = [];
+
 async function carregarPedidosAbertos() {
   const cont = document.getElementById('lista-pedidos-abertos');
   try {
-    const pedidos = await listarPedidosEmAberto();
-    if (pedidos.length === 0) {
-      cont.innerHTML = '<div class="vazio-itens">Nenhum pedido em aberto</div>';
-      return;
-    }
-    cont.innerHTML = '';
-    pedidos.forEach(p => {
-      const div = document.createElement('div');
-      div.className = 'item-pedido';
-      div.innerHTML = `
-        <span class="num">${p.numero}</span>
-        <span class="cli">${p.cliente || '—'}</span>
-        <span>${formatDataBR(p.data_pedido)}</span>
-        <span>${p.total_pecas || 0} pç</span>
-        <span class="val">${formatBRL(p.total_valor || 0)}</span>
-      `;
-      div.addEventListener('click', () => abrirPedido(p.numero));
-      cont.appendChild(div);
-    });
+    pedidosAbertosCache = await listarPedidosEmAberto();
+    document.getElementById('lbl-pedidos-abertos-total').textContent = `(${pedidosAbertosCache.length})`;
+    renderPedidosAbertos();
   } catch (e) {
     cont.innerHTML = '<div class="vazio-itens">Erro ao carregar</div>';
     console.warn(e);
   }
+}
+
+function renderPedidosAbertos() {
+  const cont = document.getElementById('lista-pedidos-abertos');
+  const busca = (document.getElementById('busca-pedido-aberto').value || '').trim().toUpperCase();
+  const filtrados = busca
+    ? pedidosAbertosCache.filter(p =>
+        (p.cliente || '').toUpperCase().includes(busca) ||
+        (p.numero || '').toUpperCase().includes(busca)
+      )
+    : pedidosAbertosCache;
+
+  if (pedidosAbertosCache.length === 0) {
+    cont.innerHTML = '<div class="vazio-itens">Nenhum pedido em aberto</div>';
+    return;
+  }
+  if (filtrados.length === 0) {
+    cont.innerHTML = `<div class="vazio-itens">Nenhum pedido encontrado com "${busca}"</div>`;
+    return;
+  }
+  cont.innerHTML = '';
+  filtrados.forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'item-pedido';
+    div.innerHTML = `
+      <span class="num">${p.numero}</span>
+      <span class="cli">${p.cliente || '—'}</span>
+      <span>${formatDataBR(p.data_pedido)}</span>
+      <span>${p.total_pecas || 0} pç</span>
+      <span class="val">${formatBRL(p.total_valor || 0)}</span>
+    `;
+    div.addEventListener('click', () => abrirPedido(p.numero));
+    cont.appendChild(div);
+  });
 }
 
 async function abrirPedido(numero) {
