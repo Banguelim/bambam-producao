@@ -13,7 +13,7 @@
 // Nomes de tela válidos (arquivo .html sem o .html):
 //   'index'  'novo-corte'  'designacao'  'retorno'  'pagamento'
 //   'arremate'  'estoque'  'cadastros'  'relatorios'
-//   'pedido'  'vendas-cadastros'  'contas-receber'
+//   'pedido'  'pedido-novo'  'vendas-cadastros'  'contas-receber'
 
 const PERMISSOES = {
   'pss@bambam.com':               'todas',

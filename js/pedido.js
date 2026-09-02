@@ -11,6 +11,7 @@ let pedidoItens = [];      // [{ref, cor, descricao, qtds:{RN,P,M,G,GG}, qtd, pr
 let numeroPedidoAtual = null;
 let statusPedidoAtual = 'aberto';
 let itDescricaoAtual = '';  // descrição do produto da ref sendo digitada agora
+let clienteBloqueadoAtual = null; // objeto do cliente quando ele está 🔒 bloqueado (inadimplente)
 
 async function init() {
   await protegerRota();
@@ -57,10 +58,8 @@ async function init() {
   document.getElementById('btn-romaneio-conferencia').addEventListener('click', () => imprimirRomaneio('conferencia'));
   document.getElementById('btn-confirmacao').addEventListener('click', imprimirConfirmacao);
   document.getElementById('btn-email-cliente').addEventListener('click', enviarPorEmail);
-  document.getElementById('busca-pedido-aberto').addEventListener('input', renderPedidosAbertos);
 
   renderItens();
-  await carregarPedidosAbertos();
 
   // Abrir direto se veio ?pedido=NNNN
   const params = new URLSearchParams(location.search);
@@ -106,6 +105,25 @@ function onClienteChange() {
       document.getElementById('it-tabela').value = c.tabela_preco;
     }
   }
+  verificarBloqueioCliente();
+}
+
+// Cliente 🔒 bloqueado (inadimplente, marcado manualmente em Clientes) — trava
+// total: mostra aviso e desabilita Salvar/Concluir enquanto ele estiver
+// selecionado. Só desbloqueando na ficha do cliente (Clientes) libera de novo.
+function verificarBloqueioCliente() {
+  const nome = document.getElementById('p-cliente').value.trim();
+  const c = pClientes.find(x => x.nome.toUpperCase() === nome.toUpperCase());
+  clienteBloqueadoAtual = (c && c.bloqueado === true) ? c : null;
+  const aviso = document.getElementById('aviso-cliente-bloqueado');
+  if (clienteBloqueadoAtual) {
+    document.getElementById('aviso-bloqueio-nome').textContent = clienteBloqueadoAtual.nome;
+    document.getElementById('aviso-bloqueio-motivo').textContent = clienteBloqueadoAtual.motivo_bloqueio || 'sem motivo registrado';
+    aviso.style.display = '';
+  } else {
+    aviso.style.display = 'none';
+  }
+  atualizarCabecalhoNumero();
 }
 
 // Preço puxado pela tabela escolhida NA ENTRADA DE ITEM (it-tabela), que
@@ -441,6 +459,7 @@ function montarPedidoObj() {
     vendedor: document.getElementById('p-vendedor').value.trim().toUpperCase(),
     tabela_preco: document.getElementById('p-tabela').value,
     data_pedido: document.getElementById('p-data').value,
+    prazo_pagamento: document.getElementById('p-prazo').value.trim(),
     itens: pedidoItens,
     total_pecas: pedidoItens.reduce((a, i) => a + i.qtd, 0),
     desconto_pct: descontoAtual(),
@@ -457,6 +476,12 @@ function validarCabecalho() {
   if (!cliente) { toast('Escolha ou digite o cliente', 'err'); return false; }
   if (!data) { toast('Preencha a data', 'err'); return false; }
   if (pedidoItens.length === 0) { toast('Adicione ao menos um item', 'err'); return false; }
+  // Trava mesmo se o aviso visual tiver sido burlado de algum jeito
+  verificarBloqueioCliente();
+  if (clienteBloqueadoAtual) {
+    toast(`${clienteBloqueadoAtual.nome} está 🔒 bloqueado — não é possível salvar/concluir pedido pra esse cliente`, 'err');
+    return false;
+  }
   return true;
 }
 
@@ -472,7 +497,6 @@ async function salvarPedidoBtn(silencioso) {
     statusPedidoAtual = 'aberto';
     atualizarCabecalhoNumero();
     if (!silencioso) toast(`✓ Pedido ${numero} salvo`, 'ok');
-    await carregarPedidosAbertos();
     if (!(pedido.vendedor && pVendedores.some(v => v.nome === pedido.vendedor))) {
       if (pedido.vendedor) await salvarVendedor(pedido.vendedor);
     }
@@ -521,7 +545,6 @@ async function concluirPedidoBtn() {
     await gerarContasReceber({ numero, cliente: pedido.cliente, cliente_id: pedido.cliente_id, total_valor: pedido.total_valor }, parcelas, vencBase);
 
     toast(`✓ Pedido ${numero} concluído — estoque baixado e ${parcelas} parcela(s) geradas`, 'ok grande');
-    await carregarPedidosAbertos();
   } catch (e) {
     console.error(e);
     toast('Erro ao concluir: ' + e.message, 'err');
@@ -533,10 +556,15 @@ async function concluirPedidoBtn() {
 function atualizarCabecalhoNumero() {
   document.getElementById('lbl-num-pedido').textContent = numeroPedidoAtual || 'novo';
   document.getElementById('lbl-status-pedido').textContent = statusPedidoAtual === 'concluido' ? '✓ concluído' : 'rascunho';
-  const bloqueado = statusPedidoAtual === 'concluido';
-  document.getElementById('btn-add-ref').disabled = bloqueado;
-  document.getElementById('btn-salvar-pedido').style.display = bloqueado ? 'none' : '';
-  document.getElementById('btn-concluir-pedido').style.display = bloqueado ? 'none' : '';
+  const pedidoConcluido = statusPedidoAtual === 'concluido';
+  document.getElementById('btn-add-ref').disabled = pedidoConcluido;
+  document.getElementById('btn-salvar-pedido').style.display = pedidoConcluido ? 'none' : '';
+  document.getElementById('btn-concluir-pedido').style.display = pedidoConcluido ? 'none' : '';
+  // Cliente bloqueado trava Salvar/Concluir (mas não esconde — o usuário
+  // precisa ver que existem, só não consegue clicar)
+  const travado = !pedidoConcluido && !!clienteBloqueadoAtual;
+  document.getElementById('btn-salvar-pedido').disabled = travado;
+  document.getElementById('btn-concluir-pedido').disabled = travado;
 }
 
 function limparFormulario() {
@@ -547,64 +575,20 @@ function limparFormulario() {
   document.getElementById('p-vendedor').value = '';
   document.getElementById('p-tabela').selectedIndex = 0;
   document.getElementById('p-data').value = hojeISO();
+  document.getElementById('p-prazo').value = '';
   document.getElementById('p-parcelas').value = 1;
   document.getElementById('p-desconto').value = 0;
   sugerirVencimento();
   limparGradeItem();
+  verificarBloqueioCliente();
   atualizarCabecalhoNumero();
   renderItens();
   history.replaceState(null, '', location.pathname);
 }
 
-// ==== LISTA DE PEDIDOS EM ABERTO ====
-let pedidosAbertosCache = [];
-
-async function carregarPedidosAbertos() {
-  const cont = document.getElementById('lista-pedidos-abertos');
-  try {
-    pedidosAbertosCache = await listarPedidosEmAberto();
-    document.getElementById('lbl-pedidos-abertos-total').textContent = `(${pedidosAbertosCache.length})`;
-    renderPedidosAbertos();
-  } catch (e) {
-    cont.innerHTML = '<div class="vazio-itens">Erro ao carregar</div>';
-    console.warn(e);
-  }
-}
-
-function renderPedidosAbertos() {
-  const cont = document.getElementById('lista-pedidos-abertos');
-  const busca = (document.getElementById('busca-pedido-aberto').value || '').trim().toUpperCase();
-  const filtrados = busca
-    ? pedidosAbertosCache.filter(p =>
-        (p.cliente || '').toUpperCase().includes(busca) ||
-        (p.numero || '').toUpperCase().includes(busca)
-      )
-    : pedidosAbertosCache;
-
-  if (pedidosAbertosCache.length === 0) {
-    cont.innerHTML = '<div class="vazio-itens">Nenhum pedido em aberto</div>';
-    return;
-  }
-  if (filtrados.length === 0) {
-    cont.innerHTML = `<div class="vazio-itens">Nenhum pedido encontrado com "${busca}"</div>`;
-    return;
-  }
-  cont.innerHTML = '';
-  filtrados.forEach(p => {
-    const div = document.createElement('div');
-    div.className = 'item-pedido';
-    div.innerHTML = `
-      <span class="num">${p.numero}</span>
-      <span class="cli">${p.cliente || '—'}</span>
-      <span>${formatDataBR(p.data_pedido)}</span>
-      <span>${p.total_pecas || 0} pç</span>
-      <span class="val">${formatBRL(p.total_valor || 0)}</span>
-    `;
-    div.addEventListener('click', () => abrirPedido(p.numero));
-    cont.appendChild(div);
-  });
-}
-
+// A lista de pedidos (em aberto / concluídos) mora na tela "Pedidos"
+// (pedido.html, js/pedidos.js) — aqui só abrimos um pedido específico
+// quando a URL vem com ?pedido=NNNN (link que sai de lá).
 async function abrirPedido(numero) {
   try {
     const p = await buscarPedido(numero);
@@ -615,11 +599,13 @@ async function abrirPedido(numero) {
     document.getElementById('p-vendedor').value = p.vendedor || '';
     if (p.tabela_preco) document.getElementById('p-tabela').value = p.tabela_preco;
     document.getElementById('p-data').value = p.data_pedido || hojeISO();
+    document.getElementById('p-prazo').value = p.prazo_pagamento || '';
     document.getElementById('p-parcelas').value = p.parcelas || 1;
     document.getElementById('p-vencimento').value = p.data_vencimento_base || '';
     document.getElementById('p-desconto').value = p.desconto_pct || 0;
     pedidoItens = (p.itens || []).map(i => ({ ...i }));
     limparGradeItem();
+    verificarBloqueioCliente();
     atualizarCabecalhoNumero();
     renderItens();
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -664,9 +650,11 @@ function imprimirConfirmacao() {
   document.getElementById('cf-total').textContent = formatBRL(totalPedido());
 
   const parcelas = parseInt(document.getElementById('p-parcelas').value) || 1;
-  document.getElementById('cf-parcelas').textContent = parcelas > 1
+  const prazo = document.getElementById('p-prazo').value.trim();
+  const linhaPrazo = prazo ? `Prazo: ${prazo} — ` : '';
+  document.getElementById('cf-parcelas').textContent = linhaPrazo + (parcelas > 1
     ? `Pagamento em ${parcelas}x, 1ª parcela em ${formatDataBR(document.getElementById('p-vencimento').value)}`
-    : `Pagamento à vista — vencimento em ${formatDataBR(document.getElementById('p-vencimento').value)}`;
+    : `Pagamento à vista — vencimento em ${formatDataBR(document.getElementById('p-vencimento').value)}`);
 
   dispararImpressao('folha-confirmacao');
 }
@@ -687,9 +675,11 @@ function enviarPorEmail() {
     `${it.ref} ${it.descricao ? '- ' + it.descricao + ' ' : ''}(${it.cor}) — ${it.qtd} pç × ${formatBRL(it.preco)} = ${formatBRL(it.subtotal)}`
   ).join('\n');
   const assunto = `Confirmação de Pedido ${numeroPedidoAtual || ''} — BAMBAM BABY`;
+  const prazo = document.getElementById('p-prazo').value.trim();
+  const linhaPrazo = prazo ? `Prazo de pagamento: ${prazo}\n\n` : '';
   const corpo =
     `Olá, ${nomeCliente}!\n\nSegue o resumo do seu pedido pra confirmação:\n\n${linhas}\n\n` +
-    `TOTAL: ${formatBRL(totalPedido())}\n\n` +
+    `TOTAL: ${formatBRL(totalPedido())}\n\n${linhaPrazo}` +
     `Por favor confirme respondendo este e-mail. Segue em anexo o PDF (imprima a Confirmação do Pedido e anexe antes de enviar).\n\nObrigado!\nBAMBAM BABY`;
   const link = `mailto:${encodeURIComponent(cliObj.email)}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
   window.location.href = link;
