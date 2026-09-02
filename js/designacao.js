@@ -34,6 +34,13 @@ async function init() {
     }
   });
 
+  // Reimprimir nota antiga — busca em TODAS as notas (mesmo de corte já
+  // 100% designado, que some da lista de "cortes pendentes" acima)
+  document.getElementById('btn-buscar-reimprimir').addEventListener('click', buscarNotaParaReimprimir);
+  document.getElementById('busca-reimprimir').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); buscarNotaParaReimprimir(); }
+  });
+
   // Modal de editar corte
   document.getElementById('edcorte-cancelar').addEventListener('click', () => {
     document.getElementById('modal-editar-corte').classList.remove('visivel');
@@ -398,7 +405,11 @@ async function mostrarNotasExistentes(corteId) {
 }
 
 function reimprimirNota(n) {
-  // Reabre o modal da nota com os dados originais
+  // Reabre o modal da nota com os dados originais. Usa lote/refs guardados
+  // NA PRÓPRIA nota (não depende do corte estar aberto/carregado) — assim
+  // funciona tanto reimprimindo de dentro de um corte quanto vindo da busca
+  // global abaixo, de um corte que já foi 100% designado há tempos.
+  const refsTxt = (n.refs_completa && n.refs_completa.length ? n.refs_completa : [n.ref]).filter(Boolean).join(' + ');
   mostrarModalNota(
     n.numero,
     n.itens || [],
@@ -406,8 +417,79 @@ function reimprimirNota(n) {
     n.preco_peca || 0,
     n.valor_nota || 0,
     n.costureira || '?',
-    n.data_saida
+    n.data_saida,
+    n.lote || '—',
+    refsTxt || '—'
   );
+}
+
+// Busca uma nota antiga pra reimprimir — funciona mesmo se o corte dela já
+// estiver 100% designado (some da lista de "cortes pendentes" acima, então
+// sem essa busca não tinha mais como achar a nota de novo). Tenta, nessa
+// ordem: número exato da nota → lote exato → nome da costureira (exato,
+// maiúsculas) — sempre com where() no Firestore, nunca lendo a coleção
+// inteira (ela só cresce, e isso é o que estourou a cota do Firestore uma
+// vez — ver commit da correção do Financeiro).
+async function buscarNotaParaReimprimir() {
+  const termoOriginal = document.getElementById('busca-reimprimir').value.trim();
+  const resultado = document.getElementById('resultado-reimprimir');
+  if (!termoOriginal) { resultado.innerHTML = ''; return; }
+  const termo = termoOriginal.toUpperCase();
+  resultado.innerHTML = '<div class="vazio-busca">Buscando...</div>';
+
+  try {
+    let notas = [];
+
+    // Número da nota (aceita com ou sem zeros à esquerda — ex: "12" acha "0012")
+    if (/^\d+$/.test(termoOriginal)) {
+      const doc = await colNotas().doc(termoOriginal.padStart(4, '0')).get();
+      if (doc.exists) notas = [{ id: doc.id, ...doc.data() }];
+    }
+
+    // Lote exato
+    if (notas.length === 0) {
+      const snap = await colNotas().where('lote', '==', termo).get();
+      notas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }
+
+    // Nome da costureira exato
+    if (notas.length === 0) {
+      const snap = await colNotas().where('costureira', '==', termo).get();
+      notas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }
+
+    if (notas.length === 0) {
+      resultado.innerHTML = `<div class="vazio-busca">Nenhuma nota encontrada com "${termoOriginal}" (busca é por nº exato, lote exato ou nome da costureira exato — confere a digitação)</div>`;
+      return;
+    }
+
+    notas.sort((a, b) => (b.numero || '').localeCompare(a.numero || ''));
+    resultado.innerHTML = '';
+    notas.forEach(n => {
+      const porTam = {};
+      TAMS.forEach(t => porTam[t] = 0);
+      (n.itens || []).forEach(i => { porTam[i.tam] += i.qtd; });
+      const detTxt = TAMS.filter(t => porTam[t]).map(t => `${t}${porTam[t]}`).join(' ');
+      const refsTxt = (n.refs_completa && n.refs_completa.length ? n.refs_completa : [n.ref]).filter(Boolean).join(' + ');
+
+      const item = document.createElement('div');
+      item.className = 'nota-item';
+      item.innerHTML = `
+        <span class="num">#${n.numero}</span>
+        <span class="cost">${n.costureira || '?'}</span>
+        <span class="detalhes">lote ${n.lote || '—'} · ref ${refsTxt || '—'} · ${detTxt} · ${n.total_saida || 0}pç · ${formatDataBR(n.data_saida)}</span>
+        <span class="valor">${formatBRL(n.valor_nota || 0)}</span>
+        <div class="acoes">
+          <button class="btn-mini" data-acao="reimprimir">🖨 imprimir</button>
+        </div>
+      `;
+      item.querySelector('[data-acao="reimprimir"]').addEventListener('click', () => reimprimirNota(n));
+      resultado.appendChild(item);
+    });
+  } catch (e) {
+    console.error('Erro buscando nota:', e);
+    resultado.innerHTML = `<div class="vazio-busca" style="color:var(--text-danger)">Erro na busca: ${e.message}</div>`;
+  }
 }
 
 async function cancelarNota(n) {
@@ -627,9 +709,7 @@ function recalcValor() {
   document.getElementById('valor-total').textContent = formatBRL(valor);
 }
 
-function mostrarModalNota(numero, itens, totalPecas, preco, valor, costureira, data) {
-  const refsTxt = corteAtual.refs.join(' + ');
-
+function mostrarModalNota(numero, itens, totalPecas, preco, valor, costureira, data, lote, refsTxt) {
   // Agrupar por tamanho
   const qtds = {};
   TAMS.forEach(t => qtds[t] = 0);
@@ -666,7 +746,7 @@ function mostrarModalNota(numero, itens, totalPecas, preco, valor, costureira, d
         <!-- Data / Lote / Ref / Preço -->
         <tr>
           <td class="esq"><b>${formatDataBR(data)}</b></td>
-          <td colspan="2" class="esq">Lote <b style="font-size:22px;letter-spacing:1px">${corteAtual.lote}</b></td>
+          <td colspan="2" class="esq">Lote <b style="font-size:22px;letter-spacing:1px">${lote}</b></td>
           <td class="esq">Ref <b style="font-size:22px">${refsTxt}</b></td>
           <td colspan="2" class="esq">Preço <b>${formatBRL(preco)}</b></td>
         </tr>
@@ -794,7 +874,7 @@ async function gerarNota() {
     console.log('[gerarNota] corte atualizado, sobrou:', totalRestante);
 
     // Abre o modal da nota gerada
-    mostrarModalNota(numero, itens, totalSaida, preco, valorNota, nome, data);
+    mostrarModalNota(numero, itens, totalSaida, preco, valorNota, nome, data, corteAtual.lote, corteAtual.refs.join(' + '));
   } catch (e) {
     console.error('[gerarNota] ERRO:', e);
     toast('Erro ao gerar nota: ' + e.message, 'err');
