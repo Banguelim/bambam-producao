@@ -10,7 +10,7 @@
 <style>
   .cabec-pedido {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr auto auto auto auto;
+    grid-template-columns: 2fr 1fr 1fr auto auto auto auto auto;
     gap: 12px;
     align-items: flex-end;
     background: var(--surface-2);
@@ -147,6 +147,10 @@
       <div class="campo">
         <label class="lbl">Data</label>
         <input type="date" id="p-data">
+      </div>
+      <div class="campo">
+        <label class="lbl">Prazo</label>
+        <input id="p-prazo" placeholder="ex: 30/60/90" style="width:90px">
       </div>
       <div class="campo">
         <label class="lbl">Parcelas</label>

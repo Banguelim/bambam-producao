@@ -439,6 +439,7 @@ function montarPedidoObj() {
     vendedor: document.getElementById('p-vendedor').value.trim().toUpperCase(),
     tabela_preco: document.getElementById('p-tabela').value,
     data_pedido: document.getElementById('p-data').value,
+    prazo_pagamento: document.getElementById('p-prazo').value.trim(),
     itens: pedidoItens,
     total_pecas: pedidoItens.reduce((a, i) => a + i.qtd, 0),
     desconto_pct: descontoAtual(),
@@ -543,6 +544,7 @@ function limparFormulario() {
   document.getElementById('p-vendedor').value = '';
   document.getElementById('p-tabela').selectedIndex = 0;
   document.getElementById('p-data').value = hojeISO();
+  document.getElementById('p-prazo').value = '';
   document.getElementById('p-parcelas').value = 1;
   document.getElementById('p-desconto').value = 0;
   sugerirVencimento();
@@ -565,6 +567,7 @@ async function abrirPedido(numero) {
     document.getElementById('p-vendedor').value = p.vendedor || '';
     if (p.tabela_preco) document.getElementById('p-tabela').value = p.tabela_preco;
     document.getElementById('p-data').value = p.data_pedido || hojeISO();
+    document.getElementById('p-prazo').value = p.prazo_pagamento || '';
     document.getElementById('p-parcelas').value = p.parcelas || 1;
     document.getElementById('p-vencimento').value = p.data_vencimento_base || '';
     document.getElementById('p-desconto').value = p.desconto_pct || 0;
@@ -614,9 +617,11 @@ function imprimirConfirmacao() {
   document.getElementById('cf-total').textContent = formatBRL(totalPedido());
 
   const parcelas = parseInt(document.getElementById('p-parcelas').value) || 1;
-  document.getElementById('cf-parcelas').textContent = parcelas > 1
+  const prazo = document.getElementById('p-prazo').value.trim();
+  const linhaPrazo = prazo ? `Prazo: ${prazo} — ` : '';
+  document.getElementById('cf-parcelas').textContent = linhaPrazo + (parcelas > 1
     ? `Pagamento em ${parcelas}x, 1ª parcela em ${formatDataBR(document.getElementById('p-vencimento').value)}`
-    : `Pagamento à vista — vencimento em ${formatDataBR(document.getElementById('p-vencimento').value)}`;
+    : `Pagamento à vista — vencimento em ${formatDataBR(document.getElementById('p-vencimento').value)}`);
 
   dispararImpressao('folha-confirmacao');
 }
@@ -637,9 +642,11 @@ function enviarPorEmail() {
     `${it.ref} ${it.descricao ? '- ' + it.descricao + ' ' : ''}(${it.cor}) — ${it.qtd} pç × ${formatBRL(it.preco)} = ${formatBRL(it.subtotal)}`
   ).join('\n');
   const assunto = `Confirmação de Pedido ${numeroPedidoAtual || ''} — BAMBAM BABY`;
+  const prazo = document.getElementById('p-prazo').value.trim();
+  const linhaPrazo = prazo ? `Prazo de pagamento: ${prazo}\n\n` : '';
   const corpo =
     `Olá, ${nomeCliente}!\n\nSegue o resumo do seu pedido pra confirmação:\n\n${linhas}\n\n` +
-    `TOTAL: ${formatBRL(totalPedido())}\n\n` +
+    `TOTAL: ${formatBRL(totalPedido())}\n\n${linhaPrazo}` +
     `Por favor confirme respondendo este e-mail. Segue em anexo o PDF (imprima a Confirmação do Pedido e anexe antes de enviar).\n\nObrigado!\nBAMBAM BABY`;
   const link = `mailto:${encodeURIComponent(cliObj.email)}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
   window.location.href = link;
