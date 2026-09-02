@@ -35,6 +35,9 @@
     font-size: 15px;
     letter-spacing: 0.5px;
   }
+  .reimprimir-box { background: var(--surface-2); border: 0.5px solid var(--border); border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; }
+  .reimprimir-box .resultado { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .reimprimir-box .resultado .vazio-busca { color: var(--text-muted); font-size: 12px; padding: 4px 2px; }
   .notas-existentes { background: var(--surface-2); border: 0.5px solid var(--border); border-radius: 8px; padding: 10px 14px; margin-top: 8px; }
   .notas-titulo { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; margin-bottom: 6px; }
   .notas-titulo span { color: var(--text-muted); font-weight: 500; margin-left: 4px; }
@@ -151,6 +154,15 @@
     </div>
 
     <div id="tela-selecao" class="selecao-corte" style="display:none">
+      <div class="reimprimir-box">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <label class="lbl" style="margin:0;white-space:nowrap">🖨️ Reimprimir nota antiga (perdeu ou falhou a impressão)</label>
+          <input id="busca-reimprimir" placeholder="nº da nota, lote ou nome da costureira" style="flex:1;min-width:220px;padding:8px 10px;font-size:13px">
+          <button class="btn btn-secondary" id="btn-buscar-reimprimir" style="padding:8px 16px">🔎 Buscar</button>
+        </div>
+        <div class="resultado" id="resultado-reimprimir"></div>
+      </div>
+
       <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px">
         <h3 style="margin:0;flex:1">Cortes pendentes de designação</h3>
         <input id="busca-corte" placeholder="🔎 buscar lote, ref ou data..."
