@@ -1,10 +1,21 @@
 // Tela de Contas a Receber — parcelas geradas quando um Pedido é concluído.
+//
+// IMPORTANTE (leia antes de mexer): a coleção contas_receber já passou de
+// 16 mil documentos (histórico desde 2017, só cresce) e o Firestore
+// gratuito só dá 50 mil leituras/dia pro projeto INTEIRO. Por isso essa
+// tela NUNCA lê a coleção inteira de cara — só as contas "em aberto"
+// (pendentes/vencidas), que são um punhado. O histórico de pagas só é lido
+// se alguém realmente pedir (filtro "Só pagas" ou "Todas"), e uma vez lido
+// fica guardado aqui (contasPagasCache) pro resto da visita à tela.
 
-let todasContas = [];
+let contasPendentes = [];       // sempre carregadas (leve)
+let contasPagasCache = null;    // null = ainda não carregado; carrega sob demanda
+let agregadosPago = { total: 0, qtd: 0 }; // totais de "pago" mantidos incrementalmente (ver db-vendas.js)
+let carregandoPagas = false;
 
 async function init() {
   await protegerRota();
-  document.getElementById('f-status').addEventListener('change', render);
+  document.getElementById('f-status').addEventListener('change', onFiltroChange);
   document.getElementById('f-busca').addEventListener('input', render);
   document.getElementById('f-data-de').addEventListener('change', render);
   document.getElementById('f-data-ate').addEventListener('change', render);
@@ -20,12 +31,38 @@ async function init() {
 
 async function carregar() {
   try {
-    todasContas = await listarContasReceber();
+    const [pendentes, agregados] = await Promise.all([
+      listarContasReceberPendentes(),
+      lerAgregadosContas()
+    ]);
+    contasPendentes = pendentes;
+    agregadosPago = agregados;
     render();
   } catch (e) {
     console.error(e);
     toast('Erro ao carregar contas: ' + e.message, 'err');
   }
+}
+
+// Filtros que precisam enxergar as pagas ("pago"/"todos") disparam a
+// carga pesada (uma vez só, depois fica em cache) — só quando pedido.
+async function onFiltroChange() {
+  const filtro = document.getElementById('f-status').value;
+  if ((filtro === 'pago' || filtro === 'todos') && contasPagasCache === null) {
+    if (carregandoPagas) return;
+    carregandoPagas = true;
+    const corpo = document.getElementById('contas-corpo');
+    corpo.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-muted)">Carregando histórico de pagas (${agregadosPago.qtd} registros)...</td></tr>`;
+    try {
+      contasPagasCache = await listarContasReceberPagas();
+    } catch (e) {
+      toast('Erro ao carregar pagas: ' + e.message, 'err');
+      contasPagasCache = null;
+    } finally {
+      carregandoPagas = false;
+    }
+  }
+  render();
 }
 
 function statusReal(c) {
@@ -38,6 +75,11 @@ function render() {
   const busca = (document.getElementById('f-busca').value || '').toUpperCase();
   const dataDe = document.getElementById('f-data-de').value;
   const dataAte = document.getElementById('f-data-ate').value;
+  const precisaPagas = filtro === 'pago' || filtro === 'todos';
+
+  if (precisaPagas && contasPagasCache === null) return; // ainda carregando — onFiltroChange chama render() de novo quando terminar
+
+  const todasContas = precisaPagas ? contasPendentes.concat(contasPagasCache) : contasPendentes;
 
   const filtradas = todasContas.filter(c => {
     const st = statusReal(c);
@@ -65,18 +107,23 @@ function render() {
     infoPeriodo.style.display = 'none';
   }
 
-  // Estatísticas sobre TODAS as contas (não só as filtradas)
-  let somaAberto = 0, somaVencido = 0, somaPago = 0;
-  todasContas.forEach(c => {
+  // Estatísticas: aberto/vencido vêm de contasPendentes (sempre completo e
+  // leve); pago vem dos agregados (ou do cache, se já foi carregado — fica
+  // mais preciso ainda, mas os agregados já bastam).
+  let somaAberto = 0, somaVencido = 0;
+  contasPendentes.forEach(c => {
     const st = statusReal(c);
     if (st === 'aberto') somaAberto += c.valor || 0;
     else if (st === 'vencido') somaVencido += c.valor || 0;
-    else somaPago += c.valor_pago ?? c.valor ?? 0;
   });
+  const somaPago = contasPagasCache !== null
+    ? contasPagasCache.reduce((a, c) => a + (c.valor_pago ?? c.valor ?? 0), 0)
+    : agregadosPago.total;
+  const qtdPago = contasPagasCache !== null ? contasPagasCache.length : agregadosPago.qtd;
   document.getElementById('s-aberto').textContent = formatBRL(somaAberto);
   document.getElementById('s-vencido').textContent = formatBRL(somaVencido);
   document.getElementById('s-pago').textContent = formatBRL(somaPago);
-  document.getElementById('s-total').textContent = todasContas.length;
+  document.getElementById('s-total').textContent = contasPendentes.length + qtdPago;
 
   const corpo = document.getElementById('contas-corpo');
   const vazio = document.getElementById('contas-vazio');
@@ -121,6 +168,16 @@ function render() {
   });
 }
 
+// A conta muda de lado (pendente ↔ paga) — invalida o cache de pagas e
+// recarrega. Se o filtro atual precisa ver as pagas, busca de novo na
+// hora (onFiltroChange); senão só atualiza pendentes/agregados (leve).
+async function recarregarApos() {
+  contasPagasCache = null;
+  await carregar();
+  const filtro = document.getElementById('f-status').value;
+  if (filtro === 'pago' || filtro === 'todos') await onFiltroChange();
+}
+
 async function darBaixaBtn(c) {
   const dataPag = prompt(`Data do pagamento (AAAA-MM-DD):`, hojeISO());
   if (!dataPag) return;
@@ -131,7 +188,7 @@ async function darBaixaBtn(c) {
   try {
     await darBaixaConta(c.id, dataPag, valor);
     toast(`✓ Baixa registrada — parcela ${c.parcela_num}/${c.parcelas_total} de ${c.cliente}`, 'ok');
-    await carregar();
+    await recarregarApos();
   } catch (e) {
     toast('Erro: ' + e.message, 'err');
   }
@@ -142,7 +199,7 @@ async function reabrirBtn(c) {
   try {
     await reabrirConta(c.id);
     toast('✓ Parcela reaberta', 'ok');
-    await carregar();
+    await recarregarApos();
   } catch (e) {
     toast('Erro: ' + e.message, 'err');
   }

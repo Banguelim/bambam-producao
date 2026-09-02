@@ -189,25 +189,77 @@ async function gerarContasReceber(pedido, parcelas, dataBase) {
   }
   await batch.commit();
 }
-async function listarContasReceber() {
-  const snap = await colContasReceber().get();
+// ATENÇÃO: nunca usar colContasReceber().get() sem where() aqui — a coleção
+// já passou de 16 mil documentos (histórico desde 2017) e só cresce. Ler ela
+// inteira toda vez que alguém abre o Financeiro é o que estourou a cota
+// grátis do Firestore. As pagas (a maioria, é histórico) só são lidas quando
+// alguém pede explicitamente (filtro "pago"/"todas" na tela) — ver
+// listarContasReceberPagas().
+async function listarContasReceberPendentes() {
+  const snap = await colContasReceber().where('status', '==', 'aberto').get();
   const contas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   contas.sort((a, b) => (a.data_vencimento || '').localeCompare(b.data_vencimento || ''));
   return contas;
 }
+// Carga pesada de propósito (lê todo o histórico de pagas) — só chamar
+// quando o usuário pedir pra ver as pagas, e guardar o resultado em cache
+// no lado da tela (não repetir a cada clique de filtro).
+async function listarContasReceberPagas() {
+  const snap = await colContasReceber().where('status', '==', 'pago').get();
+  const contas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  contas.sort((a, b) => (a.data_vencimento || '').localeCompare(b.data_vencimento || ''));
+  return contas;
+}
+// Totais acumulados de contas já pagas (soma em R$ e quantidade), mantidos
+// incrementalmente a cada baixa/reabertura — pra mostrar o card "pago" do
+// Financeiro sem precisar ler as 16 mil contas toda vez. Precisa ser
+// zerado/recalculado uma vez (ver recalcularAgregadosContas) pra bater com
+// o histórico que já existia antes desse controle existir.
+async function lerAgregadosContas() {
+  const doc = await VENDAS.doc('meta').get();
+  const d = doc.exists ? doc.data() : {};
+  return { total: d.contas_pago_total || 0, qtd: d.contas_pago_qtd || 0 };
+}
+// Varre a coleção inteira UMA VEZ pra (re)calcular os agregados acima a
+// partir do que já está pago no Firestore. É a única função aqui que ainda
+// lê a coleção inteira de propósito — rodar manualmente (botão em
+// admin/importar.html), não em toda abertura de tela.
+async function recalcularAgregadosContas() {
+  const snap = await colContasReceber().where('status', '==', 'pago').get();
+  let total = 0, qtd = 0;
+  snap.forEach(d => {
+    const c = d.data();
+    total += c.valor_pago ?? c.valor ?? 0;
+    qtd++;
+  });
+  total = Math.round(total * 100) / 100;
+  await VENDAS.doc('meta').set({ contas_pago_total: total, contas_pago_qtd: qtd }, { merge: true });
+  return { total, qtd, lidos: snap.size };
+}
 async function darBaixaConta(id, dataPagamento, valorPago) {
+  const valor = Number(valorPago);
   await colContasReceber().doc(id).update({
     status: 'pago',
     data_pagamento: dataPagamento,
-    valor_pago: Number(valorPago)
+    valor_pago: valor
   });
+  await VENDAS.doc('meta').set({
+    contas_pago_total: firebase.firestore.FieldValue.increment(valor),
+    contas_pago_qtd: firebase.firestore.FieldValue.increment(1)
+  }, { merge: true });
 }
 async function reabrirConta(id) {
+  const doc = await colContasReceber().doc(id).get();
+  const valorPago = doc.exists ? (doc.data().valor_pago || 0) : 0;
   await colContasReceber().doc(id).update({
     status: 'aberto',
     data_pagamento: firebase.firestore.FieldValue.delete(),
     valor_pago: firebase.firestore.FieldValue.delete()
   });
+  await VENDAS.doc('meta').set({
+    contas_pago_total: firebase.firestore.FieldValue.increment(-valorPago),
+    contas_pago_qtd: firebase.firestore.FieldValue.increment(-1)
+  }, { merge: true });
 }
 async function deletarContasDoPedido(numeroPedido) {
   const snap = await colContasReceber().where('pedido_id', '==', numeroPedido).get();
