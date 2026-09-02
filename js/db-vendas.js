@@ -143,6 +143,12 @@ async function listarPedidosEmAberto() {
   pedidos.sort((a, b) => (b.data_pedido || '').localeCompare(a.data_pedido || ''));
   return pedidos;
 }
+async function listarPedidosConcluidos() {
+  const snap = await colPedidos().where('status', '==', 'concluido').get();
+  const pedidos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  pedidos.sort((a, b) => (b.data_pedido || '').localeCompare(a.data_pedido || ''));
+  return pedidos;
+}
 async function listarPedidosRecentes(limite = 50) {
   const snap = await colPedidos().get();
   const pedidos = snap.docs.map(d => ({ id: d.id, ...d.data() }));

@@ -95,7 +95,7 @@ function render() {
     const tr = document.createElement('tr');
     tr.className = st === 'vencido' ? 'vencida' : (st === 'pago' ? 'paga' : '');
     tr.innerHTML = `
-      <td>${c.pedido_id ? `<a href="pedido.html?pedido=${c.pedido_id}">${c.pedido_id}</a>` : '<span style="color:var(--text-muted)">—</span>'}</td>
+      <td>${c.pedido_id ? `<a href="pedido-novo.html?pedido=${c.pedido_id}">${c.pedido_id}</a>` : '<span style="color:var(--text-muted)">—</span>'}</td>
       <td class="cliente">${c.cliente || '—'}</td>
       <td>${c.parcela_num}/${c.parcelas_total}</td>
       <td>${formatDataBR(c.data_vencimento)}</td>

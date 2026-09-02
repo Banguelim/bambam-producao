@@ -57,10 +57,8 @@ async function init() {
   document.getElementById('btn-romaneio-conferencia').addEventListener('click', () => imprimirRomaneio('conferencia'));
   document.getElementById('btn-confirmacao').addEventListener('click', imprimirConfirmacao);
   document.getElementById('btn-email-cliente').addEventListener('click', enviarPorEmail);
-  document.getElementById('busca-pedido-aberto').addEventListener('input', renderPedidosAbertos);
 
   renderItens();
-  await carregarPedidosAbertos();
 
   // Abrir direto se veio ?pedido=NNNN
   const params = new URLSearchParams(location.search);
@@ -472,7 +470,6 @@ async function salvarPedidoBtn(silencioso) {
     statusPedidoAtual = 'aberto';
     atualizarCabecalhoNumero();
     if (!silencioso) toast(`✓ Pedido ${numero} salvo`, 'ok');
-    await carregarPedidosAbertos();
     if (!(pedido.vendedor && pVendedores.some(v => v.nome === pedido.vendedor))) {
       if (pedido.vendedor) await salvarVendedor(pedido.vendedor);
     }
@@ -521,7 +518,6 @@ async function concluirPedidoBtn() {
     await gerarContasReceber({ numero, cliente: pedido.cliente, cliente_id: pedido.cliente_id, total_valor: pedido.total_valor }, parcelas, vencBase);
 
     toast(`✓ Pedido ${numero} concluído — estoque baixado e ${parcelas} parcela(s) geradas`, 'ok grande');
-    await carregarPedidosAbertos();
   } catch (e) {
     console.error(e);
     toast('Erro ao concluir: ' + e.message, 'err');
@@ -556,55 +552,9 @@ function limparFormulario() {
   history.replaceState(null, '', location.pathname);
 }
 
-// ==== LISTA DE PEDIDOS EM ABERTO ====
-let pedidosAbertosCache = [];
-
-async function carregarPedidosAbertos() {
-  const cont = document.getElementById('lista-pedidos-abertos');
-  try {
-    pedidosAbertosCache = await listarPedidosEmAberto();
-    document.getElementById('lbl-pedidos-abertos-total').textContent = `(${pedidosAbertosCache.length})`;
-    renderPedidosAbertos();
-  } catch (e) {
-    cont.innerHTML = '<div class="vazio-itens">Erro ao carregar</div>';
-    console.warn(e);
-  }
-}
-
-function renderPedidosAbertos() {
-  const cont = document.getElementById('lista-pedidos-abertos');
-  const busca = (document.getElementById('busca-pedido-aberto').value || '').trim().toUpperCase();
-  const filtrados = busca
-    ? pedidosAbertosCache.filter(p =>
-        (p.cliente || '').toUpperCase().includes(busca) ||
-        (p.numero || '').toUpperCase().includes(busca)
-      )
-    : pedidosAbertosCache;
-
-  if (pedidosAbertosCache.length === 0) {
-    cont.innerHTML = '<div class="vazio-itens">Nenhum pedido em aberto</div>';
-    return;
-  }
-  if (filtrados.length === 0) {
-    cont.innerHTML = `<div class="vazio-itens">Nenhum pedido encontrado com "${busca}"</div>`;
-    return;
-  }
-  cont.innerHTML = '';
-  filtrados.forEach(p => {
-    const div = document.createElement('div');
-    div.className = 'item-pedido';
-    div.innerHTML = `
-      <span class="num">${p.numero}</span>
-      <span class="cli">${p.cliente || '—'}</span>
-      <span>${formatDataBR(p.data_pedido)}</span>
-      <span>${p.total_pecas || 0} pç</span>
-      <span class="val">${formatBRL(p.total_valor || 0)}</span>
-    `;
-    div.addEventListener('click', () => abrirPedido(p.numero));
-    cont.appendChild(div);
-  });
-}
-
+// A lista de pedidos (em aberto / concluídos) mora na tela "Pedidos"
+// (pedido.html, js/pedidos.js) — aqui só abrimos um pedido específico
+// quando a URL vem com ?pedido=NNNN (link que sai de lá).
 async function abrirPedido(numero) {
   try {
     const p = await buscarPedido(numero);

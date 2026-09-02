@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BAMBAM · Pedido Novo</title>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/forms.css">
+<link rel="stylesheet" href="css/grade5.css">
+<style>
+  .cabec-pedido {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr auto auto auto auto;
+    gap: 12px;
+    align-items: flex-end;
+    background: var(--surface-2);
+    border: 0.5px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+  }
+  .cabec-pedido .campo { display: flex; flex-direction: column; gap: 4px; }
+  .cabec-pedido input, .cabec-pedido select { padding: 9px 10px; font-size: 14px; font-weight: 600; }
+  .cabec-pedido input#p-cliente { min-width: 200px; text-transform: uppercase; }
+  .num-pedido { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; }
+  .num-pedido b { color: var(--text-accent); font-size: 14px; }
+
+  .cabec-item {
+    display: grid;
+    grid-template-columns: auto auto auto 1fr;
+    gap: 14px;
+    align-items: flex-end;
+    padding: 0 4px;
+    margin-bottom: 8px;
+  }
+  .cabec-item input#it-ref { width: 110px; font-weight: 700; text-transform: uppercase; }
+  .cabec-item select#it-tabela { min-width: 110px; }
+  .cabec-item input#it-preco { width: 100px; font-weight: 700; text-align: right; }
+  .cabec-item .info-item { font-size: 12px; color: var(--text-secondary); }
+  .cabec-item .info-item b { color: var(--text-primary); }
+  .btn-add-ref {
+    padding: 10px 20px; background: var(--bg-accent-strong); color: white;
+    border: none; border-radius: var(--radius); font-weight: 700; font-size: 13px;
+  }
+  .btn-add-ref:disabled { opacity: 0.5; }
+  .bloco-item { margin-bottom: 22px; }
+
+  .tabela-itens { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 13px; }
+  .tabela-itens th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-secondary); padding: 6px 8px; border-bottom: 0.5px solid var(--border); }
+  .tabela-itens td { padding: 7px 8px; border-bottom: 0.5px dashed var(--border); }
+  .tabela-itens td.ref { font-weight: 800; color: var(--text-primary); }
+  .tabela-itens td.desc { color: var(--text-secondary); font-size: 12px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tabela-itens td.qtds { color: var(--text-secondary); font-size: 12px; }
+  .tabela-itens td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .tabela-itens td.preco { color: var(--text-accent); }
+  .tabela-itens td.sub { font-weight: 700; color: var(--success); }
+  .tabela-itens .btn-x { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px; }
+  .tabela-itens .btn-x:hover { color: var(--text-danger); }
+  .tabela-itens .tam-chip { display: inline-block; margin-right: 6px; white-space: nowrap; }
+  .tabela-itens .editavel { cursor: text; border-bottom: 1px dashed var(--border-accent); padding: 0 2px; outline: none; }
+  .tabela-itens .editavel:hover { background: var(--surface-2); }
+  .tabela-itens .editavel:focus { background: white; color: #000; }
+  .vazio-itens { padding: 24px; text-align: center; color: var(--text-muted); font-size: 13px; background: var(--surface-1); border-radius: 8px; margin-bottom: 12px; }
+
+  .rodape-pedido {
+    background: var(--surface-2); border: 0.5px solid var(--border); border-radius: var(--radius);
+    padding: 10px 16px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;
+  }
+  .rodape-pedido .totais { font-size: 13px; color: var(--text-secondary); }
+  .rodape-pedido .totais b { color: var(--text-primary); font-size: 16px; }
+  .rodape-pedido .totais .v { color: var(--success); font-size: 18px; font-weight: 800; }
+
+  .acoes-pedido { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; margin-bottom: 24px; }
+
+  /* Folha de impressão (romaneio) */
+  .folha { display: none; background: white; color: black; padding: 20px 24px; border-radius: 8px; font-family: Arial, Helvetica, sans-serif; }
+  .folha-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 2px solid black; gap: 12px; flex-wrap: wrap; }
+  .folha-header .empresa { font-size: 20px; font-weight: 900; letter-spacing: 1px; }
+  .folha-header .sub { font-size: 13px; font-weight: 700; }
+  .folha-tabela { width: 100%; border-collapse: collapse; font-size: 12px; color: black; }
+  .folha-tabela th, .folha-tabela td { border: 1px solid #333; padding: 5px 6px; text-align: center; }
+  .folha-tabela thead th { background: #e5e5e5; font-weight: 700; font-size: 11px; text-transform: uppercase; }
+  .folha-tabela td.ref { font-family: 'Courier New', monospace; font-weight: 900; text-align: left; }
+  .folha-tabela tfoot td { background: #ffeb99; font-weight: 900; }
+  .assinaturas { margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 60px; font-size: 12px; }
+  .assinatura { border-top: 1px solid black; padding-top: 6px; text-align: center; }
+
+  @media print {
+    @page { size: A4 portrait; margin: 10mm; }
+    body { background: white !important; }
+    .topbar, .cabec-pedido, .bloco-item, .tabela-itens, .rodape-pedido, .acoes-pedido, .num-pedido, h1, .hint { display: none !important; }
+    .wrap { padding: 0 !important; margin: 0 !important; max-width: none !important; }
+    .folha { display: none; padding: 0 !important; }
+    .folha.imprimindo { display: block !important; }
+  }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <span class="logo">BAMBAM <b>BABY</b></span>
+    <nav class="nav">
+      <a href="index.html">Painel</a>
+      <a href="novo-corte.html">Novo corte</a>
+      <a href="designacao.html">Designação</a>
+      <a href="retorno.html">Retorno</a>
+      <a href="pagamento.html">Pagamento</a>
+      <a href="arremate.html">Arremate</a>
+      <a href="estoque.html">Estoque</a>
+      <a href="cadastros.html">Cadastros</a>
+      <a href="relatorios.html">Relatórios</a>
+      <a href="pedido.html">Pedidos</a>
+      <a href="pedido-novo.html" class="ativo">Pedido Novo</a>
+      <a href="vendas-cadastros.html">Clientes</a>
+      <a href="contas-receber.html">Financeiro</a>
+    </nav>
+    <div class="user">
+      <span id="user-email">—</span>
+      <button class="logout" onclick="logout()">sair</button>
+    </div>
+  </div>
+
+  <datalist id="clientes-list"></datalist>
+  <datalist id="vendedores-list"></datalist>
+  <datalist id="refs-list"></datalist>
+  <datalist id="cores-list"></datalist>
+
+  <div class="wrap">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+      <h1 style="margin:0">Pedido de venda</h1>
+      <span class="hint">Escolha o cliente, adicione os itens e conclua o pedido — <a href="pedido.html">← ver todos os pedidos</a></span>
+    </div>
+    <div class="num-pedido">Pedido <b id="lbl-num-pedido">novo</b> — <span id="lbl-status-pedido">rascunho</span></div>
+
+    <div class="cabec-pedido">
+      <div class="campo">
+        <label class="lbl">Cliente</label>
+        <input list="clientes-list" id="p-cliente" placeholder="digite ou escolha">
+      </div>
+      <div class="campo">
+        <label class="lbl">Vendedor</label>
+        <input list="vendedores-list" id="p-vendedor" placeholder="vendedor">
+      </div>
+      <div class="campo">
+        <label class="lbl">Tabela de preço</label>
+        <select id="p-tabela"></select>
+      </div>
+      <div class="campo">
+        <label class="lbl">Data</label>
+        <input type="date" id="p-data">
+      </div>
+      <div class="campo">
+        <label class="lbl">Parcelas</label>
+        <input type="number" id="p-parcelas" min="1" value="1" style="width:60px;text-align:center">
+      </div>
+      <div class="campo">
+        <label class="lbl">1º vencimento</label>
+        <input type="date" id="p-vencimento">
+      </div>
+      <div class="campo">
+        <label class="lbl">Desconto (%)</label>
+        <input type="number" id="p-desconto" min="0" max="100" step="0.01" value="0" style="width:70px;text-align:center">
+      </div>
+    </div>
+
+    <div class="bloco-item">
+      <div class="cabec-item">
+        <div><label class="lbl">Referência</label><input list="refs-list" id="it-ref" placeholder="ex: 205"></div>
+        <div><label class="lbl">Tabela</label><select id="it-tabela"></select></div>
+        <div><label class="lbl">Preço (peça)</label><input type="number" id="it-preco" step="0.01" min="0" placeholder="0,00"></div>
+        <div class="info-item">
+          Digita cor + qtd numa coluna, aperta Enter — repete pra outras cores/tamanhos da mesma ref, depois clica em <b>Adicionar ao pedido</b>
+          <div id="it-descricao-linha" style="display:none;margin-top:4px">📦 <b id="it-descricao-texto" style="color:var(--text-primary)"></b></div>
+        </div>
+      </div>
+
+      <div class="grade5" id="grade-item"></div>
+
+      <div class="rodape-tot" id="rodape-item">
+        <div class="col-totais" id="col-totais-item">
+          <span class="ct" data-ct="RN">RN <b>0</b></span>
+          <span class="ct" data-ct="P">P <b>0</b></span>
+          <span class="ct" data-ct="M">M <b>0</b></span>
+          <span class="ct" data-ct="G">G <b>0</b></span>
+          <span class="ct" data-ct="GG">GG <b>0</b></span>
+        </div>
+        <div class="total-geral">
+          <div>Total <b id="lbl-t-item">0</b> peças <small id="lbl-t-item-sub"></small></div>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;margin-top:10px">
+        <button class="btn-add-ref" id="btn-add-ref">✓ Adicionar ao pedido</button>
+      </div>
+    </div>
+
+    <h3 style="margin-bottom:8px">Itens do pedido</h3>
+    <table class="tabela-itens" id="tabela-itens">
+      <thead>
+        <tr><th>Ref</th><th>Descrição</th><th>Cor</th><th>Tamanhos</th><th>Qtd</th><th id="th-preco">Preço</th><th>Subtotal</th><th></th></tr>
+      </thead>
+      <tbody id="itens-corpo"></tbody>
+    </table>
+    <div class="vazio-itens" id="itens-vazio">Nenhum item adicionado ainda</div>
+
+    <div class="rodape-pedido">
+      <div class="totais">Total de peças: <b id="lbl-total-pecas">0</b></div>
+      <div class="totais" id="lbl-desconto-info" style="display:none">Desconto: <b id="lbl-desconto-pct">0%</b> — de <s id="lbl-total-sem-desconto">R$ 0,00</s></div>
+      <div class="totais">Valor do pedido: <span class="v" id="lbl-total-valor">R$ 0,00</span></div>
+    </div>
+
+    <div class="acoes-pedido">
+      <button class="btn btn-secondary" id="btn-novo-pedido">+ novo pedido</button>
+      <button class="btn btn-secondary" id="btn-confirmacao">🖨️ Confirmação do pedido</button>
+      <button class="btn btn-secondary" id="btn-email-cliente" title="Abre um rascunho de e-mail pro cliente confirmar">📧 enviar por e-mail</button>
+      <button class="btn btn-secondary" id="btn-romaneio-separacao">🖨️ Romaneio de separação</button>
+      <button class="btn btn-secondary" id="btn-romaneio-conferencia">🖨️ Romaneio de conferência</button>
+      <button class="btn btn-secondary" id="btn-salvar-pedido">💾 Salvar</button>
+      <button class="btn btn-primary" id="btn-concluir-pedido">✓ Concluir pedido</button>
+    </div>
+  </div>
+
+  <!-- Confirmação de pedido: documento comercial pro cliente aprovar (com preço) -->
+  <div class="folha" id="folha-confirmacao">
+    <div class="folha-header">
+      <div class="empresa">BAMBAM BABY</div>
+      <div class="sub">Confirmação de Pedido Nº <span id="cf-num">—</span></div>
+    </div>
+    <div style="margin-bottom:10px;font-size:13px;display:flex;flex-wrap:wrap;gap:16px">
+      <span>Cliente: <b id="cf-cliente">—</b></span>
+      <span>Vendedor: <b id="cf-vendedor">—</b></span>
+      <span>Data: <b id="cf-data">—</b></span>
+    </div>
+    <table class="folha-tabela">
+      <thead><tr><th>Ref</th><th style="text-align:left">Descrição</th><th>Cor</th><th>RN</th><th>P</th><th>M</th><th>G</th><th>GG</th><th>Qtd</th><th>Preço</th><th>Subtotal</th></tr></thead>
+      <tbody id="cf-corpo"></tbody>
+      <tfoot>
+        <tr id="cf-linha-desconto" style="display:none"><td colspan="10" style="text-align:right">Desconto</td><td id="cf-desconto"></td></tr>
+        <tr><td colspan="10" style="text-align:right">TOTAL DO PEDIDO</td><td id="cf-total" style="font-size:14px"></td></tr>
+      </tfoot>
+    </table>
+    <div style="margin-top:10px;font-size:12px" id="cf-parcelas"></div>
+    <div class="assinaturas">
+      <div class="assinatura">Confirmo o pedido acima — Assinatura do cliente</div>
+      <div class="assinatura">Data</div>
+    </div>
+  </div>
+
+  <!-- Romaneio de separação: detalhado por ref/cor/tamanho -->
+  <div class="folha" id="folha-separacao">
+    <div class="folha-header">
+      <div class="empresa">BAMBAM BABY</div>
+      <div class="sub">Romaneio de Separação — Pedido <span id="rs-num">—</span></div>
+    </div>
+    <div style="margin-bottom:10px;font-size:13px">Cliente: <b id="rs-cliente">—</b> · Data: <b id="rs-data">—</b></div>
+    <table class="folha-tabela">
+      <thead><tr><th>Ref</th><th>Cor</th><th>RN</th><th>P</th><th>M</th><th>G</th><th>GG</th><th>Total</th></tr></thead>
+      <tbody id="rs-corpo"></tbody>
+      <tfoot><tr><td colspan="7" style="text-align:right">TOTAL GERAL</td><td id="rs-total"></td></tr></tfoot>
+    </table>
+    <div class="assinaturas">
+      <div class="assinatura">Separado por</div>
+      <div class="assinatura">Conferido por</div>
+    </div>
+  </div>
+
+  <!-- Romaneio de conferência: resumido por ref -->
+  <div class="folha" id="folha-conferencia">
+    <div class="folha-header">
+      <div class="empresa">BAMBAM BABY</div>
+      <div class="sub">Romaneio de Conferência — Pedido <span id="rc-num">—</span></div>
+    </div>
+    <div style="margin-bottom:10px;font-size:13px">Cliente: <b id="rc-cliente">—</b> · Data: <b id="rc-data">—</b></div>
+    <table class="folha-tabela">
+      <thead><tr><th>Ref</th><th>Quantidade</th></tr></thead>
+      <tbody id="rc-corpo"></tbody>
+      <tfoot><tr><td style="text-align:right">TOTAL GERAL</td><td id="rc-total"></td></tr></tfoot>
+    </table>
+    <div class="assinaturas">
+      <div class="assinatura">Entregue por</div>
+      <div class="assinatura">Recebido por</div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/acesso.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/db-vendas.js"></script>
+  <script src="js/pedido.js"></script>
+</body>
+</html>
