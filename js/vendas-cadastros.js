@@ -62,6 +62,7 @@ async function carregarTudo() {
     vVendedores = vs || [];
     vTabelas = ts || [];
     vProdutos = ps || [];
+    await aplicarBloqueioPorInatividade();
     renderClientes();
     renderVendedores();
     renderChipsTabelas();
@@ -158,13 +159,34 @@ async function toggleBloqueio(id, nome, novoBloqueado) {
     await salvarCliente({
       id,
       bloqueado: novoBloqueado,
-      motivo_bloqueio: novoBloqueado ? motivo.trim() : ''
+      motivo_bloqueio: novoBloqueado ? motivo.trim() : '',
+      // Reabre uma nova janela de 2 anos a partir de hoje — sem isso, um
+      // cliente desbloqueado com a última compra ainda velha travaria nele
+      // mesmo de novo na hora (ver aplicarBloqueioPorInatividade).
+      ...(novoBloqueado ? {} : { desbloqueado_em: hojeISO() })
     });
     toast(`Cliente ${novoBloqueado ? '🔒 bloqueado' : '🔓 desbloqueado'}`, novoBloqueado ? 'err' : 'ok');
     await carregarTudo();
   } catch (e) {
     toast('Erro: ' + e.message, 'err');
   }
+}
+
+// Trava sozinho quem não compra há mais de 2 anos (mesmo bloqueio do
+// inadimplente, motivo gerado automaticamente) — só marca quem ainda não
+// está bloqueado por outro motivo, então nunca sobrescreve um bloqueio
+// manual já registrado.
+async function aplicarBloqueioPorInatividade() {
+  const candidatos = vClientes.filter(c => c.bloqueado !== true && clienteInativoHaMuitoTempo(c));
+  if (candidatos.length === 0) return;
+  await Promise.all(candidatos.map(async c => {
+    const motivo = `Inativo — sem pedidos há mais de 2 anos (última compra: ${formatDataBR(c.data_ultimo_pedido)})`;
+    try {
+      await salvarCliente({ id: c.id, bloqueado: true, motivo_bloqueio: motivo });
+      c.bloqueado = true;
+      c.motivo_bloqueio = motivo;
+    } catch (e) { console.warn('Não foi possível bloquear por inatividade:', c.nome, e); }
+  }));
 }
 async function excluirCliente(id, nome) {
   const temPedidos = await clienteTemPedidos(id);
