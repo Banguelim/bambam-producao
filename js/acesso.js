@@ -20,7 +20,7 @@ const PERMISSOES = {
   'beutimar@bambam.com':          'todas',
   'braulio@bambam.com':           'todas',
   'corte@bambam.com':             ['index', 'novo-corte', 'designacao'],
-  'retorno@bambam.com':           ['index', 'retorno', 'arremate' 'designacao']
+  'retorno@bambam.com':           ['index', 'retorno', 'arremate'; 'designacao']
 };
 
 // Retorna a página inicial pra onde o usuário deve ir depois de logar
