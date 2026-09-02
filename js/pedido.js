@@ -58,6 +58,7 @@ async function init() {
   document.getElementById('btn-romaneio-conferencia').addEventListener('click', () => imprimirRomaneio('conferencia'));
   document.getElementById('btn-confirmacao').addEventListener('click', imprimirConfirmacao);
   document.getElementById('btn-email-cliente').addEventListener('click', enviarPorEmail);
+  document.getElementById('btn-whatsapp-cliente').addEventListener('click', enviarPorWhatsapp);
 
   renderItens();
 
@@ -684,6 +685,44 @@ function enviarPorEmail() {
   const link = `mailto:${encodeURIComponent(cliObj.email)}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
   window.location.href = link;
   toast('Abrindo seu programa de e-mail — lembra de anexar o PDF da Confirmação (imprime ela primeiro)', '');
+}
+
+// Telefone cadastrado vem em qualquer formato ("(11) 98888-7777" etc) — aqui
+// só ficam os dígitos, e garante o "55" do Brasil na frente (o wa.me exige
+// o código do país). Se o número já vier com 55 na frente, não duplica.
+function telefoneParaWhatsapp(telefone) {
+  const digitos = String(telefone || '').replace(/\D/g, '');
+  if (!digitos) return null;
+  return digitos.startsWith('55') ? digitos : '55' + digitos;
+}
+
+// Mesma ideia do e-mail, mas abre o WhatsApp (app ou web) com a mensagem já
+// pronta pro cliente confirmar — não dá pra anexar o PDF automaticamente
+// aqui também (é limitação do navegador, não rola nem por e-mail nem por
+// WhatsApp), então a orientação é a mesma: manda o texto, anexa o PDF à
+// parte se precisar.
+function enviarPorWhatsapp() {
+  if (pedidoItens.length === 0) { toast('Adicione itens antes de enviar', 'err'); return; }
+  const nomeCliente = document.getElementById('p-cliente').value.trim();
+  const cliObj = pClientes.find(c => c.nome.toUpperCase() === nomeCliente.toUpperCase());
+  const numero = telefoneParaWhatsapp(cliObj?.telefone);
+  if (!numero) {
+    toast(`${nomeCliente || 'Esse cliente'} não tem telefone cadastrado — cadastra em Clientes primeiro`, 'err');
+    return;
+  }
+  const linhas = pedidoItens.map(it =>
+    `${it.ref} ${it.descricao ? '- ' + it.descricao + ' ' : ''}(${it.cor}) — ${it.qtd} pç × ${formatBRL(it.preco)} = ${formatBRL(it.subtotal)}`
+  ).join('\n');
+  const prazo = document.getElementById('p-prazo').value.trim();
+  const linhaPrazo = prazo ? `Prazo de pagamento: ${prazo}\n\n` : '';
+  const mensagem =
+    `Olá, ${nomeCliente}! Aqui é da BAMBAM BABY 👋\n\n` +
+    `Segue o resumo do seu pedido${numeroPedidoAtual ? ` Nº ${numeroPedidoAtual}` : ''} pra confirmação:\n\n${linhas}\n\n` +
+    `TOTAL: ${formatBRL(totalPedido())}\n\n${linhaPrazo}` +
+    `Por favor confirme aqui pelo WhatsApp mesmo. Obrigado!`;
+  const link = `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`;
+  window.open(link, '_blank');
+  toast('Abrindo o WhatsApp com a mensagem pronta', '');
 }
 
 // ==== ROMANEIOS (impressão) ====
