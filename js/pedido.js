@@ -115,7 +115,24 @@ function onClienteChange() {
 function verificarBloqueioCliente() {
   const nome = document.getElementById('p-cliente').value.trim();
   const c = pClientes.find(x => x.nome.toUpperCase() === nome.toUpperCase());
-  clienteBloqueadoAtual = (c && c.bloqueado === true) ? c : null;
+
+  if (c && c.bloqueado === true) {
+    clienteBloqueadoAtual = c;
+  } else if (c && clienteInativoHaMuitoTempo(c)) {
+    // Ainda não foi "pego" pela tela de Clientes (aplicarBloqueioPorInatividade)
+    // — trava aqui mesmo assim, e tenta persistir em segundo plano (não
+    // trava a tela se falhar, o aviso já protege de qualquer forma).
+    const motivo = `Inativo — sem pedidos há mais de 2 anos (última compra: ${formatDataBR(c.data_ultimo_pedido)})`;
+    clienteBloqueadoAtual = { ...c, motivo_bloqueio: motivo };
+    if (!c.bloqueado) {
+      salvarCliente({ id: c.id, bloqueado: true, motivo_bloqueio: motivo }).catch(() => {});
+      c.bloqueado = true; // evita reenviar o mesmo salvamento a cada troca de campo
+      c.motivo_bloqueio = motivo;
+    }
+  } else {
+    clienteBloqueadoAtual = null;
+  }
+
   const aviso = document.getElementById('aviso-cliente-bloqueado');
   if (clienteBloqueadoAtual) {
     document.getElementById('aviso-bloqueio-nome').textContent = clienteBloqueadoAtual.nome;

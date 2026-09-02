@@ -114,6 +114,19 @@
       <button class="btn btn-primary" onclick="rodar(this, recalcularTotaisFinanceiro)">Recalcular totais</button>
     </div>
 
+    <div class="step" style="border-color:var(--text-danger)">
+      <h3>11. Calcular última compra dos clientes (pra bloqueio automático por inatividade)</h3>
+      <div class="info">
+        Cliente sem pedido há mais de 2 anos agora trava sozinho pra novo pedido (mesmo
+        aviso/botão do bloqueio de inadimplente — desbloqueia na ficha do cliente). Isso só
+        funciona pra pedidos <b>feitos a partir de agora</b> — pra já detectar quem já está
+        parado há anos no histórico importado, precisa calcular a última compra de cada
+        cliente uma vez. <b>Lê a coleção inteira de contas_receber</b> (mesmo custo do passo
+        10 — ~16 mil leituras, tudo bem, é uma vez só). Clica uma vez.
+      </div>
+      <button class="btn btn-primary" onclick="rodar(this, calcularUltimaCompra)">Calcular última compra</button>
+    </div>
+
     <div id="log" class="log">Aguardando...</div>
   </div>
 
@@ -252,6 +265,13 @@
       log('Lendo contas já pagas pra calcular o total (única vez que essa tela lê a coleção inteira de propósito)...');
       const r = await recalcularAgregadosContas();
       log(`✓ Recalculado: ${r.qtd} contas pagas somando ${r.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (leu ${r.lidos} documentos)`, 'ok');
+    }
+
+    async function calcularUltimaCompra() {
+      log('Lendo pedidos + contas a receber pra achar a última compra de cada cliente (pode levar alguns minutos)...');
+      const r = await recalcularUltimaCompraClientes();
+      log(`✓ ${r.clientes} cliente(s) com última compra calculada (leu ${r.pedidosLidos} pedidos + ${r.contasLidas} contas)`, 'ok');
+      log('  Quem estiver parado há mais de 2 anos já trava no próximo Pedido Novo ou na próxima vez que abrir Clientes.', '');
     }
 
     async function importarContasReceberHistorico() {
