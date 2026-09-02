@@ -72,6 +72,14 @@
 
   .acoes-pedido { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; margin-bottom: 24px; }
 
+  .aviso-bloqueio {
+    background: color-mix(in srgb, var(--text-danger) 15%, transparent);
+    border: 0.5px solid var(--text-danger); color: var(--text-danger);
+    padding: 10px 16px; border-radius: var(--radius); margin-bottom: 12px;
+    font-size: 13px; font-weight: 700;
+  }
+  .aviso-bloqueio a { color: var(--text-danger); text-decoration: underline; }
+
   /* Folha de impressão (romaneio) */
   .folha { display: none; background: white; color: black; padding: 20px 24px; border-radius: 8px; font-family: Arial, Helvetica, sans-serif; }
   .folha-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 2px solid black; gap: 12px; flex-wrap: wrap; }
@@ -88,7 +96,7 @@
   @media print {
     @page { size: A4 portrait; margin: 10mm; }
     body { background: white !important; }
-    .topbar, .cabec-pedido, .bloco-item, .tabela-itens, .rodape-pedido, .acoes-pedido, .num-pedido, h1, .hint { display: none !important; }
+    .topbar, .cabec-pedido, .bloco-item, .tabela-itens, .rodape-pedido, .acoes-pedido, .num-pedido, h1, .hint, .aviso-bloqueio { display: none !important; }
     .wrap { padding: 0 !important; margin: 0 !important; max-width: none !important; }
     .folha { display: none; padding: 0 !important; }
     .folha.imprimindo { display: block !important; }
@@ -164,6 +172,10 @@
         <label class="lbl">Desconto (%)</label>
         <input type="number" id="p-desconto" min="0" max="100" step="0.01" value="0" style="width:70px;text-align:center">
       </div>
+    </div>
+
+    <div class="aviso-bloqueio" id="aviso-cliente-bloqueado" style="display:none">
+      🔒 <b id="aviso-bloqueio-nome"></b> está BLOQUEADO — <span id="aviso-bloqueio-motivo"></span>. Não é possível salvar nem concluir pedido pra esse cliente. Pra liberar, desbloqueie em <a href="vendas-cadastros.html">Clientes</a>.
     </div>
 
     <div class="bloco-item">

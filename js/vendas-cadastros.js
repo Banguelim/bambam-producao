@@ -143,6 +143,29 @@ async function toggleCliente(id, novoAtivo) {
     toast('Erro: ' + e.message, 'err');
   }
 }
+// Bloqueio de inadimplente — trava total: enquanto bloqueado, o Pedido Novo
+// não deixa salvar nem concluir pedido pra esse cliente (é manual, não
+// depende de o sistema saber sobre a dívida). Desbloqueia com um botão.
+async function toggleBloqueio(id, nome, novoBloqueado) {
+  let motivo = '';
+  if (novoBloqueado) {
+    motivo = prompt(`Bloquear ${nome} — motivo (ex: inadimplente, dívida em aberto):`, '');
+    if (motivo === null) return; // cancelou
+  } else if (!confirm(`Desbloquear ${nome}? Ele volta a poder ter pedidos criados normalmente.`)) {
+    return;
+  }
+  try {
+    await salvarCliente({
+      id,
+      bloqueado: novoBloqueado,
+      motivo_bloqueio: novoBloqueado ? motivo.trim() : ''
+    });
+    toast(`Cliente ${novoBloqueado ? '🔒 bloqueado' : '🔓 desbloqueado'}`, novoBloqueado ? 'err' : 'ok');
+    await carregarTudo();
+  } catch (e) {
+    toast('Erro: ' + e.message, 'err');
+  }
+}
 async function excluirCliente(id, nome) {
   const temPedidos = await clienteTemPedidos(id);
   if (temPedidos) {
@@ -187,24 +210,32 @@ function renderClientes() {
   lista.innerHTML = '';
   filtrados.forEach(c => {
     const ativo = c.ativo !== false;
+    const bloqueado = c.bloqueado === true;
     const item = document.createElement('div');
     item.className = 'item-cad' + (ativo ? '' : ' inativa');
     const infoBits = [c.cidade, c.estado, c.vendedor ? `vend: ${c.vendedor}` : '', c.tabela_preco ? `tab: ${c.tabela_preco}` : '']
       .filter(Boolean).join(' · ');
+    const infoBloqueio = bloqueado ? `<div class="info-extra" style="color:var(--text-danger)">🔒 bloqueado${c.motivo_bloqueio ? ' — ' + c.motivo_bloqueio : ''}</div>` : '';
     item.innerHTML = `
       <div>
         <span class="nome-cad">${c.nome}</span>
         <div class="info-extra">${infoBits || '—'}</div>
+        ${infoBloqueio}
       </div>
-      <span class="badge ${ativo ? 'ativa' : 'inativa'}">${ativo ? '✓ ativo' : '⊘ inativo'}</span>
+      <div style="display:flex;gap:4px">
+        <span class="badge ${ativo ? 'ativa' : 'inativa'}">${ativo ? '✓ ativo' : '⊘ inativo'}</span>
+        ${bloqueado ? '<span class="badge bloqueada">🔒 bloqueado</span>' : ''}
+      </div>
       <div class="acoes-btn">
         <button class="btn-mini" data-acao="editar">✎ editar</button>
         <button class="btn-mini" data-acao="toggle">${ativo ? '⊘ desativar' : '✓ ativar'}</button>
+        <button class="btn-mini ${bloqueado ? 'success' : 'danger'}" data-acao="bloqueio">${bloqueado ? '🔓 desbloquear' : '🔒 bloquear'}</button>
         <button class="btn-mini danger" data-acao="excluir">✗ excluir</button>
       </div>
     `;
     item.querySelector('[data-acao="editar"]').addEventListener('click', () => editarCliente(c));
     item.querySelector('[data-acao="toggle"]').addEventListener('click', () => toggleCliente(c.id, !ativo));
+    item.querySelector('[data-acao="bloqueio"]').addEventListener('click', () => toggleBloqueio(c.id, c.nome, !bloqueado));
     item.querySelector('[data-acao="excluir"]').addEventListener('click', () => excluirCliente(c.id, c.nome));
     lista.appendChild(item);
   });
