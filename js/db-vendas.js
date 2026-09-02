@@ -261,6 +261,12 @@ async function reabrirConta(id) {
     contas_pago_qtd: firebase.firestore.FieldValue.increment(-1)
   }, { merge: true });
 }
+// Observação livre por parcela — reaproveita o campo "historico" que já
+// vem preenchido nos registros importados da planilha antiga (ex: "NF 4188
+// - Parcela 2"), então o histórico velho já aparece editável de cara.
+async function salvarObservacaoConta(id, texto) {
+  await colContasReceber().doc(id).update({ historico: texto });
+}
 async function deletarContasDoPedido(numeroPedido) {
   const snap = await colContasReceber().where('pedido_id', '==', numeroPedido).get();
   const batch = db.batch();

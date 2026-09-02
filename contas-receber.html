@@ -34,6 +34,15 @@
   .btn-mini:hover { color: var(--text-primary); border-color: var(--border-accent); }
   .btn-mini.success { color: var(--success); border-color: var(--success); }
   .vazio { padding: 30px; text-align: center; color: var(--text-muted); font-size: 13px; }
+  .tabela-contas td.obs { max-width: 240px; }
+  .tabela-contas .obs-editavel {
+    display: block; min-height: 18px; cursor: text; padding: 2px 4px;
+    border-bottom: 1px dashed var(--border-accent); color: var(--text-secondary);
+    font-size: 12px; white-space: pre-wrap; word-break: break-word;
+  }
+  .tabela-contas .obs-editavel:hover { background: var(--surface-2); }
+  .tabela-contas .obs-editavel:focus { background: white; color: #000; outline: none; }
+  .tabela-contas .obs-editavel:empty::before { content: '+ observação'; color: var(--text-muted); font-style: italic; }
 </style>
 </head>
 <body>
@@ -105,7 +114,7 @@
 
     <table class="tabela-contas" id="tabela-contas">
       <thead>
-        <tr><th>Pedido</th><th>Cliente</th><th>Parcela</th><th>Vencimento</th><th>Valor</th><th>Status</th><th></th></tr>
+        <tr><th>Pedido</th><th>Cliente</th><th>Parcela</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Observação</th><th></th></tr>
       </thead>
       <tbody id="contas-corpo"></tbody>
     </table>
