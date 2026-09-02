@@ -666,13 +666,13 @@ function mostrarModalNota(numero, itens, totalPecas, preco, valor, costureira, d
         <!-- Data / Lote / Ref / Preço -->
         <tr>
           <td class="esq"><b>${formatDataBR(data)}</b></td>
-          <td colspan="2" class="esq">Lote <b style="font-size:16px;letter-spacing:1px">${corteAtual.lote}</b></td>
-          <td class="esq">Ref <b style="font-size:15px">${refsTxt}</b></td>
+          <td colspan="2" class="esq">Lote <b style="font-size:22px;letter-spacing:1px">${corteAtual.lote}</b></td>
+          <td class="esq">Ref <b style="font-size:22px">${refsTxt}</b></td>
           <td colspan="2" class="esq">Preço <b>${formatBRL(preco)}</b></td>
         </tr>
         <!-- Costureira + Total -->
         <tr>
-          <td colspan="4" class="esq"><b style="font-size:17px;letter-spacing:0.5px">${costureira}</b></td>
+          <td colspan="4" class="esq"><b style="font-size:22px;letter-spacing:0.5px">${costureira}</b></td>
           <td colspan="2" class="esq">Total <b style="font-size:14px">${formatBRL(valor)}</b></td>
         </tr>
 

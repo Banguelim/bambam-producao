@@ -52,7 +52,7 @@ async function onFiltroChange() {
     if (carregandoPagas) return;
     carregandoPagas = true;
     const corpo = document.getElementById('contas-corpo');
-    corpo.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-muted)">Carregando histórico de pagas (${agregadosPago.qtd} registros)...</td></tr>`;
+    corpo.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text-muted)">Carregando histórico de pagas (${agregadosPago.qtd} registros)...</td></tr>`;
     try {
       contasPagasCache = await listarContasReceberPagas();
     } catch (e) {
@@ -148,8 +148,12 @@ function render() {
       <td>${formatDataBR(c.data_vencimento)}</td>
       <td class="num">${formatBRL(c.valor)}</td>
       <td><span class="badge ${st}">${st === 'pago' ? '✓ pago' : (st === 'vencido' ? '⚠ vencido' : 'aberto')}</span></td>
+      <td class="obs"><span class="obs-editavel" contenteditable="true" spellcheck="false" data-id="${c.id}">${c.historico || ''}</span></td>
       <td></td>
     `;
+    const obsEl = tr.querySelector('.obs-editavel');
+    obsEl.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); obsEl.blur(); } });
+    obsEl.addEventListener('blur', () => salvarObservacaoBtn(c, obsEl));
     const acaoTd = tr.lastElementChild;
     if (st === 'pago') {
       const btn = document.createElement('button');
@@ -176,6 +180,19 @@ async function recarregarApos() {
   await carregar();
   const filtro = document.getElementById('f-status').value;
   if (filtro === 'pago' || filtro === 'todos') await onFiltroChange();
+}
+
+// Salva a observação da parcela ao sair do campo (blur) — só grava se
+// mudou, pra não escrever à toa toda vez que alguém só clica e sai.
+async function salvarObservacaoBtn(c, obsEl) {
+  const texto = obsEl.textContent.trim();
+  if (texto === (c.historico || '')) return;
+  try {
+    await salvarObservacaoConta(c.id, texto);
+    c.historico = texto; // mantém o cache local em sincronia
+  } catch (e) {
+    toast('Erro ao salvar observação: ' + e.message, 'err');
+  }
 }
 
 async function darBaixaBtn(c) {
