@@ -192,17 +192,22 @@
     let seedRefs = [], seedCost = [], seedPrc = {}, seedLotes = [];
     let seedClientesCompleto = [], seedTabPrecos = {}, seedPedidosHist = [], seedContasHist = [], seedPedidosAbertos = [];
 
+    // Quebra-cache: sem isso, o navegador (ou o CDN do GitHub Pages) pode
+    // segurar uma cópia velha do .json por minutos depois de um deploy novo
+    // — aí os botões abaixo mostram a contagem antiga e importam dado velho
+    // sem avisar. ?v=<agora> força buscar sempre o arquivo atual.
+    const cacheBust = () => `?v=${Date.now()}`;
     async function carregarSeeds() {
       try {
-        seedRefs  = await (await fetch('../seed/refs.json')).json();
-        seedCost  = await (await fetch('../seed/costureiras.json')).json();
-        seedPrc   = await (await fetch('../seed/precos.json')).json();
-        seedLotes = await (await fetch('../seed/lotes-fora.json')).json();
-        seedClientesCompleto = await (await fetch('../seed/clientes-completo.json')).json();
-        seedTabPrecos = await (await fetch('../seed/tabelas-precos.json')).json();
-        seedPedidosHist = await (await fetch('../seed/pedidos-historicos.json')).json();
-        seedContasHist = await (await fetch('../seed/contas-receber-historico.json')).json();
-        seedPedidosAbertos = await (await fetch('../seed/pedidos-abertos.json')).json();
+        seedRefs  = await (await fetch('../seed/refs.json' + cacheBust())).json();
+        seedCost  = await (await fetch('../seed/costureiras.json' + cacheBust())).json();
+        seedPrc   = await (await fetch('../seed/precos.json' + cacheBust())).json();
+        seedLotes = await (await fetch('../seed/lotes-fora.json' + cacheBust())).json();
+        seedClientesCompleto = await (await fetch('../seed/clientes-completo.json' + cacheBust())).json();
+        seedTabPrecos = await (await fetch('../seed/tabelas-precos.json' + cacheBust())).json();
+        seedPedidosHist = await (await fetch('../seed/pedidos-historicos.json' + cacheBust())).json();
+        seedContasHist = await (await fetch('../seed/contas-receber-historico.json' + cacheBust())).json();
+        seedPedidosAbertos = await (await fetch('../seed/pedidos-abertos.json' + cacheBust())).json();
         document.getElementById('c-refs').textContent = seedRefs.length;
         document.getElementById('c-cost').textContent = seedCost.length;
         const nPrc = Object.values(seedPrc).reduce((a, o) => a + Object.keys(o).length, 0);
