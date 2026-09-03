@@ -34,6 +34,37 @@ async function clienteTemPedidos(id) {
   return !snap.empty;
 }
 
+// Apaga todos os documentos de uma coleção, em lotes de 400 (limite do
+// Firestore é 500 escritas por batch commit). onProgresso(n) é chamado a
+// cada lote, com o total apagado até ali — útil pra coleções grandes tipo
+// contas_receber (~16 mil docs).
+async function apagarColecaoInteira(colRef, onProgresso) {
+  const snap = await colRef.get();
+  let n = 0, batch = db.batch(), inBatch = 0;
+  for (const doc of snap.docs) {
+    batch.delete(doc.ref);
+    n++; inBatch++;
+    if (inBatch >= 400) {
+      await batch.commit();
+      if (onProgresso) onProgresso(n);
+      batch = db.batch(); inBatch = 0;
+    }
+  }
+  if (inBatch > 0) await batch.commit();
+  return n;
+}
+
+// Reset completo de Clientes + Contas a Receber, pra reimportar do zero com
+// uma planilha nova — usado pelo botão de admin (admin/importar.html). Zera
+// também o total acumulado de "pago" (ver lerAgregadosContas), senão ele
+// ficaria contando o histórico já apagado.
+async function apagarClientesEContasReceber(onProgresso) {
+  const contas = await apagarColecaoInteira(colContasReceber(), onProgresso);
+  const clientes = await apagarColecaoInteira(colClientes());
+  await VENDAS.doc('meta').set({ contas_pago_total: 0, contas_pago_qtd: 0 }, { merge: true });
+  return { clientes, contas };
+}
+
 // ============ VENDEDORES ============
 async function listarVendedores() {
   const snap = await colVendedores().orderBy('nome').get();

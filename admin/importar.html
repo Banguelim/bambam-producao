@@ -46,6 +46,19 @@
       Cada botão importa um tipo de dado. Pode acompanhar o progresso no console abaixo.
     </p>
 
+    <div class="step" style="border-color:var(--text-danger)">
+      <h3>0. Apagar Clientes + Contas a Receber (antes de importar a planilha nova)</h3>
+      <div class="info">
+        Apaga <b>todos</b> os clientes e <b>todas</b> as contas a receber (histórico completo,
+        pagas e em aberto) do Firestore — inclusive as pagas, que não aparecem na tela
+        Financeiro sem clicar em "ver pagas". Zera também o total acumulado do card "pago".
+        Não mexe em Vendedores, Tabelas de preço nem Pedidos. <b>Não pode ser desfeito.</b>
+        Rode só depois de já ter os <code>seed/*.json</code> novos no lugar — os passos 5 e 8
+        abaixo reimportam em seguida.
+      </div>
+      <button class="btn btn-primary" style="background:var(--text-danger)" onclick="rodar(this, apagarClientesEContasReceberBtn)">Apagar clientes + contas a receber</button>
+    </div>
+
     <div class="step">
       <h3>1. Referências</h3>
       <div class="info">Importa <b id="c-refs">—</b> refs do <code>seed/refs.json</code></div>
@@ -190,6 +203,19 @@
       } catch (e) {
         log('Erro carregando seeds: ' + e.message, 'err');
       }
+    }
+
+    // Apaga clientes + contas a receber inteiros (ver apagarClientesEContasReceber
+    // em db-vendas.js) — exige digitar a confirmação, porque não tem volta.
+    async function apagarClientesEContasReceberBtn() {
+      const digitado = prompt(
+        'Isso vai apagar TODOS os clientes e TODAS as contas a receber (pagas e em ' +
+        'aberto) — não pode ser desfeito.\n\nDigite APAGAR pra confirmar:'
+      );
+      if (digitado !== 'APAGAR') { log('Cancelado — nada foi apagado.'); return; }
+      log('Apagando contas a receber (pode levar alguns minutos)...');
+      const r = await apagarClientesEContasReceber(n => log(`  ${n} contas apagadas...`));
+      log(`✓ Apagado: ${r.clientes} cliente(s) e ${r.contas} conta(s) a receber. Total "pago" zerado.`, 'ok');
     }
 
     async function importarPedidosAbertos() {
