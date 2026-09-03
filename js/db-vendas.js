@@ -145,6 +145,12 @@ async function salvarPrecosProduto(ref, nome, precosMap) {
 async function deletarProdutoVenda(ref) {
   await colPrecosVenda().doc(ref).delete();
 }
+// Apaga todos os produtos/preços de venda — usado pelo botão de admin antes
+// de reimportar uma tabela de referências nova (senão as refs antigas que
+// não estão na planilha nova ficam pra sempre, com preço desatualizado).
+async function apagarProdutosVenda(onProgresso) {
+  return apagarColecaoInteira(colPrecosVenda(), onProgresso);
+}
 
 // ============ PEDIDOS ============
 async function proximoNumeroPedido() {

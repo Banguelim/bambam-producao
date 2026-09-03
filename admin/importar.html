@@ -59,6 +59,20 @@
       <button class="btn btn-primary" style="background:var(--text-danger)" onclick="rodar(this, apagarClientesEContasReceberBtn)">Apagar clientes + contas a receber</button>
     </div>
 
+    <div class="step" style="border-color:var(--text-danger)">
+      <h3>0b. Apagar Tabela de preços / Produtos (antes de importar a planilha nova)</h3>
+      <div class="info">
+        Apaga <b>todos</b> os produtos e preços de venda cadastrados (aba Produtos de
+        Cadastros de Vendas) — pra quando a planilha nova tiver uma lista de referências
+        diferente da atual, e as refs que não estão mais lá não podem ficar perdidas com
+        preço desatualizado. Não mexe em Clientes, Contas a Receber, Vendedores nem
+        Pedidos. <b>Não pode ser desfeito.</b> Rode só depois de já ter o
+        <code>seed/tabelas-precos.json</code> novo no lugar — o passo 6 abaixo reimporta
+        em seguida.
+      </div>
+      <button class="btn btn-primary" style="background:var(--text-danger)" onclick="rodar(this, apagarProdutosVendaBtn)">Apagar produtos + tabela de preços</button>
+    </div>
+
     <div class="step">
       <h3>1. Referências</h3>
       <div class="info">Importa <b id="c-refs">—</b> refs do <code>seed/refs.json</code></div>
@@ -216,6 +230,18 @@
       log('Apagando contas a receber (pode levar alguns minutos)...');
       const r = await apagarClientesEContasReceber(n => log(`  ${n} contas apagadas...`));
       log(`✓ Apagado: ${r.clientes} cliente(s) e ${r.contas} conta(s) a receber. Total "pago" zerado.`, 'ok');
+    }
+
+    // Apaga produtos/tabela de preços (ver apagarProdutosVenda em db-vendas.js).
+    async function apagarProdutosVendaBtn() {
+      const digitado = prompt(
+        'Isso vai apagar TODOS os produtos e preços de venda cadastrados — não pode ser ' +
+        'desfeito.\n\nDigite APAGAR pra confirmar:'
+      );
+      if (digitado !== 'APAGAR') { log('Cancelado — nada foi apagado.'); return; }
+      log('Apagando produtos/tabela de preços...');
+      const n = await apagarProdutosVenda(x => log(`  ${x} apagados...`));
+      log(`✓ Apagado: ${n} produto(s)/preço(s) de venda.`, 'ok');
     }
 
     async function importarPedidosAbertos() {
