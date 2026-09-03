@@ -46,6 +46,33 @@
       Cada botão importa um tipo de dado. Pode acompanhar o progresso no console abaixo.
     </p>
 
+    <div class="step" style="border-color:var(--text-danger)">
+      <h3>0. Apagar Clientes + Contas a Receber (antes de importar a planilha nova)</h3>
+      <div class="info">
+        Apaga <b>todos</b> os clientes e <b>todas</b> as contas a receber (histórico completo,
+        pagas e em aberto) do Firestore — inclusive as pagas, que não aparecem na tela
+        Financeiro sem clicar em "ver pagas". Zera também o total acumulado do card "pago".
+        Não mexe em Vendedores, Tabelas de preço nem Pedidos. <b>Não pode ser desfeito.</b>
+        Rode só depois de já ter os <code>seed/*.json</code> novos no lugar — os passos 5 e 8
+        abaixo reimportam em seguida.
+      </div>
+      <button class="btn btn-primary" style="background:var(--text-danger)" onclick="rodar(this, apagarClientesEContasReceberBtn)">Apagar clientes + contas a receber</button>
+    </div>
+
+    <div class="step" style="border-color:var(--text-danger)">
+      <h3>0b. Apagar Tabela de preços / Produtos (antes de importar a planilha nova)</h3>
+      <div class="info">
+        Apaga <b>todos</b> os produtos e preços de venda cadastrados (aba Produtos de
+        Cadastros de Vendas) — pra quando a planilha nova tiver uma lista de referências
+        diferente da atual, e as refs que não estão mais lá não podem ficar perdidas com
+        preço desatualizado. Não mexe em Clientes, Contas a Receber, Vendedores nem
+        Pedidos. <b>Não pode ser desfeito.</b> Rode só depois de já ter o
+        <code>seed/tabelas-precos.json</code> novo no lugar — o passo 6 abaixo reimporta
+        em seguida.
+      </div>
+      <button class="btn btn-primary" style="background:var(--text-danger)" onclick="rodar(this, apagarProdutosVendaBtn)">Apagar produtos + tabela de preços</button>
+    </div>
+
     <div class="step">
       <h3>1. Referências</h3>
       <div class="info">Importa <b id="c-refs">—</b> refs do <code>seed/refs.json</code></div>
@@ -112,19 +139,6 @@
         se desconfiar que o total ficou errado, não tem problema).
       </div>
       <button class="btn btn-primary" onclick="rodar(this, recalcularTotaisFinanceiro)">Recalcular totais</button>
-    </div>
-
-    <div class="step" style="border-color:var(--text-danger)">
-      <h3>11. Calcular última compra dos clientes (pra bloqueio automático por inatividade)</h3>
-      <div class="info">
-        Cliente sem pedido há mais de 2 anos agora trava sozinho pra novo pedido (mesmo
-        aviso/botão do bloqueio de inadimplente — desbloqueia na ficha do cliente). Isso só
-        funciona pra pedidos <b>feitos a partir de agora</b> — pra já detectar quem já está
-        parado há anos no histórico importado, precisa calcular a última compra de cada
-        cliente uma vez. <b>Lê a coleção inteira de contas_receber</b> (mesmo custo do passo
-        10 — ~16 mil leituras, tudo bem, é uma vez só). Clica uma vez.
-      </div>
-      <button class="btn btn-primary" onclick="rodar(this, calcularUltimaCompra)">Calcular última compra</button>
     </div>
 
     <div id="log" class="log">Aguardando...</div>
@@ -205,6 +219,31 @@
       }
     }
 
+    // Apaga clientes + contas a receber inteiros (ver apagarClientesEContasReceber
+    // em db-vendas.js) — exige digitar a confirmação, porque não tem volta.
+    async function apagarClientesEContasReceberBtn() {
+      const digitado = prompt(
+        'Isso vai apagar TODOS os clientes e TODAS as contas a receber (pagas e em ' +
+        'aberto) — não pode ser desfeito.\n\nDigite APAGAR pra confirmar:'
+      );
+      if (digitado !== 'APAGAR') { log('Cancelado — nada foi apagado.'); return; }
+      log('Apagando contas a receber (pode levar alguns minutos)...');
+      const r = await apagarClientesEContasReceber(n => log(`  ${n} contas apagadas...`));
+      log(`✓ Apagado: ${r.clientes} cliente(s) e ${r.contas} conta(s) a receber. Total "pago" zerado.`, 'ok');
+    }
+
+    // Apaga produtos/tabela de preços (ver apagarProdutosVenda em db-vendas.js).
+    async function apagarProdutosVendaBtn() {
+      const digitado = prompt(
+        'Isso vai apagar TODOS os produtos e preços de venda cadastrados — não pode ser ' +
+        'desfeito.\n\nDigite APAGAR pra confirmar:'
+      );
+      if (digitado !== 'APAGAR') { log('Cancelado — nada foi apagado.'); return; }
+      log('Apagando produtos/tabela de preços...');
+      const n = await apagarProdutosVenda(x => log(`  ${x} apagados...`));
+      log(`✓ Apagado: ${n} produto(s)/preço(s) de venda.`, 'ok');
+    }
+
     async function importarPedidosAbertos() {
       log('Importando pedidos em aberto...');
       let n = 0, batch = db.batch(), inBatch = 0;
@@ -265,13 +304,6 @@
       log('Lendo contas já pagas pra calcular o total (única vez que essa tela lê a coleção inteira de propósito)...');
       const r = await recalcularAgregadosContas();
       log(`✓ Recalculado: ${r.qtd} contas pagas somando ${r.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (leu ${r.lidos} documentos)`, 'ok');
-    }
-
-    async function calcularUltimaCompra() {
-      log('Lendo pedidos + contas a receber pra achar a última compra de cada cliente (pode levar alguns minutos)...');
-      const r = await recalcularUltimaCompraClientes();
-      log(`✓ ${r.clientes} cliente(s) com última compra calculada (leu ${r.pedidosLidos} pedidos + ${r.contasLidas} contas)`, 'ok');
-      log('  Quem estiver parado há mais de 2 anos já trava no próximo Pedido Novo ou na próxima vez que abrir Clientes.', '');
     }
 
     async function importarContasReceberHistorico() {

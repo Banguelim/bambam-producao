@@ -34,53 +34,35 @@ async function clienteTemPedidos(id) {
   return !snap.empty;
 }
 
-// ---- Bloqueio automático por inatividade (cliente que parou de comprar) ----
-// Regra combinada com o pss@bambam.com: sem pedido/compra há mais de 2 anos
-// = trava automaticamente igual ao bloqueio de inadimplente (mesmo botão
-// 🔒/🔓, mesmo aviso no Pedido Novo). desbloqueado_em reabre uma nova janela
-// de 2 anos a partir de quando alguém reativou na mão — assim, depois de
-// desbloquear, não trava de novo na hora; só se ficar outros 2 anos sem
-// pedido nenhum.
-const DIAS_INATIVIDADE_CLIENTE = 730; // ~2 anos
-
-function clienteInativoHaMuitoTempo(c) {
-  if (!c || !c.data_ultimo_pedido) return false; // nunca comprou = não é "parou de comprar"
-  const limite = new Date();
-  limite.setDate(limite.getDate() - DIAS_INATIVIDADE_CLIENTE);
-  const limiteISO = limite.toISOString().slice(0, 10);
-  if (c.data_ultimo_pedido >= limiteISO) return false;
-  if (c.desbloqueado_em && c.desbloqueado_em >= limiteISO) return false;
-  return true;
-}
-
-// Lê TODOS os pedidos e TODAS as contas a receber uma única vez pra calcular
-// a última compra de cada cliente (data_ultimo_pedido) — precisa disso pra
-// popular o histórico já existente, porque salvarPedido() só mantém esse
-// campo em dia DAQUI PRA FRENTE. É pesada de propósito (lê contas_receber
-// inteira, ~16 mil documentos) — rodar manualmente uma vez (botão em
-// admin/importar.html), igual recalcularAgregadosContas().
-async function recalcularUltimaCompraClientes() {
-  const ultimaPorCliente = {}; // { cliente_id: 'YYYY-MM-DD' }
-  const considerar = (clienteId, data) => {
-    if (!clienteId || !data) return;
-    if (!ultimaPorCliente[clienteId] || data > ultimaPorCliente[clienteId]) ultimaPorCliente[clienteId] = data;
-  };
-
-  const pedidosSnap = await colPedidos().get(); // coleção pequena, tudo bem ler inteira
-  pedidosSnap.forEach(d => { const p = d.data(); considerar(p.cliente_id, p.data_pedido); });
-
-  const contasSnap = await colContasReceber().get(); // grande — só por isso ser manual/única
-  contasSnap.forEach(d => { const c = d.data(); considerar(c.cliente_id, c.data_emissao || c.data_vencimento); });
-
-  const entradas = Object.entries(ultimaPorCliente);
+// Apaga todos os documentos de uma coleção, em lotes de 400 (limite do
+// Firestore é 500 escritas por batch commit). onProgresso(n) é chamado a
+// cada lote, com o total apagado até ali — útil pra coleções grandes tipo
+// contas_receber (~16 mil docs).
+async function apagarColecaoInteira(colRef, onProgresso) {
+  const snap = await colRef.get();
   let n = 0, batch = db.batch(), inBatch = 0;
-  for (const [clienteId, data] of entradas) {
-    batch.set(colClientes().doc(clienteId), { data_ultimo_pedido: data }, { merge: true });
+  for (const doc of snap.docs) {
+    batch.delete(doc.ref);
     n++; inBatch++;
-    if (inBatch >= 400) { await batch.commit(); batch = db.batch(); inBatch = 0; }
+    if (inBatch >= 400) {
+      await batch.commit();
+      if (onProgresso) onProgresso(n);
+      batch = db.batch(); inBatch = 0;
+    }
   }
   if (inBatch > 0) await batch.commit();
-  return { clientes: n, pedidosLidos: pedidosSnap.size, contasLidas: contasSnap.size };
+  return n;
+}
+
+// Reset completo de Clientes + Contas a Receber, pra reimportar do zero com
+// uma planilha nova — usado pelo botão de admin (admin/importar.html). Zera
+// também o total acumulado de "pago" (ver lerAgregadosContas), senão ele
+// ficaria contando o histórico já apagado.
+async function apagarClientesEContasReceber(onProgresso) {
+  const contas = await apagarColecaoInteira(colContasReceber(), onProgresso);
+  const clientes = await apagarColecaoInteira(colClientes());
+  await VENDAS.doc('meta').set({ contas_pago_total: 0, contas_pago_qtd: 0 }, { merge: true });
+  return { clientes, contas };
 }
 
 // ============ VENDEDORES ============
@@ -163,6 +145,12 @@ async function salvarPrecosProduto(ref, nome, precosMap) {
 async function deletarProdutoVenda(ref) {
   await colPrecosVenda().doc(ref).delete();
 }
+// Apaga todos os produtos/preços de venda — usado pelo botão de admin antes
+// de reimportar uma tabela de referências nova (senão as refs antigas que
+// não estão na planilha nova ficam pra sempre, com preço desatualizado).
+async function apagarProdutosVenda(onProgresso) {
+  return apagarColecaoInteira(colPrecosVenda(), onProgresso);
+}
 
 // ============ PEDIDOS ============
 async function proximoNumeroPedido() {
@@ -180,19 +168,6 @@ async function salvarPedido(pedido) {
     pedido.criado_em = firebase.firestore.FieldValue.serverTimestamp();
   }
   await colPedidos().doc(pedido.numero).set(pedido, { merge: true });
-  // Mantém a "última compra" do cliente em dia (usada pra detectar
-  // inatividade — ver clienteInativoHaMuitoTempo). Só avança a data, nunca
-  // volta: editar um pedido antigo não pode fingir que a compra mais
-  // recente é aquela.
-  if (pedido.cliente_id && pedido.data_pedido) {
-    try {
-      const cliDoc = await colClientes().doc(pedido.cliente_id).get();
-      const atual = cliDoc.exists ? (cliDoc.data().data_ultimo_pedido || '') : '';
-      if (pedido.data_pedido > atual) {
-        await colClientes().doc(pedido.cliente_id).set({ data_ultimo_pedido: pedido.data_pedido }, { merge: true });
-      }
-    } catch (e) { console.warn('Não foi possível atualizar a última compra do cliente:', e); }
-  }
   return pedido.numero;
 }
 async function buscarPedido(numero) {

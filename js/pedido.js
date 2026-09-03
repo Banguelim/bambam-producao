@@ -11,7 +11,6 @@ let pedidoItens = [];      // [{ref, cor, descricao, qtds:{RN,P,M,G,GG}, qtd, pr
 let numeroPedidoAtual = null;
 let statusPedidoAtual = 'aberto';
 let itDescricaoAtual = '';  // descrição do produto da ref sendo digitada agora
-let clienteBloqueadoAtual = null; // objeto do cliente quando ele está 🔒 bloqueado (inadimplente)
 
 async function init() {
   await protegerRota();
@@ -106,42 +105,6 @@ function onClienteChange() {
       document.getElementById('it-tabela').value = c.tabela_preco;
     }
   }
-  verificarBloqueioCliente();
-}
-
-// Cliente 🔒 bloqueado (inadimplente, marcado manualmente em Clientes) — trava
-// total: mostra aviso e desabilita Salvar/Concluir enquanto ele estiver
-// selecionado. Só desbloqueando na ficha do cliente (Clientes) libera de novo.
-function verificarBloqueioCliente() {
-  const nome = document.getElementById('p-cliente').value.trim();
-  const c = pClientes.find(x => x.nome.toUpperCase() === nome.toUpperCase());
-
-  if (c && c.bloqueado === true) {
-    clienteBloqueadoAtual = c;
-  } else if (c && clienteInativoHaMuitoTempo(c)) {
-    // Ainda não foi "pego" pela tela de Clientes (aplicarBloqueioPorInatividade)
-    // — trava aqui mesmo assim, e tenta persistir em segundo plano (não
-    // trava a tela se falhar, o aviso já protege de qualquer forma).
-    const motivo = `Inativo — sem pedidos há mais de 2 anos (última compra: ${formatDataBR(c.data_ultimo_pedido)})`;
-    clienteBloqueadoAtual = { ...c, motivo_bloqueio: motivo };
-    if (!c.bloqueado) {
-      salvarCliente({ id: c.id, bloqueado: true, motivo_bloqueio: motivo }).catch(() => {});
-      c.bloqueado = true; // evita reenviar o mesmo salvamento a cada troca de campo
-      c.motivo_bloqueio = motivo;
-    }
-  } else {
-    clienteBloqueadoAtual = null;
-  }
-
-  const aviso = document.getElementById('aviso-cliente-bloqueado');
-  if (clienteBloqueadoAtual) {
-    document.getElementById('aviso-bloqueio-nome').textContent = clienteBloqueadoAtual.nome;
-    document.getElementById('aviso-bloqueio-motivo').textContent = clienteBloqueadoAtual.motivo_bloqueio || 'sem motivo registrado';
-    aviso.style.display = '';
-  } else {
-    aviso.style.display = 'none';
-  }
-  atualizarCabecalhoNumero();
 }
 
 // Preço puxado pela tabela escolhida NA ENTRADA DE ITEM (it-tabela), que
@@ -494,12 +457,6 @@ function validarCabecalho() {
   if (!cliente) { toast('Escolha ou digite o cliente', 'err'); return false; }
   if (!data) { toast('Preencha a data', 'err'); return false; }
   if (pedidoItens.length === 0) { toast('Adicione ao menos um item', 'err'); return false; }
-  // Trava mesmo se o aviso visual tiver sido burlado de algum jeito
-  verificarBloqueioCliente();
-  if (clienteBloqueadoAtual) {
-    toast(`${clienteBloqueadoAtual.nome} está 🔒 bloqueado — não é possível salvar/concluir pedido pra esse cliente`, 'err');
-    return false;
-  }
   return true;
 }
 
@@ -578,11 +535,6 @@ function atualizarCabecalhoNumero() {
   document.getElementById('btn-add-ref').disabled = pedidoConcluido;
   document.getElementById('btn-salvar-pedido').style.display = pedidoConcluido ? 'none' : '';
   document.getElementById('btn-concluir-pedido').style.display = pedidoConcluido ? 'none' : '';
-  // Cliente bloqueado trava Salvar/Concluir (mas não esconde — o usuário
-  // precisa ver que existem, só não consegue clicar)
-  const travado = !pedidoConcluido && !!clienteBloqueadoAtual;
-  document.getElementById('btn-salvar-pedido').disabled = travado;
-  document.getElementById('btn-concluir-pedido').disabled = travado;
 }
 
 function limparFormulario() {
@@ -598,7 +550,6 @@ function limparFormulario() {
   document.getElementById('p-desconto').value = 0;
   sugerirVencimento();
   limparGradeItem();
-  verificarBloqueioCliente();
   atualizarCabecalhoNumero();
   renderItens();
   history.replaceState(null, '', location.pathname);
@@ -623,7 +574,6 @@ async function abrirPedido(numero) {
     document.getElementById('p-desconto').value = p.desconto_pct || 0;
     pedidoItens = (p.itens || []).map(i => ({ ...i }));
     limparGradeItem();
-    verificarBloqueioCliente();
     atualizarCabecalhoNumero();
     renderItens();
     window.scrollTo({ top: 0, behavior: 'smooth' });
