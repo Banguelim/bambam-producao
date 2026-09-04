@@ -98,8 +98,17 @@ function renderNotas() {
     // agora é (chegou - defeitos).
     const defeitos = Number(n.defeito_retorno_total) || 0;
     const pecasValidas = Math.max(0, chegou - defeitos);
-    const valorRestante = (n.valor_nota || 0) - jaPago;
-    const pecasSugeridas = pecasValidas > 0 ? pecasValidas : (chegou > 0 ? chegou : (n.total_saida || 0));
+    // CORREÇÃO 04/09/2026 — desconta também as peças JÁ PAGAS antes.
+    // Bug: nota com retorno parcial (ex: 98/100, sem defeito ainda) já pode
+    // ter sido paga (98 peças). Se depois disso as 2 que faltavam derem
+    // entrada como DEFEITO, a nota volta a aparecer aqui — e sem esse
+    // desconto ela sugeria pagar as 98 peças válidas DE NOVO (duplicando o
+    // pagamento), em vez de reconhecer que já não falta nada a pagar.
+    const pecasJaPagas = (n.pagamentos || []).reduce((a, p) => a + (p.pecas || 0), 0);
+    const pecasPendentes = Math.max(0, pecasValidas - pecasJaPagas);
+    const valorRestante = pecasPendentes * (n.preco_peca || 0);
+    const pecasSugeridas = pecasPendentes > 0 ? pecasPendentes
+      : (pecasValidas > 0 ? pecasValidas : (chegou > 0 ? chegou : (n.total_saida || 0)));
 
     const linha = document.createElement('div');
     linha.className = 'nota-linha';
@@ -143,7 +152,7 @@ function renderNotas() {
           </div>
         </div>
         <div class="info-linha">
-          Saída original: <b>${n.total_saida} peças</b> em ${formatDataBR(n.data_saida)} · Chegaram: <b>${chegou}</b>${defeitos > 0 ? ` · <span style="color:var(--text-danger)">Defeito: <b>${defeitos}</b></span> · <span style="color:var(--success)">A pagar: <b>${pecasValidas}</b></span>` : ''} · Ainda fora: <b>${fora}</b>${jaPago > 0 ? ` · Já pago antes: <b>${formatBRL(jaPago)}</b>` : ''}
+          Saída original: <b>${n.total_saida} peças</b> em ${formatDataBR(n.data_saida)} · Chegaram: <b>${chegou}</b>${defeitos > 0 ? ` · <span style="color:var(--text-danger)">Defeito: <b>${defeitos}</b></span> · <span style="color:var(--success)">Ainda a pagar: <b>${pecasPendentes}</b></span>` : ''} · Ainda fora: <b>${fora}</b>${jaPago > 0 ? ` · Já pago antes: <b>${formatBRL(jaPago)}</b>` : ''}
         </div>
       </div>
     `;
@@ -374,7 +383,11 @@ async function registrarPagamento() {
         status: novoStatus,
         // Se o preço mudou nesta nota, atualiza também (reajuste retroativo)
         preco_peca: np.preco_peca,
-        valor_nota: (nota.total_saida || 0) * np.preco_peca
+        // CORREÇÃO 04/09/2026 — usa pecasEsperadas (já desconta defeito), não
+        // total_saida puro. Antes isso apagava o desconto de defeito que o
+        // retorno.js já tinha aplicado ao valor_nota, fazendo a nota parecer
+        // que ainda faltava pagar as peças com defeito.
+        valor_nota: pecasEsperadas * np.preco_peca
       });
     }
 

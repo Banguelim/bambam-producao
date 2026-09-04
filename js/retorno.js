@@ -574,8 +574,17 @@ async function confirmarDefeito() {
     novasQtds[tam] = (novasQtds[tam] || 0) + qtd;
 
     // 4) CORREÇÃO 19/08/2026 — recalcula valor_nota se a nota ainda não foi paga
+    //    integralmente. CORREÇÃO 04/09/2026 — "paga_parcial" também precisa
+    //    recalcular: cenário real — saiu 100, retorno chega 98 (2 ficam
+    //    fora), costureira é PAGA pelos 98 (nota fica "paga_parcial" porque
+    //    98 < 100). Depois os 2 que faltavam aparecem como DEFEITO. Antes,
+    //    como a nota já tinha status "paga_parcial", esse bloco não mexia no
+    //    valor_nota nem fechava a nota — ela reaparecia na tela de Pagamento
+    //    pedindo pra pagar as MESMAS 98 peças de novo. Só uma nota já 100%
+    //    quitada (paga_total) não deve mais ser tocada (defeito aí é só
+    //    estatística, não há mais nada a reconciliar).
     const status = notaAtual.status || 'aberta';
-    const jaFoiPaga = status === 'paga_total' || status === 'paga_parcial';
+    const jaPagaTotal = status === 'paga_total';
     const totalSaida = Number(notaAtual.total_saida) || 0;
     const precoPeca = Number(notaAtual.preco_peca) || 0;
 
@@ -586,14 +595,25 @@ async function confirmarDefeito() {
     };
 
     let msgExtra = '';
-    if (!jaFoiPaga && precoPeca > 0) {
+    if (!jaPagaTotal && precoPeca > 0) {
       // Peças a pagar = tudo que saiu MENOS os defeitos registrados no retorno
       const novoValor = Math.max(0, (totalSaida - totalDefeitos) * precoPeca);
       updates.valor_nota = novoValor;
       const desconto = qtd * precoPeca;
       msgExtra = ` · desconto ${formatBRL(desconto)} no pagamento (novo total: ${formatBRL(novoValor)})`;
-    } else if (jaFoiPaga) {
-      msgExtra = ` · ⚠ nota já paga, valor NÃO atualizado`;
+
+      // Se o que já foi pago cobre o novo valor esperado (o defeito
+      // descoberto agora era exatamente o que faltava chegar), fecha a nota
+      // como paga_total — sem isso ela ficava "paga_parcial" pra sempre e
+      // reaparecia pedindo pagamento de peças que já foram pagas.
+      const pecasJaPagas = (notaAtual.pagamentos || []).reduce((a, p) => a + (p.pecas || 0), 0);
+      const pecasEsperadasAgora = Math.max(0, totalSaida - totalDefeitos);
+      if ((notaAtual.pagamentos || []).length > 0 && pecasJaPagas >= pecasEsperadasAgora) {
+        updates.status = 'paga_total';
+        msgExtra += ' · ✓ nota fechada (o que já foi pago cobre o restante)';
+      }
+    } else if (jaPagaTotal) {
+      msgExtra = ` · ⚠ nota já paga totalmente, valor NÃO atualizado (defeito só registrado pra estatística)`;
     }
 
     await atualizarNota(notaAtual.numero, updates);
