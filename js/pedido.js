@@ -556,19 +556,46 @@ function atualizarCabecalhoNumero() {
   document.getElementById('lbl-add-ref-motivo').style.display = pedidoConcluido ? '' : 'none';
   document.getElementById('btn-salvar-pedido').style.display = pedidoConcluido ? 'none' : '';
   document.getElementById('btn-concluir-pedido').style.display = pedidoConcluido ? 'none' : '';
-  // Só deixa excluir pedido já salvo e ainda em aberto — um concluído já deu
-  // baixa no estoque e gerou contas a receber, apagar ele deixaria isso
-  // órfão (não é só apagar o documento do pedido).
-  document.getElementById('btn-excluir-pedido').style.display = (numeroPedidoAtual && !pedidoConcluido) ? '' : 'none';
+  // Excluir só aparece pra pedido já salvo (precisa ter número). Pedido em
+  // aberto: apaga direto. Pedido concluído: também dá, mas primeiro estorna
+  // (devolve estoque + cancela parcelas em aberto) — ver excluirPedidoAtual.
+  const btnExcluir = document.getElementById('btn-excluir-pedido');
+  btnExcluir.style.display = numeroPedidoAtual ? '' : 'none';
+  btnExcluir.textContent = pedidoConcluido ? '🗑 Excluir pedido (estorna estoque/financeiro)' : '🗑 Excluir pedido';
 }
 
-// Apaga de vez um pedido em aberto (rascunho) que não vai ser usado — ex:
-// lançado errado, cliente desistiu, ficou incompleto e não faz mais sentido
-// continuar. Só existe pra pedidos ainda não concluídos (ver atualizarCabecalhoNumero).
+// Apaga de vez um pedido que não vai ser usado — ex: lançado errado, cliente
+// desistiu, ficou incompleto e não faz mais sentido continuar.
+// - Em ABERTO: só apaga o documento (não afetou estoque/financeiro ainda).
+// - CONCLUÍDO: precisa desfazer o que "Concluir pedido" fez antes de apagar
+//   (ver estornarPedidoConcluido) — senão fica peça baixada do estoque e
+//   parcela no Financeiro sem pedido nenhum por trás.
 async function excluirPedidoAtual() {
   if (!numeroPedidoAtual) return;
-  if (!confirm(`Excluir o pedido ${numeroPedidoAtual} de vez?\n\nNão pode ser desfeito.`)) return;
   const btn = document.getElementById('btn-excluir-pedido');
+
+  if (statusPedidoAtual === 'concluido') {
+    if (!confirm(
+      `O pedido ${numeroPedidoAtual} já foi CONCLUÍDO — excluir ele vai:\n\n` +
+      `• Devolver as peças pro estoque de produção\n` +
+      `• Cancelar (apagar) as parcelas em ABERTO geradas em Contas a Receber\n\n` +
+      `Se alguma parcela já tiver sido paga, a exclusão é BLOQUEADA — não mexe ` +
+      `em histórico de pagamento sozinho.\n\nIsso não pode ser desfeito. Confirma o estorno completo?`
+    )) return;
+    btn.disabled = true;
+    try {
+      await estornarPedidoConcluido(numeroPedidoAtual, pedidoItens);
+      toast(`✓ Pedido ${numeroPedidoAtual} estornado e excluído — estoque devolvido, parcelas em aberto canceladas`, 'ok grande');
+      limparFormulario();
+    } catch (e) {
+      toast('Erro ao estornar: ' + e.message, 'err grande');
+    } finally {
+      btn.disabled = false;
+    }
+    return;
+  }
+
+  if (!confirm(`Excluir o pedido ${numeroPedidoAtual} de vez?\n\nNão pode ser desfeito.`)) return;
   btn.disabled = true;
   try {
     await deletarPedido(numeroPedidoAtual);
@@ -579,6 +606,39 @@ async function excluirPedidoAtual() {
   } finally {
     btn.disabled = false;
   }
+}
+
+// Desfaz um pedido CONCLUÍDO: devolve pro estoque de produção tudo que foi
+// baixado (o inverso do que concluirPedidoBtn fez), apaga as parcelas dele
+// em Contas a Receber que ainda estão em aberto, e só então apaga o pedido.
+// Se alguma parcela já foi paga, para ANTES de mexer em qualquer coisa —
+// não decide sozinho apagar histórico de pagamento.
+async function estornarPedidoConcluido(numero, itens) {
+  const contasSnap = await colContasReceber().where('pedido_id', '==', numero).get();
+  const contas = contasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const pagas = contas.filter(c => c.status === 'pago');
+  if (pagas.length > 0) {
+    throw new Error(
+      `Tem ${pagas.length} parcela(s) já paga(s) desse pedido — não apago sozinho ` +
+      `pra não perder histórico de pagamento. Resolve isso no Financeiro antes (reabrir/estornar a parcela paga) e tenta de novo.`
+    );
+  }
+
+  const dataHoje = hojeISO();
+  for (const it of (itens || [])) {
+    for (const t of TAMS) {
+      const q = it.qtds?.[t] || 0;
+      if (q > 0) await adicionarAoEstoque(it.ref, it.cor, t, q, dataHoje);
+    }
+  }
+
+  if (contas.length > 0) {
+    const batch = db.batch();
+    contas.forEach(c => batch.delete(colContasReceber().doc(c.id)));
+    await batch.commit();
+  }
+
+  await deletarPedido(numero);
 }
 
 function limparFormulario() {
