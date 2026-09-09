@@ -3,9 +3,9 @@
 const TAMS = ['RN','P','M','G','GG'];
 
 const CORES = [
-  'AZUL','TURQ','PISC','ROSA','PINK','ROSÃO','VERDE','MAR',
+  'AZUL','TURQ','PISCINA','ROSA','PINK','ROSÃO','VERDE','MAR',
   'VERMELHO','MARINHO','AMARELO','BCO','LILAS','MROM','BEGE',
-  'MCLA','MARFIM','RIAL'
+  'MCLA','MARFIM','RIAL','SORTIDO'
 ];
 
 // Retorna sempre o nome COMPLETO da cor (sem abreviar)

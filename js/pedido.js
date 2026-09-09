@@ -258,6 +258,22 @@ function limparGradeItem() {
   document.getElementById('it-ref').focus();
 }
 
+// Se o usuário digitou cor+qtd numa coluna mas esqueceu de apertar Enter (ou
+// clicou direto em "Adicionar ao pedido"), essa entrada nunca vira uma
+// '.cor-linha' — e como confirmarRefNoPedido só lê '.cor-linha', a peça
+// digitada se perde sem nenhum aviso claro (só o toast genérico de "adicione
+// uma cor", fácil de não notar). CORREÇÃO: confirma sozinho o que estiver
+// pendente nos campos de cor+qtd de cada coluna antes de somar.
+function confirmarEntradasPendentes() {
+  TAMS.forEach(tam => {
+    const col = document.querySelector(`#grade-item .col[data-tam="${tam}"]`);
+    if (col.classList.contains('desabilitada')) return;
+    const corInput = col.querySelector('.cor-input');
+    const qtyInput = col.querySelector('.qty-input');
+    if (corInput.value.trim() && qtyInput.value) salvarEntradaNovaEmColItem(col);
+  });
+}
+
 // Lê as 5 colunas, agrupa por cor (juntando os tamanhos) e joga no pedido —
 // tudo com a mesma ref e o mesmo preço (o preço do campo acima da grade).
 function confirmarRefNoPedido() {
@@ -265,6 +281,8 @@ function confirmarRefNoPedido() {
   const preco = parseFloat(document.getElementById('it-preco').value) || 0;
   if (!ref) { toast('Preencha a referência', 'err'); return; }
   if (!preco) { toast('Preencha o preço (ou cadastre a ref na tabela de preço)', 'err'); return; }
+
+  confirmarEntradasPendentes();
 
   const porCor = {}; // { COR: {RN,P,M,G,GG} }
   TAMS.forEach(tam => {

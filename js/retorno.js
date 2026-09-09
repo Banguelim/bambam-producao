@@ -519,26 +519,42 @@ async function confirmarTroca() {
 }
 
 // ==== DEFEITO ====
+// Cores válidas pra um tamanho são só as que realmente saíram nesse lote/nota
+// (notaAtual.itens) — não dá pra registrar defeito numa cor que não foi
+// enviada pra essa costureira nesse lote (era texto livre antes, deixava
+// digitar qualquer coisa).
+function coresValidasParaDefeito(tam) {
+  const coresDoTam = new Set();
+  (notaAtual?.itens || []).forEach(i => {
+    if (i.tam === tam) coresDoTam.add(i.cor);
+  });
+  return coresDoTam;
+}
+
 function abrirModalDefeito(tam, pendente) {
   document.getElementById('def-tam').textContent = tam;
   document.getElementById('def-pendente').textContent = pendente;
   document.getElementById('def-qtd').value = '';
   document.getElementById('def-qtd').max = pendente;
-  document.getElementById('def-cor').value = '';
 
+  const coresDoTam = coresValidasParaDefeito(tam);
   const dl = document.getElementById('def-cores-list');
   dl.innerHTML = '';
-  if (notaAtual) {
-    const coresDoTam = new Set();
-    (notaAtual.itens || []).forEach(i => {
-      if (i.tam === tam) coresDoTam.add(i.cor);
-    });
-    coresDoTam.forEach(cor => {
-      const opt = document.createElement('option');
-      opt.value = cor;
-      dl.appendChild(opt);
-    });
-    document.getElementById('def-cor').setAttribute('list', 'def-cores-list');
+  coresDoTam.forEach(cor => {
+    const opt = document.createElement('option');
+    opt.value = cor;
+    dl.appendChild(opt);
+  });
+
+  const corInput = document.getElementById('def-cor');
+  const lbl = document.getElementById('def-cor-lbl');
+  if (coresDoTam.size === 1) {
+    // Só uma cor nesse lote/tamanho — já vem preenchida, nem precisa escolher
+    corInput.value = [...coresDoTam][0];
+    lbl.textContent = 'Cor';
+  } else {
+    corInput.value = '';
+    lbl.textContent = coresDoTam.size === 0 ? 'Cor (opcional)' : 'Cor (escolha uma da lista)';
   }
 
   document.getElementById('modal-defeito').classList.add('visivel');
@@ -548,11 +564,30 @@ function abrirModalDefeito(tam, pendente) {
 async function confirmarDefeito() {
   const tam = document.getElementById('def-tam').textContent;
   const qtd = parseInt(document.getElementById('def-qtd').value);
-  const cor = document.getElementById('def-cor').value.trim().toUpperCase() || 'GERAL';
+  const corDigitada = document.getElementById('def-cor').value.trim().toUpperCase();
   const pendente = parseInt(document.getElementById('def-pendente').textContent);
 
   if (!qtd || qtd <= 0) { toast('Digite a quantidade com defeito', 'err'); return; }
   if (qtd > pendente) { toast(`Máximo é ${pendente} peças pendentes`, 'err'); return; }
+
+  // Não permite entrada de defeito em cor que não está nesse lote/tamanho —
+  // só passa reto quando a nota não tem cor discriminada por item (lote
+  // antigo importado sem essa informação), mantendo o comportamento antigo.
+  const coresDoTam = coresValidasParaDefeito(tam);
+  let cor;
+  if (coresDoTam.size === 0) {
+    cor = corDigitada || 'GERAL';
+  } else if (!corDigitada) {
+    toast(coresDoTam.size === 1
+      ? `Confirma a cor ${[...coresDoTam][0]}`
+      : `Escolha a cor (esse lote tem mais de uma cor no ${tam}: ${[...coresDoTam].join(', ')})`, 'err');
+    return;
+  } else if (!coresDoTam.has(corDigitada)) {
+    toast(`A cor "${corDigitada}" não está nesse lote — cores válidas no ${tam}: ${[...coresDoTam].join(', ')}`, 'err');
+    return;
+  } else {
+    cor = corDigitada;
+  }
 
   const btn = document.getElementById('btn-confirmar-defeito');
   btn.disabled = true;
