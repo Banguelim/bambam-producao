@@ -53,6 +53,7 @@ async function init() {
   document.getElementById('btn-novo-pedido').addEventListener('click', () => { if (confirm('Descartar e começar um pedido novo?')) limparFormulario(); });
   document.getElementById('btn-salvar-pedido').addEventListener('click', () => salvarPedidoBtn(false));
   document.getElementById('btn-concluir-pedido').addEventListener('click', concluirPedidoBtn);
+  document.getElementById('btn-excluir-pedido').addEventListener('click', excluirPedidoAtual);
   document.getElementById('btn-romaneio-separacao').addEventListener('click', () => imprimirRomaneio('separacao'));
   document.getElementById('btn-romaneio-conferencia').addEventListener('click', () => imprimirRomaneio('conferencia'));
   document.getElementById('btn-confirmacao').addEventListener('click', imprimirConfirmacao);
@@ -555,6 +556,29 @@ function atualizarCabecalhoNumero() {
   document.getElementById('lbl-add-ref-motivo').style.display = pedidoConcluido ? '' : 'none';
   document.getElementById('btn-salvar-pedido').style.display = pedidoConcluido ? 'none' : '';
   document.getElementById('btn-concluir-pedido').style.display = pedidoConcluido ? 'none' : '';
+  // Só deixa excluir pedido já salvo e ainda em aberto — um concluído já deu
+  // baixa no estoque e gerou contas a receber, apagar ele deixaria isso
+  // órfão (não é só apagar o documento do pedido).
+  document.getElementById('btn-excluir-pedido').style.display = (numeroPedidoAtual && !pedidoConcluido) ? '' : 'none';
+}
+
+// Apaga de vez um pedido em aberto (rascunho) que não vai ser usado — ex:
+// lançado errado, cliente desistiu, ficou incompleto e não faz mais sentido
+// continuar. Só existe pra pedidos ainda não concluídos (ver atualizarCabecalhoNumero).
+async function excluirPedidoAtual() {
+  if (!numeroPedidoAtual) return;
+  if (!confirm(`Excluir o pedido ${numeroPedidoAtual} de vez?\n\nNão pode ser desfeito.`)) return;
+  const btn = document.getElementById('btn-excluir-pedido');
+  btn.disabled = true;
+  try {
+    await deletarPedido(numeroPedidoAtual);
+    toast(`✓ Pedido ${numeroPedidoAtual} excluído`, 'ok');
+    limparFormulario();
+  } catch (e) {
+    toast('Erro ao excluir: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 function limparFormulario() {
