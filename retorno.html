@@ -209,11 +209,12 @@
       </div>
       <label class="lbl">Quantidade com defeito</label>
       <input type="number" id="def-qtd" min="1" placeholder="0" style="width:100%;padding:9px 12px;margin-bottom:12px;color:var(--text-primary);background:var(--surface-2)">
-      <label class="lbl">Cor (opcional)</label>
-      <input list="costureiras-list" id="def-cor" placeholder="selecione a cor" style="width:100%;padding:9px 12px;margin-bottom:16px;color:var(--text-primary);background:var(--surface-2)">
+      <label class="lbl" id="def-cor-lbl">Cor</label>
+      <input list="def-cores-list" id="def-cor" placeholder="selecione a cor" autocomplete="off" style="width:100%;padding:9px 12px;margin-bottom:16px;color:var(--text-primary);background:var(--surface-2)">
       <datalist id="def-cores-list"></datalist>
       <div style="font-size:11px;color:var(--text-muted);margin-bottom:14px;font-style:italic">
-        As peças com defeito serão descontadas do pendente e o pagamento poderá ser concluído.
+        Só aceita uma cor que realmente saiu nesse lote/tamanho — as peças com defeito
+        serão descontadas do pendente e o pagamento poderá ser concluído.
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button class="btn btn-secondary" onclick="document.getElementById('modal-defeito').classList.remove('visivel')">Cancelar</button>

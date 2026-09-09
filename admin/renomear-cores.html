@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>BAMBAM · Renomear cores</title>
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/forms.css">
+<style>
+  .step {
+    background: var(--surface-1);
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+  }
+  .step h3 { margin-bottom: 6px; }
+  .step .info { font-size: 12px; color: var(--text-secondary); margin-bottom: 10px; }
+  .step .info b { color: var(--text-primary); }
+  .step button { margin-right: 8px; }
+  .campo-manual input { padding: 8px 10px; text-transform: uppercase; }
+  .log {
+    background: #000;
+    color: #6ee7b7;
+    padding: 10px;
+    border-radius: 6px;
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    max-height: 260px;
+    overflow-y: auto;
+    margin-top: 10px;
+    white-space: pre-wrap;
+  }
+  .log .err { color: #fca5a5; }
+  .log .ok { color: #a7f3d0; }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <span class="logo">BAMBAM <b>BABY</b> · Admin</span>
+    <nav class="nav"><a href="../index.html">← voltar ao painel</a></nav>
+  </div>
+
+  <div class="wrap" style="max-width:800px">
+    <h1>Renomear cores</h1>
+    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px">
+      Troca o nome de uma cor em <b>tudo</b> que já foi registrado — cadastro de cores
+      (autocompletar), cortes, notas de retorno (inclusive defeitos), estoque e pedidos de
+      venda — sem perder nenhuma quantidade já lançada. Usa isso quando uma cor foi
+      cadastrada abreviada/errada (ex: "PISC" devia ser "PISCINA") e esse nome errado já
+      espalhou pelo sistema. <b>Não pode ser desfeito</b> — confere o nome certo antes de
+      confirmar.
+    </p>
+
+    <div class="step">
+      <h3>Trocas já pedidas</h3>
+      <div class="info">Essas duas já vêm prontas — só clicar e confirmar.</div>
+      <button class="btn btn-primary" onclick="rodar(this, () => renomearCorBtn('SORT', 'SORTIDO'))">SORT → SORTIDO</button>
+      <button class="btn btn-primary" onclick="rodar(this, () => renomearCorBtn('PISC', 'PISCINA'))">PISC → PISCINA</button>
+    </div>
+
+    <div class="step">
+      <h3>Renomear outra cor</h3>
+      <div class="info">Pra qualquer outra troca — digita o nome de como está hoje e como deve ficar.</div>
+      <div class="campo-manual" style="display:flex;gap:8px;align-items:center">
+        <input id="cor-de" placeholder="nome atual (ex: SORT)" style="width:200px">
+        <span>→</span>
+        <input id="cor-para" placeholder="nome novo (ex: SORTIDO)" style="width:200px">
+        <button class="btn btn-primary" onclick="rodar(this, renomearCorManualBtn)">Renomear</button>
+      </div>
+    </div>
+
+    <div id="log" class="log">Aguardando...</div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="../js/firebase-config.js"></script>
+  <script src="../js/acesso.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+  <script src="../js/db.js"></script>
+  <script src="../js/db-vendas.js"></script>
+  <script>
+    const logEl = document.getElementById('log');
+    function log(msg, tipo = '') {
+      const p = document.createElement('div');
+      p.textContent = msg;
+      if (tipo) p.classList.add(tipo);
+      logEl.appendChild(p);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    // Mesma proteção do admin/importar.html: trava clique duplo e sempre
+    // mostra o erro na tela (nunca só no console, senão o log parece travado).
+    let rodando = false;
+    async function rodar(btn, fn) {
+      if (rodando) { log('⏳ Já tem uma renomeação rodando — espera terminar', 'err'); return; }
+      rodando = true;
+      btn.disabled = true;
+      const textoOriginal = btn.textContent;
+      btn.textContent = '⏳ renomeando...';
+      try {
+        await fn();
+      } catch (e) {
+        console.error(e);
+        let msg = e.message || String(e);
+        if (e.code === 'permission-denied' || /permission/i.test(msg)) {
+          msg += ' — provavelmente falta liberar a coleção nas Regras do Firestore (Firebase Console → Firestore Database → Regras)';
+        }
+        log('✗ Erro: ' + msg, 'err');
+      } finally {
+        rodando = false;
+        btn.disabled = false;
+        btn.textContent = textoOriginal;
+      }
+    }
+
+    async function renomearCorBtn(de, para) {
+      const digitado = prompt(
+        `Isso vai trocar a cor "${de}" por "${para}" em TUDO que já foi registrado ` +
+        `(cadastro de cores, cortes, notas de retorno, estoque e pedidos de venda) — ` +
+        `não pode ser desfeito.\n\nDigite RENOMEAR pra confirmar:`
+      );
+      if (digitado !== 'RENOMEAR') { log('Cancelado — nada foi alterado.'); return; }
+      await renomearCor(de, para);
+    }
+
+    async function renomearCorManualBtn() {
+      const de = document.getElementById('cor-de').value.trim().toUpperCase();
+      const para = document.getElementById('cor-para').value.trim().toUpperCase();
+      if (!de || !para) { log('Preencha os dois nomes.', 'err'); return; }
+      if (de === para) { log('Os dois nomes são iguais — nada a fazer.', 'err'); return; }
+      await renomearCorBtn(de, para);
+    }
+
+    // Migração completa de UMA cor pra outro nome. Lê cada coleção inteira de
+    // propósito (é ação de admin, rodada uma vez só) — ver mesmo padrão em
+    // apagarColecaoInteira/recalcularAgregadosContas (db-vendas.js).
+    async function renomearCor(de, para) {
+      log(`Renomeando "${de}" → "${para}"...`);
+      let nCores = 0, nCortes = 0, nNotas = 0, nEstoque = 0, nPedidos = 0;
+
+      // 1) Cadastro de cores (producao_dados/meta/cores) — usado no autocompletar
+      //    de Novo Corte e Pedido.
+      try {
+        const doc = await colCores().doc(de).get();
+        if (doc.exists) {
+          await colCores().doc(para).set({ nome: para, criado_em: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+          await colCores().doc(de).delete();
+          nCores = 1;
+          log(`  ✓ cadastro de cor migrado`);
+        }
+      } catch (e) { log('  aviso: não deu pra migrar o cadastro de cor — ' + e.message, 'err'); }
+
+      // 2) Cortes (producao_dados/op/cortes) — itens[].cor
+      log('  lendo cortes...');
+      const cortesSnap = await colCortes().get();
+      {
+        let batch = db.batch(), inBatch = 0;
+        for (const doc of cortesSnap.docs) {
+          const itens = doc.data().itens || [];
+          if (!itens.some(i => i.cor === de)) continue;
+          const novosItens = itens.map(i => i.cor === de ? { ...i, cor: para } : i);
+          batch.update(doc.ref, { itens: novosItens });
+          nCortes++; inBatch++;
+          if (inBatch >= 400) { await batch.commit(); log(`  ${nCortes} corte(s) atualizados...`); batch = db.batch(); inBatch = 0; }
+        }
+        if (inBatch > 0) await batch.commit();
+      }
+
+      // 3) Notas de retorno (producao_dados/op/notas) — itens[].cor e as
+      //    chaves do mapa de defeitos, que são "TAM_COR" (ex: "RN_SORT").
+      log('  lendo notas de retorno...');
+      const notasSnap = await colNotas().get();
+      {
+        let batch = db.batch(), inBatch = 0;
+        for (const doc of notasSnap.docs) {
+          const n = doc.data();
+          const itens = n.itens || [];
+          const temItem = itens.some(i => i.cor === de);
+          const defeitos = n.defeitos || {};
+          const sufixo = `_${de}`;
+          const chavesDefeito = Object.keys(defeitos).filter(k => k.endsWith(sufixo));
+          if (!temItem && chavesDefeito.length === 0) continue;
+
+          const updates = {};
+          if (temItem) updates.itens = itens.map(i => i.cor === de ? { ...i, cor: para } : i);
+          if (chavesDefeito.length > 0) {
+            const novosDefeitos = { ...defeitos };
+            chavesDefeito.forEach(chave => {
+              const tam = chave.slice(0, chave.length - sufixo.length);
+              const novaChave = `${tam}_${para}`;
+              novosDefeitos[novaChave] = (novosDefeitos[novaChave] || 0) + (Number(novosDefeitos[chave]) || 0);
+              delete novosDefeitos[chave];
+            });
+            updates.defeitos = novosDefeitos;
+          }
+          batch.update(doc.ref, updates);
+          nNotas++; inBatch++;
+          if (inBatch >= 400) { await batch.commit(); log(`  ${nNotas} nota(s) atualizadas...`); batch = db.batch(); inBatch = 0; }
+        }
+        if (inBatch > 0) await batch.commit();
+      }
+
+      // 4) Estoque (producao_dados/op/estoque) — o id do doc é "REF_COR_TAM",
+      //    então precisa mover a quantidade pro doc novo (somando se ele já
+      //    existir) e apagar o antigo — não dá só pra renomear o campo.
+      log('  lendo estoque...');
+      const estoqueSnap = await colEstoque().where('cor', '==', de).get();
+      for (const doc of estoqueSnap.docs) {
+        const d = doc.data();
+        const novoId = `${d.ref}_${para}_${d.tam}`;
+        const qtd = Number(d.qtd) || 0;
+        await colEstoque().doc(novoId).set({
+          ref: d.ref, cor: para, tam: d.tam,
+          qtd: firebase.firestore.FieldValue.increment(qtd),
+          ultima_entrada: d.ultima_entrada || hojeISO()
+        }, { merge: true });
+        await colEstoque().doc(doc.id).delete();
+        nEstoque++;
+        if (nEstoque % 20 === 0) log(`  ${nEstoque} item(ns) de estoque migrados...`);
+      }
+
+      // 5) Pedidos de venda (vendas_dados/op/pedidos) — itens[].cor
+      log('  lendo pedidos de venda...');
+      const pedidosSnap = await colPedidos().get();
+      {
+        let batch = db.batch(), inBatch = 0;
+        for (const doc of pedidosSnap.docs) {
+          const itens = doc.data().itens || [];
+          if (!itens.some(i => i.cor === de)) continue;
+          const novosItens = itens.map(i => i.cor === de ? { ...i, cor: para } : i);
+          batch.update(doc.ref, { itens: novosItens });
+          nPedidos++; inBatch++;
+          if (inBatch >= 400) { await batch.commit(); log(`  ${nPedidos} pedido(s) atualizados...`); batch = db.batch(); inBatch = 0; }
+        }
+        if (inBatch > 0) await batch.commit();
+      }
+
+      log(
+        `✓ "${de}" → "${para}" concluído: cadastro de cor (${nCores ? 'migrado' : 'não existia'}), ` +
+        `${nCortes} corte(s), ${nNotas} nota(s) de retorno, ${nEstoque} item(ns) de estoque, ` +
+        `${nPedidos} pedido(s) de venda.`,
+        'ok'
+      );
+    }
+
+    protegerRota();
+  </script>
+</body>
+</html>
