@@ -41,7 +41,10 @@ function filtrarPedidos(lista, busca) {
   );
 }
 
-function renderListaPedidos(containerId, cache, busca, vazioMsg) {
+// permiteExcluir só é true pra "Pedidos em aberto" — um pedido concluído já
+// deu baixa no estoque e gerou contas a receber, apagar ele deixaria isso
+// órfão (ver excluirPedido).
+function renderListaPedidos(containerId, cache, busca, vazioMsg, permiteExcluir) {
   const cont = document.getElementById(containerId);
   const filtrados = filtrarPedidos(cache, busca);
 
@@ -63,15 +66,34 @@ function renderListaPedidos(containerId, cache, busca, vazioMsg) {
       <span>${formatDataBR(p.data_pedido)}</span>
       <span>${p.total_pecas || 0} pç</span>
       <span class="val">${formatBRL(p.total_valor || 0)}</span>
+      ${permiteExcluir ? `<button class="btn-x-pedido" title="Excluir pedido">🗑</button>` : ''}
     `;
     div.addEventListener('click', () => { location.href = `pedido-novo.html?pedido=${p.numero}`; });
+    if (permiteExcluir) {
+      div.querySelector('.btn-x-pedido').addEventListener('click', (e) => {
+        e.stopPropagation();
+        excluirPedido(p.numero);
+      });
+    }
     cont.appendChild(div);
   });
 }
 
+async function excluirPedido(numero) {
+  if (!confirm(`Excluir o pedido ${numero} de vez?\n\nNão pode ser desfeito.`)) return;
+  try {
+    await deletarPedido(numero);
+    pedidosAbertosCache = pedidosAbertosCache.filter(p => p.numero !== numero);
+    document.getElementById('lbl-pedidos-abertos-total').textContent = `(${pedidosAbertosCache.length})`;
+    renderPedidosAbertos();
+  } catch (e) {
+    alert('Erro ao excluir: ' + e.message);
+  }
+}
+
 function renderPedidosAbertos() {
   const busca = (document.getElementById('busca-pedido-aberto').value || '').trim().toUpperCase();
-  renderListaPedidos('lista-pedidos-abertos', pedidosAbertosCache, busca, 'Nenhum pedido em aberto');
+  renderListaPedidos('lista-pedidos-abertos', pedidosAbertosCache, busca, 'Nenhum pedido em aberto', true);
 }
 
 function renderPedidosConcluidos() {
