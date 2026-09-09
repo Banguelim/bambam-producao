@@ -551,6 +551,8 @@ function atualizarCabecalhoNumero() {
   document.getElementById('lbl-status-pedido').textContent = statusPedidoAtual === 'concluido' ? '✓ concluído' : 'rascunho';
   const pedidoConcluido = statusPedidoAtual === 'concluido';
   document.getElementById('btn-add-ref').disabled = pedidoConcluido;
+  // Antes o botão só ficava cinza sem explicar por quê — parecia travado/quebrado.
+  document.getElementById('lbl-add-ref-motivo').style.display = pedidoConcluido ? '' : 'none';
   document.getElementById('btn-salvar-pedido').style.display = pedidoConcluido ? 'none' : '';
   document.getElementById('btn-concluir-pedido').style.display = pedidoConcluido ? 'none' : '';
 }
