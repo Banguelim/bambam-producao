@@ -92,6 +92,7 @@ function renderNotas() {
     const chegou = calcularTotalChegou(n);
     const fora = (n.total_saida || 0) - chegou;
     const jaPago = totalJaPagoDaNota(n);
+    const pecasJaPagas = totalPecasJaPagasDaNota(n);
     // NOVO 20/08/2026 — desconta as peças com defeito registradas no retorno.
     // Motivo: no retorno.js as peças defeituosas entram na chegada_1 pra
     // fechar o pendente, mas NÃO devem ser pagas. Sugestão de pagamento
@@ -99,7 +100,13 @@ function renderNotas() {
     const defeitos = Number(n.defeito_retorno_total) || 0;
     const pecasValidas = Math.max(0, chegou - defeitos);
     const valorRestante = (n.valor_nota || 0) - jaPago;
-    const pecasSugeridas = pecasValidas > 0 ? pecasValidas : (chegou > 0 ? chegou : (n.total_saida || 0));
+    // NOVO 10/09/2026 — desconta as peças que JÁ FORAM PAGAS antes.
+    // Motivo: sem isso, quando o resto do lote chega (ex: faltavam 100 de
+    // 198), o campo sugeria as 198 peças de novo — se a pessoa não reparasse
+    // e só marcasse a nota, pagava a nota inteira outra vez (duplicidade).
+    // Agora sugere só a diferença ainda não paga.
+    const pecasBaseSugestao = pecasValidas > 0 ? pecasValidas : (chegou > 0 ? chegou : (n.total_saida || 0));
+    const pecasSugeridas = Math.max(0, pecasBaseSugestao - pecasJaPagas);
 
     const linha = document.createElement('div');
     linha.className = 'nota-linha';
@@ -130,7 +137,7 @@ function renderNotas() {
       <div class="nota-detalhes">
         <div class="campos">
           <div class="campo">
-            <label>Peças a pagar${defeitos > 0 ? ` <span style="color:var(--text-danger);font-weight:700;text-transform:none">(defeito já descontado)</span>` : ''}</label>
+            <label>Peças a pagar${defeitos > 0 ? ` <span style="color:var(--text-danger);font-weight:700;text-transform:none">(defeito já descontado)</span>` : ''}${pecasJaPagas > 0 ? ` <span style="color:var(--text-muted);font-weight:700;text-transform:none">(${pecasJaPagas} já pagas antes)</span>` : ''}</label>
             <input type="number" class="in-pecas" min="0" max="${n.total_saida}" value="${pecasSugeridas}">
           </div>
           <div class="campo">
@@ -143,7 +150,7 @@ function renderNotas() {
           </div>
         </div>
         <div class="info-linha">
-          Saída original: <b>${n.total_saida} peças</b> em ${formatDataBR(n.data_saida)} · Chegaram: <b>${chegou}</b>${defeitos > 0 ? ` · <span style="color:var(--text-danger)">Defeito: <b>${defeitos}</b></span> · <span style="color:var(--success)">A pagar: <b>${pecasValidas}</b></span>` : ''} · Ainda fora: <b>${fora}</b>${jaPago > 0 ? ` · Já pago antes: <b>${formatBRL(jaPago)}</b>` : ''}
+          Saída original: <b>${n.total_saida} peças</b> em ${formatDataBR(n.data_saida)} · Chegaram: <b>${chegou}</b>${defeitos > 0 ? ` · <span style="color:var(--text-danger)">Defeito: <b>${defeitos}</b></span> · <span style="color:var(--success)">A pagar: <b>${pecasValidas}</b></span>` : ''} · Ainda fora: <b>${fora}</b>${jaPago > 0 ? ` · Já pago antes: <b>${formatBRL(jaPago)}</b> (${pecasJaPagas} pç)` : ''}
         </div>
       </div>
     `;
@@ -192,6 +199,10 @@ function calcularTotalChegou(n) {
 
 function totalJaPagoDaNota(n) {
   return (n.pagamentos || []).reduce((a, p) => a + (p.valor || 0), 0);
+}
+
+function totalPecasJaPagasDaNota(n) {
+  return (n.pagamentos || []).reduce((a, p) => a + (p.pecas || 0), 0);
 }
 
 function marcarTodas() {
@@ -329,56 +340,25 @@ async function registrarPagamento() {
 
     if (notasPagas.length === 0) throw new Error('Marque ao menos 1 nota com valor > 0');
 
-    // Consumir adiantamento (se escolhido)
     const usoAdiant = calcularUsoAdiantamento();
     const adiantEfetivo = Math.min(usoAdiant, valorBruto);
-    const valorLiquido = valorBruto - adiantEfetivo;
 
-    let consumoAdiant = { consumidos: [], faltou: 0 };
-    if (adiantEfetivo > 0) {
-      consumoAdiant = await consumirAdiantamentos(costureiraAtual, adiantEfetivo);
-    }
-
-    // Criar registro de pagamento
-    const pag = {
-      data: dataPag,
+    // NOVO 10/09/2026 — grava tudo (recibo + baixa em cada nota + consumo de
+    // adiantamento) numa transação atômica só. Cada nota é relida de dentro
+    // da transação (dado mais fresco do servidor) e a gravação é RECUSADA
+    // se o valor pedido passar do saldo que realmente resta nela — trava
+    // contra pagar a mesma nota em duplicidade mesmo com a tela desatualizada,
+    // 2 abas abertas ao mesmo tempo, ou falha no meio de um pagamento anterior.
+    const { pagId, pag } = await registrarPagamentoTransacional({
       costureira: costureiraAtual,
+      data: dataPag,
       forma,
       observacao: obs,
-      notas_pagas: notasPagas,
-      valor_bruto: valorBruto,
-      adiantamento_usado: adiantEfetivo,
-      valor_liquido: valorLiquido,
-      adiantamentos_consumidos: consumoAdiant.consumidos
-    };
-    const pagId = await salvarPagamento(pag);
+      notasPagas,
+      usoAdiantDesejado: adiantEfetivo
+    });
 
-    // Atualiza cada nota: registra o pagamento, atualiza status
-    for (const np of notasPagas) {
-      const nota = notasCarregadas.find(n => n.numero === np.nota_numero);
-      if (!nota) continue;
-      const pagamentosAntes = nota.pagamentos || [];
-      const novosPagamentos = [...pagamentosAntes, { pag_id: pagId, data: dataPag, valor: np.valor, pecas: np.pecas_pagas }];
-      const totalPago = novosPagamentos.reduce((a, p) => a + (p.valor || 0), 0);
-      const valorTotalNota = (nota.total_saida || 0) * (nota.preco_peca || 0);
-      // Determinar status: paga_total quando as peças pagas cobrem as
-      // peças ESPERADAS (total saída MENOS defeitos registrados no retorno).
-      // Antes: só comparava com total_saida — bug quando havia defeito.
-      let novoStatus = 'paga_parcial';
-      const pecasPagasTotal = novosPagamentos.reduce((a, p) => a + (p.pecas || 0), 0);
-      const defeitosNota = Number(nota.defeito_retorno_total) || 0;
-      const pecasEsperadas = Math.max(0, (nota.total_saida || 0) - defeitosNota);
-      if (pecasPagasTotal >= pecasEsperadas) novoStatus = 'paga_total';
-      await atualizarNota(np.nota_numero, {
-        pagamentos: novosPagamentos,
-        status: novoStatus,
-        // Se o preço mudou nesta nota, atualiza também (reajuste retroativo)
-        preco_peca: np.preco_peca,
-        valor_nota: (nota.total_saida || 0) * np.preco_peca
-      });
-    }
-
-    toast(`✓ Pagamento de ${formatBRL(valorLiquido)} registrado pra ${costureiraAtual}`, 'ok');
+    toast(`✓ Pagamento de ${formatBRL(pag.valor_liquido)} registrado pra ${costureiraAtual}`, 'ok');
     // Mostra o comprovante
     setTimeout(() => mostrarComprovante(pag, pagId), 800);
   } catch (e) {

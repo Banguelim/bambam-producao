@@ -236,6 +236,115 @@ async function salvarPagamento(pag) {
   return doc.id;
 }
 
+// Registra um pagamento (1+ notas juntas + adiantamento opcional) de forma
+// ATÔMICA numa única transação do Firestore.
+//
+// Por quê: o fluxo antigo salvava em 3 passos soltos (consumir adiantamento
+// → gravar recibo → dar baixa em cada nota), calculando o valor "restante"
+// de cada nota a partir do que já estava carregado na tela. Isso abria 2
+// brechas de pagamento em duplicidade:
+//   1) Tela desatualizada — se a nota tivesse sido paga em outra aba, ou a
+//      chegada de peças mudasse depois do carregamento, o valor sugerido
+//      não descontava o que já tinha sido pago (podia pagar a nota de novo,
+//      inteira, em vez de só a diferença).
+//   2) Falha no meio do caminho (rede cai depois de gravar o recibo mas
+//      antes de dar baixa em todas as notas) deixava tudo pela metade,
+//      abrindo margem pra alguém tentar pagar de novo achando que não deu certo.
+//
+// Agora: cada nota é RELIDA de dentro da transação (o dado mais fresco que
+// existe no servidor no exato momento de gravar) e a gravação é RECUSADA se
+// o valor pedido passar do saldo que realmente resta nela. Recibo + baixa
+// nas notas + consumo de adiantamento são gravados juntos — ou vai tudo, ou
+// não vai nada.
+async function registrarPagamentoTransacional({ costureira, data, forma, observacao, notasPagas, usoAdiantDesejado }) {
+  const pagRef = colPagamentos().doc();
+  const notaRefsInfo = notasPagas.map(np => ({ ref: colNotas().doc(np.nota_numero), np }));
+
+  // Descobre quais docs de adiantamento existem pra essa costureira (só os
+  // IDs). O saldo de cada um é relido de dentro da transação — então mesmo
+  // que esta lista fique um pouco desatualizada, o valor usado é sempre o real.
+  let adiantRefsInfo = [];
+  if (usoAdiantDesejado > 0) {
+    const snap = await colAdiants().where('costureira', '==', costureira).get();
+    adiantRefsInfo = snap.docs
+      .map(d => ({ ref: d.ref, dataOrdenacao: d.data().data || '' }))
+      .sort((a, b) => a.dataOrdenacao.localeCompare(b.dataOrdenacao)); // FIFO — mais antigos primeiro
+  }
+
+  return db.runTransaction(async (tx) => {
+    // ---- 1) LER tudo primeiro (regra do Firestore: toda leitura antes de qualquer escrita numa tx) ----
+    const notaSnaps = await Promise.all(notaRefsInfo.map(x => tx.get(x.ref)));
+    const adiantSnaps = await Promise.all(adiantRefsInfo.map(x => tx.get(x.ref)));
+
+    // ---- 2) VALIDAR contra o saldo real de cada nota (trava a duplicidade) ----
+    const atualizacoesNota = [];
+    notaSnaps.forEach((snap, i) => {
+      const { np } = notaRefsInfo[i];
+      if (!snap.exists) throw new Error(`Nota #${np.nota_numero} não foi encontrada — recarregue a tela.`);
+      const nota = snap.data();
+      const pagamentosAntes = nota.pagamentos || [];
+      const totalPagoAntes = pagamentosAntes.reduce((a, p) => a + (p.valor || 0), 0);
+      const defeitos = Number(nota.defeito_retorno_total) || 0;
+      const pecasEsperadas = Math.max(0, (nota.total_saida || 0) - defeitos);
+      const precoUsado = np.preco_peca != null ? np.preco_peca : (nota.preco_peca || 0);
+      const valorNota = (nota.total_saida || 0) * precoUsado;
+      const restante = valorNota - totalPagoAntes;
+
+      // Trava principal: não deixa gravar um pagamento que passe do saldo
+      // que realmente resta nesta nota (1 centavo de folga pra arredondamento).
+      if (np.valor > restante + 0.01) {
+        throw new Error(
+          `Nota #${np.nota_numero} (${nota.lote}/${nota.ref}): valor de ${formatBRL(np.valor)} passa do saldo ` +
+          `restante (${formatBRL(Math.max(restante, 0))}). Já foi pago ${formatBRL(totalPagoAntes)} desta nota — ` +
+          `isso parece pagamento em duplicidade. Recarregue a tela e confira antes de tentar de novo.`
+        );
+      }
+
+      const novosPagamentos = [...pagamentosAntes, { pag_id: pagRef.id, data, valor: np.valor, pecas: np.pecas_pagas }];
+      const pecasPagasTotal = novosPagamentos.reduce((a, p) => a + (p.pecas || 0), 0);
+      const novoStatus = (pecasEsperadas > 0 && pecasPagasTotal >= pecasEsperadas) ? 'paga_total' : 'paga_parcial';
+
+      atualizacoesNota.push({
+        ref: notaRefsInfo[i].ref,
+        campos: { pagamentos: novosPagamentos, status: novoStatus, preco_peca: precoUsado, valor_nota: valorNota }
+      });
+    });
+
+    // ---- 3) Consumir adiantamento (FIFO) até o valor desejado ----
+    const consumidos = [];
+    let restanteAdiant = usoAdiantDesejado;
+    adiantSnaps.forEach((snap, i) => {
+      if (restanteAdiant <= 0 || !snap.exists) return;
+      const saldo = snap.data().saldo || 0;
+      const usar = Math.min(saldo, restanteAdiant);
+      if (usar > 0) {
+        tx.update(adiantRefsInfo[i].ref, { saldo: saldo - usar });
+        consumidos.push({ id: snap.id, consumido: usar });
+        restanteAdiant -= usar;
+      }
+    });
+    const adiantEfetivo = usoAdiantDesejado - restanteAdiant;
+    const valorBruto = notasPagas.reduce((a, np) => a + np.valor, 0);
+    const valorLiquido = valorBruto - adiantEfetivo;
+
+    // ---- 4) ESCREVER tudo junto: recibo + baixa nas notas + saldo de adiantamento ----
+    const pag = {
+      data, costureira, forma, observacao,
+      notas_pagas: notasPagas,
+      valor_bruto: valorBruto,
+      adiantamento_usado: adiantEfetivo,
+      valor_liquido: valorLiquido,
+      adiantamentos_consumidos: consumidos,
+      criado_em: firebase.firestore.FieldValue.serverTimestamp(),
+      criado_por: auth.currentUser?.uid || 'anon'
+    };
+    tx.set(pagRef, pag);
+    atualizacoesNota.forEach(u => tx.update(u.ref, u.campos));
+
+    return { pagId: pagRef.id, pag };
+  });
+}
+
 // ============ ESTOQUE ============
 async function estoqueSKU(ref, cor, tam) {
   const id = `${ref}_${cor}_${tam}`;
