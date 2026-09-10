@@ -15,10 +15,35 @@
 // recarregar as notas da costureira disparando um 'change' no input.
 
 (function() {
-  let TODAS_NOTAS_HIST = [];
+  // NOVO 10/09/2026 — antes essa tela lia a coleção INTEIRA de notas
+  // (colNotas().get()) toda vez que a costureira mudava/perdia foco — e de
+  // novo, dobrado, dentro de recarregar(). Com a coleção de notas grande
+  // (mesma situação que já tinha estourado a cota grátis do Firestore em
+  // Contas a Receber, ver aviso em db-vendas.js), isso sozinho conseguia
+  // consumir a cota do dia só de alguém digitar/apagar um nome algumas vezes.
+  // Agora: NOTAS_CACHE só guarda as notas específicas que realmente precisam
+  // de lookup (recibos antigos, de antes de gravar lote/ref direto no
+  // pagamento — ver registrarPagamentoTransacional em db.js), buscadas uma
+  // por uma (doc.get(), não coleção inteira) e cacheadas pra não repetir.
+  const NOTAS_CACHE = new Map(); // numero (string) -> dados da nota, ou null se não achou
   let debounceTimer = null;
   let costureiraAnterior = '';
   let jaInicializou = false;
+
+  // Busca (e cacheia) só as notas que estão faltando — nunca lê a coleção inteira.
+  async function garantirNotasNoCache(numeros) {
+    const faltando = [...new Set(numeros)]
+      .filter(n => n != null && !NOTAS_CACHE.has(String(n)));
+    if (faltando.length === 0) return;
+    await Promise.all(faltando.map(async (numero) => {
+      try {
+        const doc = await colNotas().doc(String(numero)).get();
+        NOTAS_CACHE.set(String(numero), doc.exists ? { id: doc.id, ...doc.data() } : null);
+      } catch (e) {
+        console.warn(`[pag-hist] falha buscando nota #${numero}:`, e);
+      }
+    }));
+  }
 
   async function init() {
     if (jaInicializou) return;
@@ -30,13 +55,6 @@
 
     const inpCost = document.getElementById('costureira');
     if (!inpCost) { console.warn('[pag-hist] campo #costureira não encontrado'); return; }
-
-    try {
-      const snap = await colNotas().get();
-      TODAS_NOTAS_HIST = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    } catch (e) {
-      console.warn('[pag-hist] falha carregando notas pra lookup:', e);
-    }
 
     inpCost.addEventListener('input', agendarRecarga);
     inpCost.addEventListener('change', agendarRecarga);
@@ -92,11 +110,13 @@
       });
       linhas.sort((a, b) => (toDateH(b.pag.data) || 0) - (toDateH(a.pag.data) || 0));
 
-      // Atualizar cache local de notas (pra lookup lote/ref ficar fresco)
-      try {
-        const snapN = await colNotas().get();
-        TODAS_NOTAS_HIST = snapN.docs.map(d => ({ id: d.id, ...d.data() }));
-      } catch (_) {}
+      // Só busca notas específicas quando o próprio recibo não trouxer
+      // lote/ref (recibos antigos) — nunca a coleção inteira.
+      const numerosFaltando = linhas
+        .filter(l => !(l.np && l.np.lote && l.np.ref))
+        .map(l => l.np?.nota_numero ?? l.np?.numero ?? l.np?.num ?? l.np?.id ?? l.np)
+        .filter(n => n != null);
+      try { await garantirNotasNoCache(numerosFaltando); } catch (_) {}
 
       if (linhas.length === 0) {
         bloco.classList.remove('visivel', 'aberto');
@@ -122,7 +142,7 @@
       valor  = np.valor ?? np.valor_nota;
       pecas  = np.pecas_pagas ?? np.pecas;
     }
-    const nota = TODAS_NOTAS_HIST.find(n => Number(n.numero) === Number(numero));
+    const nota = NOTAS_CACHE.get(String(numero));
     const lote = (np && np.lote) || (nota && nota.lote) || '?';
     const ref  = (np && np.ref)  || (nota && nota.ref)  || '?';
 
@@ -158,10 +178,18 @@
       const num = np.nota_numero ?? np.numero ?? np.num ?? '?';
       msg += `A nota #${num} vai voltar pra lista de "em aberto".`;
     } else {
+      // Só busca no banco as notas cujo lote/ref não veio salvo no recibo
+      // (recibos antigos) — nunca a coleção inteira.
+      try {
+        await garantirNotasNoCache(outrasNotas
+          .filter(np => !(np && np.lote && np.ref))
+          .map(np => np.nota_numero ?? np.numero ?? np.num));
+      } catch (_) {}
+
       msg += `⚠ Este pagamento tem ${qtd} notas juntas:\n`;
       outrasNotas.forEach(np => {
         const num = np.nota_numero ?? np.numero ?? np.num ?? '?';
-        const nota = TODAS_NOTAS_HIST.find(n => Number(n.numero) === Number(num));
+        const nota = NOTAS_CACHE.get(String(num));
         const lote = (np && np.lote) || (nota && nota.lote) || '?';
         const ref  = (np && np.ref)  || (nota && nota.ref)  || '?';
         msg += `  · #${num} — ${lote}/${ref} (${np.valor != null ? fmtBRLh(np.valor) : '?'})\n`;
@@ -193,7 +221,7 @@
         if (numero == null) continue;
 
         // Busca a nota atual (pega o estado mais fresco)
-        let notaAtual = TODAS_NOTAS_HIST.find(n => Number(n.numero) === Number(numero));
+        let notaAtual = NOTAS_CACHE.get(String(numero));
         try {
           const snap = await colNotas().where('numero', '==', numero).get();
           if (!snap.empty) notaAtual = { id: snap.docs[0].id, ...snap.docs[0].data() };

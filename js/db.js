@@ -278,6 +278,12 @@ async function registrarPagamentoTransacional({ costureira, data, forma, observa
 
     // ---- 2) VALIDAR contra o saldo real de cada nota (trava a duplicidade) ----
     const atualizacoesNota = [];
+    // NOVO 10/09/2026 — grava lote/ref junto de cada nota paga no recibo.
+    // Motivo: o histórico de pagamentos (pagamento-historico.js) precisava
+    // ler a coleção INTEIRA de notas toda vez só pra mostrar lote/ref na
+    // tela — com o lote/ref já vindo salvo aqui, não precisa mais disso pra
+    // pagamentos novos (some com uma fonte grande de leituras desperdiçadas).
+    const notasPagasComLoteRef = [];
     notaSnaps.forEach((snap, i) => {
       const { np } = notaRefsInfo[i];
       if (!snap.exists) throw new Error(`Nota #${np.nota_numero} não foi encontrada — recarregue a tela.`);
@@ -308,6 +314,7 @@ async function registrarPagamentoTransacional({ costureira, data, forma, observa
         ref: notaRefsInfo[i].ref,
         campos: { pagamentos: novosPagamentos, status: novoStatus, preco_peca: precoUsado, valor_nota: valorNota }
       });
+      notasPagasComLoteRef.push({ ...np, lote: nota.lote, ref: nota.ref });
     });
 
     // ---- 3) Consumir adiantamento (FIFO) até o valor desejado ----
@@ -330,7 +337,7 @@ async function registrarPagamentoTransacional({ costureira, data, forma, observa
     // ---- 4) ESCREVER tudo junto: recibo + baixa nas notas + saldo de adiantamento ----
     const pag = {
       data, costureira, forma, observacao,
-      notas_pagas: notasPagas,
+      notas_pagas: notasPagasComLoteRef,
       valor_bruto: valorBruto,
       adiantamento_usado: adiantEfetivo,
       valor_liquido: valorLiquido,
