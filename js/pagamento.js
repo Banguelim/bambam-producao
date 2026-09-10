@@ -22,6 +22,10 @@ async function init() {
   // Handlers
   document.getElementById('costureira').addEventListener('change', onCostureiraChange);
   document.getElementById('costureira').addEventListener('blur', onCostureiraChange);
+  // NOVO 10/09/2026 — lembra a última costureira selecionada nessa tela.
+  // Assim, se a pessoa sair pra outra tela (ex: Designação) e voltar pra
+  // Pagamento, continua na mesma costureira em vez de ter que digitar de novo.
+  lembrarCampo(document.getElementById('costureira'), 'pagamento_costureira', onCostureiraChange);
   document.getElementById('btn-marcar-todas').addEventListener('click', marcarTodas);
   document.getElementById('btn-desmarcar').addEventListener('click', desmarcarTodas);
   document.getElementById('btn-cancelar').addEventListener('click', () => window.location.href = 'index.html');
