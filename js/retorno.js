@@ -31,6 +31,10 @@ async function init() {
 
   document.getElementById('filtro-cost').addEventListener('input', onFiltroChange);
   document.getElementById('filtro-lote').addEventListener('input', onFiltroChange);
+  // NOVO 10/09/2026 — lembra o último filtro de costureira/lote nessa tela
+  // (só filtra o que já foi carregado, não busca nada novo — seguro reaplicar sozinho).
+  lembrarCampo(document.getElementById('filtro-cost'), 'retorno_filtro_cost', onFiltroChange);
+  lembrarCampo(document.getElementById('filtro-lote'), 'retorno_filtro_lote', onFiltroChange);
   document.getElementById('x-cost').addEventListener('click', () => limparCampo('filtro-cost'));
   document.getElementById('x-lote').addEventListener('click', () => limparCampo('filtro-lote'));
 

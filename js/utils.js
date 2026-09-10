@@ -55,6 +55,36 @@ function sanitizarQtd(el, max) {
   return v;
 }
 
+// Lembra o último valor digitado num campo (por tela), usando localStorage
+// do navegador — assim, ao sair da tela e voltar depois (ex: foi em
+// Designação e voltou pra Pagamento), o campo já reaparece preenchido com o
+// que tinha antes, sem precisar digitar de novo.
+// `chave` identifica o campo — use um nome único por tela+campo (ex:
+// 'pagamento_costureira'), senão uma tela sobrescreve o valor lembrado de outra.
+// Ao restaurar, dispara um 'change' de verdade no campo — assim QUALQUER
+// script que esteja escutando esse campo (ex: pagamento-historico.js, que
+// roda separado da tela principal) reage igual reagiria se a pessoa tivesse
+// digitado/selecionado na mão. `aoRestaurar` (opcional) é extra, só se
+// precisar de algo além do que os listeners de change/input já cobrem.
+function lembrarCampo(inputEl, chave, aoRestaurar) {
+  if (!inputEl) return;
+  const chaveCompleta = 'bambam_lembrar_' + chave;
+  try {
+    const salvo = localStorage.getItem(chaveCompleta);
+    if (salvo && !inputEl.value) {
+      inputEl.value = salvo;
+      inputEl.dispatchEvent(new Event('change', { bubbles: true }));
+      if (typeof aoRestaurar === 'function') aoRestaurar();
+    }
+  } catch (e) { /* localStorage pode falhar (aba anônima etc.) — não é crítico */ }
+
+  const salvar = () => {
+    try { localStorage.setItem(chaveCompleta, inputEl.value || ''); } catch (e) {}
+  };
+  inputEl.addEventListener('change', salvar);
+  inputEl.addEventListener('blur', salvar);
+}
+
 // Toast (mensagem na tela)
 // tipo: '' (info), 'ok', 'err', 'ok grande', 'err grande'
 function toast(msg, tipo = '') {

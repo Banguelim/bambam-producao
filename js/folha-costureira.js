@@ -37,6 +37,10 @@ async function carregarNotas() {
       `${nomes.length} costureira${nomes.length!==1?'s':''} com notas em aberto`;
     document.getElementById('vazio').style.display = 'block';
     console.log(`[folha] ${TODAS_NOTAS_FC.length} notas total, ${abertas.length} em aberto, ${nomes.length} costureiras`);
+
+    // NOVO 10/09/2026 — lembra a última costureira selecionada nessa tela.
+    // Precisa ser depois de montar as <option>, senão o valor não "gruda".
+    lembrarCampo(sel, 'folha_costureira', onCostureiraChange);
   } catch (e) {
     console.error('Erro:', e);
     sel.innerHTML = '<option value="">— erro ao carregar —</option>';
