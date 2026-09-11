@@ -186,11 +186,12 @@ async function listarPedidosConcluidos() {
   pedidos.sort((a, b) => (b.data_pedido || '').localeCompare(a.data_pedido || ''));
   return pedidos;
 }
+// CORREÇÃO 11/09/2026 — lia a coleção INTEIRA de pedidos só pra pegar os
+// N mais recentes. Agora pede só o necessário direto no Firestore
+// (orderBy + limit), sem trazer o histórico todo pra ordenar no cliente.
 async function listarPedidosRecentes(limite = 50) {
-  const snap = await colPedidos().get();
-  const pedidos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  pedidos.sort((a, b) => (b.data_pedido || '').localeCompare(a.data_pedido || ''));
-  return pedidos.slice(0, limite);
+  const snap = await colPedidos().orderBy('data_pedido', 'desc').limit(limite).get();
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 async function deletarPedido(numero) {
   await colPedidos().doc(numero).delete();

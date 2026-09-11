@@ -101,18 +101,6 @@ async function buscarCorte(id) {
   const doc = await colCortes().doc(id).get();
   return doc.exists ? { id: doc.id, ...doc.data() } : null;
 }
-async function listarCortesRecentes(limite = 100) {
-  // Busca todos e ordena no cliente (evita problema com cortes migrados sem criado_em)
-  const snap = await colCortes().get();
-  const cortes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  // Ordena por data_corte desc, depois por criado_em se tiver
-  cortes.sort((a, b) => {
-    const da = a.data_corte || a.criado_em || '';
-    const db2 = b.data_corte || b.criado_em || '';
-    return db2.localeCompare(da);
-  });
-  return cortes.slice(0, limite);
-}
 
 // Lista TODOS os cortes ainda não 100% designados (sem limite de quantidade) —
 // usado na tela de Designação. CORREÇÃO 31/08/2026: antes usava
@@ -152,18 +140,6 @@ async function notasEmAbertoDaCostureira(costureira) {
   return snap.docs
     .map(d => ({ id: d.id, ...d.data() }))
     .filter(n => !n.status || n.status === 'aberta' || n.status === 'paga_parcial');
-}
-
-// Lista TODAS as notas em aberto/paga_parcial (pra tela de retorno)
-// Busca tudo e filtra no cliente (evita problema de índice composto no Firestore)
-async function listarTodasNotasEmAberto() {
-  const snap = await colNotas().get();
-  const notas = snap.docs
-    .map(d => ({ id: d.id, ...d.data() }))
-    .filter(n => !n.status || n.status === 'aberta' || n.status === 'paga_parcial');
-  // Ordena por data_saida desc
-  notas.sort((a, b) => (b.data_saida || '').localeCompare(a.data_saida || ''));
-  return notas;
 }
 
 // Atualiza campos específicos de uma nota (ex: chegada_1, chegada_2, costureira)

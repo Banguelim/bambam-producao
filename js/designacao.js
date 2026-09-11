@@ -70,26 +70,42 @@ async function mostrarSelecao() {
       return;
     }
 
-    // Buscar infos de designação de cada corte
-    const infos = await Promise.all(pendentes.map(async c => {
-      try {
-        const snap = await colNotas().where('corte_id', '==', c.id).get();
-        let designado = 0, numNotas = 0;
-        const porCostureira = {};
-        snap.forEach(d => {
-          const n = d.data();
-          designado += n.total_saida || 0;
-          numNotas++;
-          const nome = n.costureira || '?';
-          if (!porCostureira[nome]) porCostureira[nome] = { total: 0, tams: {} };
-          porCostureira[nome].total += n.total_saida || 0;
-          (n.itens || []).forEach(i => {
-            porCostureira[nome].tams[i.tam] = (porCostureira[nome].tams[i.tam] || 0) + i.qtd;
-          });
+    // CORREÇÃO 11/09/2026 — antes buscava as notas de CADA corte pendente
+    // numa consulta separada (N consultas, 1 por corte — e no Firestore
+    // toda consulta cobra no mínimo 1 leitura, MESMO VAZIA). Essa tela é
+    // aberta toda hora, então isso sozinho já consumia bastante da cota.
+    // Agora: (1) corte com status "cortado" nunca teve nota ainda — só vira
+    // "designado_parcial"/"designado_total" depois da 1ª nota (ver
+    // gerarNota()) — então nem precisa consultar; (2) os demais (podem ter
+    // nota) são buscados juntos, em lotes de até 30 ids (limite do operador
+    // "in" do Firestore), em vez de 1 consulta por corte.
+    const comPossiveisNotas = pendentes.filter(c => c.status !== 'cortado');
+    const notasPorCorte = {};  // corte_id -> [notas]
+    for (let i = 0; i < comPossiveisNotas.length; i += 30) {
+      const grupo = comPossiveisNotas.slice(i, i + 30);
+      const snap = await colNotas().where('corte_id', 'in', grupo.map(c => c.id)).get();
+      snap.forEach(d => {
+        const n = d.data();
+        if (!notasPorCorte[n.corte_id]) notasPorCorte[n.corte_id] = [];
+        notasPorCorte[n.corte_id].push(n);
+      });
+    }
+
+    const infos = pendentes.map(c => {
+      const notasDoCorte = notasPorCorte[c.id] || [];
+      let designado = 0;
+      const porCostureira = {};
+      notasDoCorte.forEach(n => {
+        designado += n.total_saida || 0;
+        const nome = n.costureira || '?';
+        if (!porCostureira[nome]) porCostureira[nome] = { total: 0, tams: {} };
+        porCostureira[nome].total += n.total_saida || 0;
+        (n.itens || []).forEach(i => {
+          porCostureira[nome].tams[i.tam] = (porCostureira[nome].tams[i.tam] || 0) + i.qtd;
         });
-        return { designado, numNotas, porCostureira };
-      } catch (e) { return { designado: 0, numNotas: 0, porCostureira: {} }; }
-    }));
+      });
+      return { designado, numNotas: notasDoCorte.length, porCostureira };
+    });
 
     // Armazena pra busca filtrar sem rebuscar
     window._cortesCache = pendentes;
@@ -349,12 +365,18 @@ async function abrirCorte(id) {
     document.getElementById('info-txt').innerHTML =
       `Corte <b>${corteAtual.lote}</b> · Ref <b>${refsTxt}</b> · <b>${corteAtual.total_pecas}</b> peças · ${formatDataBR(corteAtual.data_corte)}`;
 
+    // CORREÇÃO 11/09/2026 — antes buscava as notas do corte em 2 consultas
+    // separadas (uma dentro de calcularRestante, outra dentro de
+    // mostrarNotasExistentes/listarNotasDoCorte) — mesma coleção, mesmo
+    // filtro (corte_id). Agora busca uma vez só e reaproveita nas duas.
+    const notasDoCorte = await listarNotasDoCorte(id);
+
     // Descobre o que ainda pode ser designado (subtrai o que já foi)
-    const restante = await calcularRestante(corteAtual);
+    const restante = await calcularRestante(corteAtual, notasDoCorte);
     renderizarGrade(restante);
 
-    // Carrega e mostra as notas já geradas desse corte
-    await mostrarNotasExistentes(id);
+    // Mostra as notas já geradas desse corte
+    mostrarNotasExistentes(notasDoCorte);
 
     recalc();
   } catch (e) {
@@ -363,12 +385,11 @@ async function abrirCorte(id) {
   }
 }
 
-async function mostrarNotasExistentes(corteId) {
+function mostrarNotasExistentes(notas) {
   const painel = document.getElementById('notas-existentes');
   const lista = document.getElementById('notas-lista');
   const contador = document.getElementById('notas-contador');
   try {
-    const notas = await listarNotasDoCorte(corteId);
     if (notas.length === 0) {
       painel.style.display = 'none';
       return;
@@ -509,7 +530,13 @@ async function cancelarNota(n) {
 
 // Calcula o que ainda pode ser designado desse corte
 // = itens do corte - itens já designados nas notas anteriores
-async function calcularRestante(corte) {
+//
+// CORREÇÃO 11/09/2026 — aceita `notasDoCorte` já buscado (abrirCorte já leu
+// as notas do corte 1x pra mostrar a lista de notas existentes; reaproveita
+// aqui em vez de consultar o Firestore de novo com o mesmo filtro). Se não
+// vier nada, busca sozinho — usado em gerarNota(), que precisa do dado mais
+// fresco (a nota que acabou de gerar) pra saber se o corte ficou completo.
+async function calcularRestante(corte, notasDoCorte = null) {
   const restante = {};  // {ref_cor_tam: qtd}
   // Começa com o total do corte
   corte.itens.forEach(i => {
@@ -518,9 +545,8 @@ async function calcularRestante(corte) {
   });
   // Subtrai o que já foi designado
   try {
-    const snap = await colNotas().where('corte_id', '==', corte.id).get();
-    snap.forEach(doc => {
-      const n = doc.data();
+    const notas = notasDoCorte || (await colNotas().where('corte_id', '==', corte.id).get()).docs.map(d => d.data());
+    notas.forEach(n => {
       (n.itens || []).forEach(i => {
         const chave = `${n.ref}_${i.cor}_${i.tam}`;
         if (restante[chave]) restante[chave] -= i.qtd;

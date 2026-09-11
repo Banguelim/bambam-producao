@@ -357,6 +357,12 @@ async function confirmarArremate() {
     }
 
     // Salvar cada nota que teve o arremate alterado
+    // CORREÇÃO 11/09/2026 — antes recarregava a coleção INTEIRA de notas
+    // (colNotas().get()) depois de cada arremate confirmado só pra
+    // atualizar a tela. `upd.nota` é a mesma referência de objeto que está
+    // em notasComRetorno (agruparPorRef não clona), então dá pra aplicar
+    // localmente o mesmo `arremate`/`data_arremate` que acabou de gravar e
+    // só re-renderizar — sem leitura de rede extra.
     for (const upd of updates) {
       const original = JSON.stringify(upd.nota.arremate || {});
       const novo = JSON.stringify(upd.novoArremate);
@@ -365,6 +371,8 @@ async function confirmarArremate() {
           arremate: upd.novoArremate,
           data_arremate: data
         });
+        upd.nota.arremate = upd.novoArremate;
+        upd.nota.data_arremate = data;
       }
     }
 
@@ -396,8 +404,8 @@ async function confirmarArremate() {
     if (totDef > 0)  msg += ` · ${totDef} defeito`;
     toast(msg, 'ok');
 
-    setTimeout(async () => {
-      await carregarDados();
+    setTimeout(() => {
+      renderChips();
       fecharPainel();
       btn.disabled = false;
       btn.textContent = '✓ Confirmar arremate';
