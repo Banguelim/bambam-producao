@@ -1,9 +1,16 @@
 // Tela de Retorno — costureira volta com peças
 //
 // CORREÇÃO 19/08/2026: defeito registrado NO RETORNO desconta do valor a pagar.
-// Regra: se a nota ainda está aberta, valor_nota = (total_saida − defeitos) × preço.
-// Se já foi paga (parcial ou total), grava o defeito mas NÃO mexe no valor —
-// a costureira já recebeu, o defeito posterior fica pra estatística.
+// Regra: valor_nota = (total_saida − defeitos) × preço, nunca abaixo do que
+// já foi pago (não tira de volta dinheiro que já foi dado à costureira).
+// CORREÇÃO 11/09/2026: se a nota está "paga_total", o defeito só entra pra
+// estatística (já foi paga por tudo, sem volta). Mas se está só
+// "paga_parcial" o valor AGORA é recalculado — antes ficava travado e a
+// nota ficava presa pra sempre em "notas em aberto" com um saldo fantasma
+// (ex: sobravam peças que chegaram defeituosas e nunca tinham sido pagas,
+// mas o valor da nota continuava contando elas como "a pagar"). Se o que
+// já foi pago cobre tudo que ainda é válido, a nota passa a "paga_total" e
+// some da aba Pagamento.
 
 let todasNotasAbertas = [];  // cache das notas em aberto
 let notasFinalizadas = [];    // notas com retorno 100% completo
@@ -612,11 +619,17 @@ async function confirmarDefeito() {
     const novasQtds = { ...(chegadaExistente.qtds || {}) };
     novasQtds[tam] = (novasQtds[tam] || 0) + qtd;
 
-    // 4) CORREÇÃO 19/08/2026 — recalcula valor_nota se a nota ainda não foi paga
+    // 4) CORREÇÃO 19/08/2026 — recalcula valor_nota se a nota ainda não foi
+    //    paga totalmente. CORREÇÃO 11/09/2026 — inclui o caso "paga_parcial":
+    //    o piso do recálculo é o que já foi pago, então nunca tira dinheiro
+    //    já dado, mas também não deixa saldo fantasma parado pra sempre.
     const status = notaAtual.status || 'aberta';
-    const jaFoiPaga = status === 'paga_total' || status === 'paga_parcial';
+    const jaPagaTotal = status === 'paga_total';
     const totalSaida = Number(notaAtual.total_saida) || 0;
     const precoPeca = Number(notaAtual.preco_peca) || 0;
+    const pagamentosExistentes = notaAtual.pagamentos || [];
+    const totalPagoAntes = pagamentosExistentes.reduce((a, p) => a + (p.valor || 0), 0);
+    const pecasPagasAntes = pagamentosExistentes.reduce((a, p) => a + (p.pecas || 0), 0);
 
     const updates = {
       defeitos: defeitosExistentes,
@@ -625,14 +638,21 @@ async function confirmarDefeito() {
     };
 
     let msgExtra = '';
-    if (!jaFoiPaga && precoPeca > 0) {
-      // Peças a pagar = tudo que saiu MENOS os defeitos registrados no retorno
-      const novoValor = Math.max(0, (totalSaida - totalDefeitos) * precoPeca);
+    if (!jaPagaTotal && precoPeca > 0) {
+      // Peças a pagar = tudo que saiu MENOS os defeitos registrados no
+      // retorno, nunca menos do que já foi pago (não retroage sobre
+      // pagamento já feito).
+      const pecasEsperadas = Math.max(0, totalSaida - totalDefeitos);
+      const novoValor = Math.max(totalPagoAntes, pecasEsperadas * precoPeca);
       updates.valor_nota = novoValor;
-      const desconto = qtd * precoPeca;
-      msgExtra = ` · desconto ${formatBRL(desconto)} no pagamento (novo total: ${formatBRL(novoValor)})`;
-    } else if (jaFoiPaga) {
-      msgExtra = ` · ⚠ nota já paga, valor NÃO atualizado`;
+      // Se o que já foi pago já cobre tudo que ainda é válido, fecha a nota
+      // (some da aba Pagamento em vez de ficar presa com saldo fantasma).
+      if (pecasEsperadas > 0 && pecasPagasAntes >= pecasEsperadas) {
+        updates.status = 'paga_total';
+      }
+      msgExtra = ` · novo total a pagar: ${formatBRL(novoValor)}`;
+    } else if (jaPagaTotal) {
+      msgExtra = ` · ⚠ nota já paga totalmente, valor NÃO atualizado`;
     }
 
     await atualizarNota(notaAtual.numero, updates);

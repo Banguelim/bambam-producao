@@ -29,9 +29,17 @@ function formatDataBR(iso) {
 }
 
 // Data de hoje em ISO (YYYY-MM-DD)
+// CORREÇÃO 11/09/2026 — toISOString() converte pra UTC. Como o Brasil é
+// UTC-3, depois das 21h no horário local o UTC já virou o dia seguinte, e
+// "hoje" aparecia com a data de amanhã em toda tela que usa essa função.
+// Agora monta a data a partir dos componentes locais (ano/mês/dia do
+// próprio fuso do navegador), sem passar por UTC.
 function hojeISO() {
   const d = new Date();
-  return d.toISOString().slice(0, 10);
+  const ano = d.getFullYear();
+  const mes = String(d.getMonth() + 1).padStart(2, '0');
+  const dia = String(d.getDate()).padStart(2, '0');
+  return `${ano}-${mes}-${dia}`;
 }
 
 // Selecionar tudo dentro de um contenteditable — pra que ao focar, já pode digitar substituindo
