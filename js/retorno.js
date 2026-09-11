@@ -69,17 +69,8 @@ async function carregarNotasAbertas() {
     const todas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     todas.sort((a, b) => (b.data_saida || '').localeCompare(a.data_saida || ''));
 
-    todasNotasAbertas = todas.filter(n => {
-      if (n.retorno_finalizado) return false;
-      const chegou = calcularTotalChegou(n);
-      return chegou < (n.total_saida || 0);
-    });
-
-    notasFinalizadas = todas.filter(n => {
-      if (n.retorno_finalizado) return true;
-      const chegou = calcularTotalChegou(n);
-      return chegou >= (n.total_saida || 0) && chegou > 0;
-    });
+    todasNotasAbertas = todas.filter(ehNotaAberta);
+    notasFinalizadas = todas.filter(ehNotaFinalizada);
 
     const dlLotes = document.getElementById('lotes-list');
     dlLotes.innerHTML = '';
@@ -191,8 +182,11 @@ function renderFinalizadas() {
       if (!confirm(`Reabilitar a nota #${n.numero}? Ela vai voltar pra lista de ativas.`)) return;
       try {
         await atualizarNota(n.numero, { retorno_finalizado: false });
+        n.retorno_finalizado = false;
+        reclassificarNota(n);
         toast(`Nota #${n.numero} reabilitada`, 'ok');
-        await carregarNotasAbertas();
+        renderChips();
+        renderFinalizadas();
       } catch (err) {
         toast('Erro: ' + err.message, 'err');
       }
@@ -213,6 +207,34 @@ function calcularTotalChegou(n) {
     t += (c1[tam] || 0) + (c2[tam] || 0);
   });
   return t;
+}
+
+function ehNotaAberta(n) {
+  if (n.retorno_finalizado) return false;
+  return calcularTotalChegou(n) < (n.total_saida || 0);
+}
+function ehNotaFinalizada(n) {
+  if (n.retorno_finalizado) return true;
+  const chegou = calcularTotalChegou(n);
+  return chegou >= (n.total_saida || 0) && chegou > 0;
+}
+
+// CORREÇÃO 11/09/2026 — reclassifica 1 nota já em memória (entre
+// todasNotasAbertas/notasFinalizadas) sem reler a coleção inteira do
+// Firestore. Motivo: carregarNotasAbertas() faz colNotas().get() (lê a
+// coleção INTEIRA) e era chamada de novo depois de CADA ação na tela
+// (registrar chegada, defeito, trocar costureira, finalizar, devolver,
+// reabilitar — 7 pontos!). Numa coleção grande, isso sozinho estourava a
+// cota grátis do Firestore rapidinho (mesma causa raiz já corrigida antes
+// em Contas a Receber e no histórico de Pagamento). Como cada ação já sabe
+// exatamente o que mudou na nota, dá pra atualizar o objeto em memória
+// (mesmos campos gravados no Firestore) e só reclassificar/re-renderizar —
+// sem nenhuma leitura de rede extra.
+function reclassificarNota(n) {
+  todasNotasAbertas = todasNotasAbertas.filter(x => x !== n);
+  notasFinalizadas = notasFinalizadas.filter(x => x !== n);
+  if (ehNotaAberta(n)) todasNotasAbertas.push(n);
+  else if (ehNotaFinalizada(n)) notasFinalizadas.push(n);
 }
 
 function calcularSaidasPorTam(n) {
@@ -379,14 +401,6 @@ function fecharPainel() {
   notaAtual = null;
 }
 
-function calcularTotalCheguoComQtds(nota, novaChegada, campoCampo) {
-  const c1 = campoCampo === 'chegada_1' ? novaChegada.qtds : (nota.chegada_1?.qtds || {});
-  const c2 = campoCampo === 'chegada_2' ? novaChegada.qtds : (nota.chegada_2?.qtds || {});
-  const por = {};
-  TAMS.forEach(t => por[t] = (c1[t] || 0) + (c2[t] || 0));
-  return por;
-}
-
 async function registrarChegada() {
   if (!notaAtual) return;
   const btn = document.getElementById('btn-registrar');
@@ -433,19 +447,22 @@ async function registrarChegada() {
     };
 
     await atualizarNota(notaAtual.numero, { [chegadaCampo]: novaChegada });
-    const chegouAtual = calcularTotalCheguoComQtds(notaAtual, novaChegada, chegadaCampo);
-    const totalChegouAgora = Object.values(chegouAtual).reduce((a, v) => a + v, 0);
+    notaAtual[chegadaCampo] = novaChegada;
+    const totalChegouAgora = calcularTotalChegou(notaAtual);
     const ficouCompleto = totalChegouAgora >= (notaAtual.total_saida || 0);
 
     if (ficouCompleto) {
       await atualizarNota(notaAtual.numero, { retorno_finalizado: true });
+      notaAtual.retorno_finalizado = true;
       toast(`✓ ${total} peças registradas — retorno completo! Nota #${notaAtual.numero} finalizada.`, 'ok');
     } else {
       toast(`✓ ${total} peças registradas na ${qualChegada}ª chegada da nota #${notaAtual.numero}`, 'ok');
     }
+    reclassificarNota(notaAtual);
 
-    setTimeout(async () => {
-      await carregarNotasAbertas();
+    setTimeout(() => {
+      renderChips();
+      renderFinalizadas();
       fecharPainel();
       btn.disabled = false;
     }, 1200);
@@ -514,12 +531,16 @@ async function confirmarTroca() {
       preco_peca: novoPreco,
       valor_nota: novoValor
     });
+    notaAtual.costureira = novaCost;
+    notaAtual.preco_peca = novoPreco;
+    notaAtual.valor_nota = novoValor;
 
     toast(`✓ Nota #${notaAtual.numero} transferida pra ${novaCost}`, 'ok');
     document.getElementById('modal-trocar').classList.remove('visivel');
 
-    setTimeout(async () => {
-      await carregarNotasAbertas();
+    setTimeout(() => {
+      renderChips();
+      renderFinalizadas();
       fecharPainel();
     }, 1200);
   } catch (e) {
@@ -656,12 +677,15 @@ async function confirmarDefeito() {
     }
 
     await atualizarNota(notaAtual.numero, updates);
+    Object.assign(notaAtual, updates);
+    reclassificarNota(notaAtual);
 
     toast(`✓ ${qtd} peça${qtd>1?'s':''} com defeito no ${tam}${msgExtra}`, 'ok');
     document.getElementById('modal-defeito').classList.remove('visivel');
 
-    setTimeout(async () => {
-      await carregarNotasAbertas();
+    setTimeout(() => {
+      renderChips();
+      renderFinalizadas();
       fecharPainel();
       btn.disabled = false;
     }, 1500);
@@ -691,9 +715,12 @@ Ela vai sair da lista de ativas e ficar disponível só pra consulta.`;
 
   try {
     await atualizarNota(notaAtual.numero, { retorno_finalizado: true });
+    notaAtual.retorno_finalizado = true;
+    reclassificarNota(notaAtual);
     toast(`✓ Retorno da nota #${notaAtual.numero} finalizado`, 'ok');
-    setTimeout(async () => {
-      await carregarNotasAbertas();
+    setTimeout(() => {
+      renderChips();
+      renderFinalizadas();
       fecharPainel();
     }, 1000);
   } catch (e) {
@@ -717,9 +744,12 @@ async function devolverParaDesignacao() {
     if (notaAtual.corte_id) {
       await colCortes().doc(notaAtual.corte_id).update({ status: 'designado_parcial' });
     }
+    todasNotasAbertas = todasNotasAbertas.filter(x => x !== notaAtual);
+    notasFinalizadas = notasFinalizadas.filter(x => x !== notaAtual);
     toast(`Nota #${notaAtual.numero} cancelada — peças liberadas pra redesignar`, 'ok');
-    setTimeout(async () => {
-      await carregarNotasAbertas();
+    setTimeout(() => {
+      renderChips();
+      renderFinalizadas();
       fecharPainel();
     }, 1200);
   } catch (e) {
