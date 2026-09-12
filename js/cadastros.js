@@ -39,6 +39,10 @@ async function init() {
   // Backup
   document.getElementById('btn-backup').addEventListener('click', fazerBackup);
 
+  // Manutenção — migração retorno_completo
+  document.getElementById('btn-migrar-retorno').addEventListener('click', migrarRetornoCompleto);
+  mostrarStatusMigracaoRetorno();
+
   // Modal duplicidade
   document.getElementById('dup-usar-existente').addEventListener('click', () => {
     document.getElementById('modal-duplicidade').classList.remove('visivel');
@@ -588,6 +592,91 @@ async function fazerBackup() {
     } catch (e) { console.warn('Não deu pra registrar data do backup:', e); }
   } catch (e) {
     console.error('Backup erro:', e);
+    status.style.color = 'var(--text-danger)';
+    status.textContent = '✗ Erro: ' + e.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ==== MANUTENÇÃO: migração retorno_completo ====
+// NOVO 12/09/2026 — a tela de Retorno lia a coleção INTEIRA de notas toda
+// vez que abria, porque "nota ainda aberta" (retorno_finalizado + peças
+// chegadas vs total) é uma regra que não dava pra escrever direto numa
+// consulta do Firestore. A partir de agora toda nota NOVA já nasce com o
+// campo `retorno_completo` certinho (ver designacao.js), mas as notas
+// ANTIGAS não têm esse campo — esse botão preenche ele em todas de uma vez,
+// só 1 vez. Depois disso o Retorno passa a consultar só "== false" em vez
+// de ler tudo (ver retorno.js).
+//
+// Mesma lógica de "nota aberta" usada em retorno.js — duplicada aqui de
+// propósito (retorno.js não é carregado nessa tela) em vez de forçar
+// dependência entre as duas telas por uma função pequena.
+function calcularTotalChegouMig(n) {
+  const c1 = n.chegada_1?.qtds || {};
+  const c2 = n.chegada_2?.qtds || {};
+  let t = 0;
+  TAMS.forEach(tam => t += (c1[tam] || 0) + (c2[tam] || 0));
+  return t;
+}
+function ehNotaAbertaMig(n) {
+  if (n.retorno_finalizado) return false;
+  return calcularTotalChegouMig(n) < (n.total_saida || 0);
+}
+
+async function mostrarStatusMigracaoRetorno() {
+  const info = document.getElementById('migrar-retorno-info');
+  if (!info) return;
+  try {
+    const migrado = await retornoCompletoMigrado();
+    if (migrado) {
+      info.style.color = 'var(--success)';
+      info.textContent = '✓ Já rodou — o Retorno já está usando a consulta rápida.';
+    } else {
+      info.style.color = 'var(--warning)';
+      info.textContent = '○ Ainda não rodou — o Retorno continua lendo a coleção inteira por enquanto.';
+    }
+  } catch (e) { console.warn('Erro checando status da migração:', e); }
+}
+
+async function migrarRetornoCompleto() {
+  const btn = document.getElementById('btn-migrar-retorno');
+  const status = document.getElementById('migrar-retorno-status');
+  btn.disabled = true;
+  status.style.color = 'var(--text-muted)';
+  status.textContent = '⏳ Lendo notas...';
+
+  try {
+    const snap = await colNotas().get();
+    status.textContent = `⏳ Conferindo ${snap.size} notas...`;
+
+    const paraAtualizar = [];
+    snap.forEach(doc => {
+      const n = doc.data();
+      const certo = !ehNotaAbertaMig(n);
+      if (n.retorno_completo !== certo) {
+        paraAtualizar.push({ id: doc.id, valor: certo });
+      }
+    });
+
+    // Grava em lotes (limite do Firestore é 500 operações por batch)
+    for (let i = 0; i < paraAtualizar.length; i += 450) {
+      const grupo = paraAtualizar.slice(i, i + 450);
+      status.textContent = `⏳ Gravando... ${i}/${paraAtualizar.length}`;
+      const batch = db.batch();
+      grupo.forEach(item => {
+        batch.update(colNotas().doc(item.id), { retorno_completo: item.valor });
+      });
+      await batch.commit();
+    }
+
+    await PRODUCAO.doc('meta').set({ retorno_completo_migrado: true }, { merge: true });
+
+    status.style.color = 'var(--success)';
+    status.textContent = `✓ Concluído — ${paraAtualizar.length} de ${snap.size} notas atualizadas. O Retorno já passa a usar a consulta rápida.`;
+    await mostrarStatusMigracaoRetorno();
+  } catch (e) {
+    console.error('Erro na migração:', e);
     status.style.color = 'var(--text-danger)';
     status.textContent = '✗ Erro: ' + e.message;
   } finally {

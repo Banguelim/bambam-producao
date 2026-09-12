@@ -884,7 +884,12 @@ async function gerarNota() {
       chegada_1: { data: '', qtds: {} },
       chegada_2: { data: '', qtds: {} },
       pagamentos: [],
-      status: 'aberta'
+      status: 'aberta',
+      // Nota nova, então retorno sempre começa em aberto — permite que o
+      // Retorno consulte "retorno_completo == false" no Firestore em vez de
+      // ler a coleção inteira (ver retorno.js e o botão de migração em
+      // Cadastros, pras notas de antes dessa mudança).
+      retorno_completo: false
     };
 
     console.log('[gerarNota] salvando nota:', nota);

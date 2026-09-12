@@ -135,6 +135,21 @@ async function salvarNota(nota) {
   await colNotas().doc(nota.numero).set(nota);
   return nota.numero;
 }
+// NOVO 12/09/2026 — diz se já rodou a migração que preenche
+// `retorno_completo` em TODAS as notas antigas (botão em Cadastros).
+// Enquanto não rodar, a tela de Retorno usa o modo antigo (lê a coleção
+// inteira) pra nunca esconder uma nota antiga ainda aberta. Depois que
+// rodar, passa a usar a consulta rápida (`where retorno_completo == false`).
+async function retornoCompletoMigrado() {
+  try {
+    const meta = await PRODUCAO.doc('meta').get();
+    return meta.exists && meta.data().retorno_completo_migrado === true;
+  } catch (e) {
+    console.warn('Erro checando migração retorno_completo:', e);
+    return false;  // na dúvida, usa o modo seguro (lê tudo)
+  }
+}
+
 async function notasEmAbertoDaCostureira(costureira) {
   const snap = await colNotas().where('costureira', '==', costureira).get();
   return snap.docs

@@ -65,12 +65,31 @@ async function carregarNotasAbertas() {
   const chips = document.getElementById('chips-notas');
   chips.innerHTML = '<span style="color:var(--text-muted);font-size:12px">carregando...</span>';
   try {
-    const snap = await colNotas().get();
-    const todas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    todas.sort((a, b) => (b.data_saida || '').localeCompare(a.data_saida || ''));
+    // CORREÇÃO 12/09/2026 — só depois que TODAS as notas antigas passarem
+    // pela migração (botão em Cadastros) é seguro consultar direto
+    // "retorno_completo == false" no Firestore (rápido, não lê o histórico
+    // inteiro). Até lá, continua no modo antigo — nunca esconde uma nota
+    // antiga que ainda esteja aberta só porque falta o campo nela.
+    const migrado = await retornoCompletoMigrado();
 
-    todasNotasAbertas = todas.filter(ehNotaAberta);
-    notasFinalizadas = todas.filter(ehNotaFinalizada);
+    if (migrado) {
+      const [snapAbertas, snapFinal] = await Promise.all([
+        colNotas().where('retorno_completo', '==', false).get(),
+        colNotas().where('retorno_completo', '==', true).limit(50).get()
+      ]);
+      todasNotasAbertas = snapAbertas.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Sem orderBy aqui de propósito (evita exigir índice composto) — é só
+      // uma amostra de até 50 pra reabilitar por engano; ordena depois.
+      notasFinalizadas = snapFinal.docs.map(d => ({ id: d.id, ...d.data() }));
+    } else {
+      const snap = await colNotas().get();
+      const todas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      todasNotasAbertas = todas.filter(ehNotaAberta);
+      notasFinalizadas = todas.filter(ehNotaFinalizada);
+    }
+
+    todasNotasAbertas.sort((a, b) => (b.data_saida || '').localeCompare(a.data_saida || ''));
+    notasFinalizadas.sort((a, b) => (b.data_saida || '').localeCompare(a.data_saida || ''));
 
     const dlLotes = document.getElementById('lotes-list');
     dlLotes.innerHTML = '';
@@ -181,8 +200,9 @@ function renderFinalizadas() {
       e.stopPropagation();
       if (!confirm(`Reabilitar a nota #${n.numero}? Ela vai voltar pra lista de ativas.`)) return;
       try {
-        await atualizarNota(n.numero, { retorno_finalizado: false });
         n.retorno_finalizado = false;
+        const retorno_completo = !ehNotaAberta(n);
+        await atualizarNota(n.numero, { retorno_finalizado: false, retorno_completo });
         reclassificarNota(n);
         toast(`Nota #${n.numero} reabilitada`, 'ok');
         renderChips();
@@ -446,14 +466,24 @@ async function registrarChegada() {
       qtds: novasQtds
     };
 
-    await atualizarNota(notaAtual.numero, { [chegadaCampo]: novaChegada });
+    // CORREÇÃO 12/09/2026 — calcula tudo localmente ANTES de gravar, pra
+    // juntar num único atualizarNota() (antes eram até 2 gravações
+    // separadas). Também já grava `retorno_completo` — é o que permite a
+    // tela, no futuro, consultar só "== false" em vez de ler a coleção
+    // inteira (ver retornoCompletoMigrado() em db.js e carregarNotasAbertas()).
     notaAtual[chegadaCampo] = novaChegada;
     const totalChegouAgora = calcularTotalChegou(notaAtual);
     const ficouCompleto = totalChegouAgora >= (notaAtual.total_saida || 0);
 
+    const campos = { [chegadaCampo]: novaChegada };
     if (ficouCompleto) {
-      await atualizarNota(notaAtual.numero, { retorno_finalizado: true });
+      campos.retorno_finalizado = true;
       notaAtual.retorno_finalizado = true;
+    }
+    campos.retorno_completo = !ehNotaAberta(notaAtual);
+    await atualizarNota(notaAtual.numero, campos);
+
+    if (ficouCompleto) {
       toast(`✓ ${total} peças registradas — retorno completo! Nota #${notaAtual.numero} finalizada.`, 'ok');
     } else {
       toast(`✓ ${total} peças registradas na ${qualChegada}ª chegada da nota #${notaAtual.numero}`, 'ok');
@@ -676,6 +706,10 @@ async function confirmarDefeito() {
       msgExtra = ` · ⚠ nota já paga totalmente, valor NÃO atualizado`;
     }
 
+    // Mantém retorno_completo em dia (defeito também mexe na chegada_1/2,
+    // que é o que decide se a nota ainda tá "aberta" no Retorno).
+    updates.retorno_completo = !ehNotaAberta({ ...notaAtual, ...updates });
+
     await atualizarNota(notaAtual.numero, updates);
     Object.assign(notaAtual, updates);
     reclassificarNota(notaAtual);
@@ -714,7 +748,8 @@ Ela vai sair da lista de ativas e ficar disponível só pra consulta.`;
   if (!confirm(msg)) return;
 
   try {
-    await atualizarNota(notaAtual.numero, { retorno_finalizado: true });
+    // retorno_finalizado:true sempre resulta em retorno_completo:true (ver ehNotaAberta)
+    await atualizarNota(notaAtual.numero, { retorno_finalizado: true, retorno_completo: true });
     notaAtual.retorno_finalizado = true;
     reclassificarNota(notaAtual);
     toast(`✓ Retorno da nota #${notaAtual.numero} finalizado`, 'ok');
