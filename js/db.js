@@ -108,11 +108,26 @@ async function buscarCorte(id) {
 // filtrar os já designados — um corte pendente mais antigo que os 200
 // últimos ficava invisível na lista pra sempre. Aqui filtra primeiro,
 // então nada pendente se perde.
+// NOVO 12/09/2026 — mesmo esquema de retorno_completo/tem_chegada: o
+// `status` do corte já é sempre gravado (nasce 'cortado', vira
+// 'designado_parcial'/'designado_total' conforme as notas são geradas —
+// nunca fica sem valor), então, uma vez confirmado isso em todos os
+// documentos (ver botão em Cadastros), dá pra consultar direto no
+// Firestore em vez de ler a coleção inteira toda vez que a tela abre.
 async function listarCortesPendentes() {
-  const snap = await colCortes().get();
-  const pendentes = snap.docs
-    .map(d => ({ id: d.id, ...d.data() }))
-    .filter(c => c.status !== 'designado_total');
+  const migrado = await cortesStatusMigrado();
+
+  let pendentes;
+  if (migrado) {
+    const snap = await colCortes().where('status', 'in', ['cortado', 'designado_parcial']).get();
+    pendentes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } else {
+    const snap = await colCortes().get();
+    pendentes = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(c => c.status !== 'designado_total');
+  }
+
   pendentes.sort((a, b) => (b.data_corte || '').localeCompare(a.data_corte || ''));
   return pendentes;
 }
@@ -159,6 +174,20 @@ async function temChegadaMigrado() {
     return meta.exists && meta.data().tem_chegada_migrado === true;
   } catch (e) {
     console.warn('Erro checando migração tem_chegada:', e);
+    return false;
+  }
+}
+
+// Mesma ideia, pro `status` dos cortes — usado por listarCortesPendentes()
+// (tela de Designação). Diferente dos dois campos acima, `status` já era
+// sempre gravado desde sempre (não devia ter nenhum corte sem valor), mas
+// a migração confere isso de verdade antes de confiar numa consulta.
+async function cortesStatusMigrado() {
+  try {
+    const meta = await PRODUCAO.doc('meta').get();
+    return meta.exists && meta.data().cortes_status_migrado === true;
+  } catch (e) {
+    console.warn('Erro checando migração cortes_status:', e);
     return false;
   }
 }

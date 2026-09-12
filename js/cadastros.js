@@ -636,16 +636,25 @@ async function mostrarStatusMigracaoRetorno() {
   const info = document.getElementById('migrar-retorno-info');
   if (!info) return;
   try {
-    const [retornoOk, arremateOk] = await Promise.all([retornoCompletoMigrado(), temChegadaMigrado()]);
-    if (retornoOk && arremateOk) {
+    const [retornoOk, arremateOk, designacaoOk] = await Promise.all([
+      retornoCompletoMigrado(), temChegadaMigrado(), cortesStatusMigrado()
+    ]);
+    if (retornoOk && arremateOk && designacaoOk) {
       info.style.color = 'var(--success)';
-      info.textContent = '✓ Já rodou — Retorno e Arremate já estão usando a consulta rápida.';
+      info.textContent = '✓ Já rodou — Retorno, Arremate e Designação já estão usando a consulta rápida.';
     } else {
       info.style.color = 'var(--warning)';
-      info.textContent = '○ Ainda não rodou — Retorno e Arremate continuam lendo a coleção inteira por enquanto.';
+      info.textContent = '○ Ainda não rodou — Retorno, Arremate e Designação continuam lendo a coleção inteira por enquanto.';
     }
   } catch (e) { console.warn('Erro checando status da migração:', e); }
 }
+
+// Um corte só devia ter esses 3 valores (ver novo-corte.js e designacao.js).
+// Se algum vier diferente/ausente (dado antigo estranho), a migração
+// prefere errar pro lado seguro: trata como "designado_parcial" (aparece
+// em Designação pra alguém checar) em vez de sumir da lista assumindo que
+// já terminou.
+const STATUS_CORTE_VALIDOS = ['cortado', 'designado_parcial', 'designado_total'];
 
 async function migrarRetornoCompleto() {
   const btn = document.getElementById('btn-migrar-retorno');
@@ -666,7 +675,19 @@ async function migrarRetornoCompleto() {
       const temChegadaCerto = temChegadaMig(n);
       if (n.retorno_completo !== retornoCompletoCerto) campos.retorno_completo = retornoCompletoCerto;
       if (n.tem_chegada !== temChegadaCerto) campos.tem_chegada = temChegadaCerto;
-      if (Object.keys(campos).length > 0) paraAtualizar.push({ id: doc.id, campos });
+      if (Object.keys(campos).length > 0) paraAtualizar.push({ id: doc.id, colecao: 'notas', campos });
+    });
+
+    status.textContent = `⏳ Lendo cortes...`;
+    const snapCortes = await colCortes().get();
+    status.textContent = `⏳ Conferindo ${snapCortes.size} cortes...`;
+    let cortesEstranhos = 0;
+    snapCortes.forEach(doc => {
+      const c = doc.data();
+      if (!STATUS_CORTE_VALIDOS.includes(c.status)) {
+        cortesEstranhos++;
+        paraAtualizar.push({ id: doc.id, colecao: 'cortes', campos: { status: 'designado_parcial' } });
+      }
     });
 
     // Grava em lotes (limite do Firestore é 500 operações por batch)
@@ -675,18 +696,23 @@ async function migrarRetornoCompleto() {
       status.textContent = `⏳ Gravando... ${i}/${paraAtualizar.length}`;
       const batch = db.batch();
       grupo.forEach(item => {
-        batch.update(colNotas().doc(item.id), item.campos);
+        const ref = item.colecao === 'cortes' ? colCortes().doc(item.id) : colNotas().doc(item.id);
+        batch.update(ref, item.campos);
       });
       await batch.commit();
     }
 
     await PRODUCAO.doc('meta').set({
       retorno_completo_migrado: true,
-      tem_chegada_migrado: true
+      tem_chegada_migrado: true,
+      cortes_status_migrado: true
     }, { merge: true });
 
     status.style.color = 'var(--success)';
-    status.textContent = `✓ Concluído — ${paraAtualizar.length} de ${snap.size} notas atualizadas. Retorno e Arremate já passam a usar a consulta rápida.`;
+    status.textContent = `✓ Concluído — ${paraAtualizar.length} registro(s) atualizado(s) ` +
+      `(${snap.size} notas, ${snapCortes.size} cortes conferidos` +
+      `${cortesEstranhos > 0 ? `, ${cortesEstranhos} corte(s) com status estranho corrigido(s)` : ''}). ` +
+      `Retorno, Arremate e Designação já passam a usar a consulta rápida.`;
     await mostrarStatusMigracaoRetorno();
   } catch (e) {
     console.error('Erro na migração:', e);
