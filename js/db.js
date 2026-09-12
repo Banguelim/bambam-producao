@@ -150,6 +150,19 @@ async function retornoCompletoMigrado() {
   }
 }
 
+// Mesma ideia acima, mas pro campo `tem_chegada` — usado pelo Arremate.
+// As duas migrações rodam juntas no mesmo botão em Cadastros, mas ficam
+// como flags separadas (cada tela só depende da sua).
+async function temChegadaMigrado() {
+  try {
+    const meta = await PRODUCAO.doc('meta').get();
+    return meta.exists && meta.data().tem_chegada_migrado === true;
+  } catch (e) {
+    console.warn('Erro checando migração tem_chegada:', e);
+    return false;
+  }
+}
+
 async function notasEmAbertoDaCostureira(costureira) {
   const snap = await colNotas().where('costureira', '==', costureira).get();
   return snap.docs

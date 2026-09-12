@@ -202,7 +202,8 @@ function renderFinalizadas() {
       try {
         n.retorno_finalizado = false;
         const retorno_completo = !ehNotaAberta(n);
-        await atualizarNota(n.numero, { retorno_finalizado: false, retorno_completo });
+        const tem_chegada = temChegadaComFallback(n);
+        await atualizarNota(n.numero, { retorno_finalizado: false, retorno_completo, tem_chegada });
         reclassificarNota(n);
         toast(`Nota #${n.numero} reabilitada`, 'ok');
         renderChips();
@@ -227,6 +228,24 @@ function calcularTotalChegou(n) {
     t += (c1[tam] || 0) + (c2[tam] || 0);
   });
   return t;
+}
+
+// NOVO 12/09/2026 — mesma regra de "chegou" que arremate.js usa (com o
+// fallback pro itens[] quando o retorno foi finalizado sem nenhuma qtd de
+// chegada registrada — caso raro, mas existe). Serve só pra manter o campo
+// `tem_chegada`, que o Arremate usa pra consultar direto no Firestore em
+// vez de ler a coleção de notas inteira.
+function temChegadaComFallback(n) {
+  let total = 0;
+  TAMS.forEach(tam => {
+    total += Number(n.chegada_1?.qtds?.[tam]) || 0;
+    total += Number(n.chegada_2?.qtds?.[tam]) || 0;
+  });
+  if (total > 0) return true;
+  if (n.retorno_finalizado === true) {
+    return (n.itens || []).reduce((a, i) => a + (Number(i.qtd) || 0), 0) > 0;
+  }
+  return false;
 }
 
 function ehNotaAberta(n) {
@@ -481,6 +500,7 @@ async function registrarChegada() {
       notaAtual.retorno_finalizado = true;
     }
     campos.retorno_completo = !ehNotaAberta(notaAtual);
+    campos.tem_chegada = true;  // acabou de registrar peça chegando, então é sempre true aqui
     await atualizarNota(notaAtual.numero, campos);
 
     if (ficouCompleto) {
@@ -709,6 +729,7 @@ async function confirmarDefeito() {
     // Mantém retorno_completo em dia (defeito também mexe na chegada_1/2,
     // que é o que decide se a nota ainda tá "aberta" no Retorno).
     updates.retorno_completo = !ehNotaAberta({ ...notaAtual, ...updates });
+    updates.tem_chegada = true;  // defeito entra em chegada_1, então é sempre true aqui
 
     await atualizarNota(notaAtual.numero, updates);
     Object.assign(notaAtual, updates);
@@ -748,8 +769,13 @@ Ela vai sair da lista de ativas e ficar disponível só pra consulta.`;
   if (!confirm(msg)) return;
 
   try {
-    // retorno_finalizado:true sempre resulta em retorno_completo:true (ver ehNotaAberta)
-    await atualizarNota(notaAtual.numero, { retorno_finalizado: true, retorno_completo: true });
+    // retorno_finalizado:true sempre resulta em retorno_completo:true (ver
+    // ehNotaAberta). tem_chegada é recalculado (não fixado em true) porque,
+    // no caso raro de finalizar sem nenhuma qtd de chegada registrada, o
+    // fallback do itens[] só entra em jogo depois do retorno_finalizado
+    // virar true (ver temChegadaComFallback).
+    const tem_chegada = temChegadaComFallback({ ...notaAtual, retorno_finalizado: true });
+    await atualizarNota(notaAtual.numero, { retorno_finalizado: true, retorno_completo: true, tem_chegada });
     notaAtual.retorno_finalizado = true;
     reclassificarNota(notaAtual);
     toast(`✓ Retorno da nota #${notaAtual.numero} finalizado`, 'ok');

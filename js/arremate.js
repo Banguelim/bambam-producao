@@ -44,11 +44,26 @@ async function carregarDados() {
   const chips = document.getElementById('chips-notas');
   chips.innerHTML = '<span style="color:var(--text-muted);font-size:12px">carregando...</span>';
   try {
-    const snap = await colNotas().get();
-    const todas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    // Inclui TODAS as notas que tiveram qualquer chegada — ativas E finalizadas
-    notasComRetorno = todas.filter(n => totalChegouNota(n) > 0);
-    console.log(`[arremate] ${todas.length} notas total, ${notasComRetorno.length} com retorno`);
+    // CORREÇÃO 12/09/2026 — mesmo esquema do Retorno: só depois que TODAS
+    // as notas antigas passarem pela migração (botão em Cadastros) é seguro
+    // consultar direto "tem_chegada == true" no Firestore em vez de ler a
+    // coleção inteira. Até lá, continua no modo antigo — nunca esconde uma
+    // nota que já teve chegada registrada.
+    const migrado = await temChegadaMigrado();
+    let notasComRetornoNovas;
+
+    if (migrado) {
+      const snap = await colNotas().where('tem_chegada', '==', true).get();
+      notasComRetornoNovas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } else {
+      const snap = await colNotas().get();
+      const todas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Inclui TODAS as notas que tiveram qualquer chegada — ativas E finalizadas
+      notasComRetornoNovas = todas.filter(n => totalChegouNota(n) > 0);
+    }
+
+    notasComRetorno = notasComRetornoNovas;
+    console.log(`[arremate] ${notasComRetorno.length} notas com retorno (migrado: ${migrado})`);
     renderChips();
   } catch (e) {
     console.error('Erro:', e);

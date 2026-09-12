@@ -885,11 +885,13 @@ async function gerarNota() {
       chegada_2: { data: '', qtds: {} },
       pagamentos: [],
       status: 'aberta',
-      // Nota nova, então retorno sempre começa em aberto — permite que o
-      // Retorno consulte "retorno_completo == false" no Firestore em vez de
-      // ler a coleção inteira (ver retorno.js e o botão de migração em
-      // Cadastros, pras notas de antes dessa mudança).
-      retorno_completo: false
+      // Nota nova, então retorno sempre começa em aberto e sem nenhuma
+      // chegada ainda — permite que Retorno e Arremate consultem direto no
+      // Firestore em vez de ler a coleção inteira (ver retorno.js,
+      // arremate.js e o botão de migração em Cadastros, pras notas de
+      // antes dessa mudança).
+      retorno_completo: false,
+      tem_chegada: false
     };
 
     console.log('[gerarNota] salvando nota:', nota);

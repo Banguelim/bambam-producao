@@ -599,19 +599,20 @@ async function fazerBackup() {
   }
 }
 
-// ==== MANUTENÇÃO: migração retorno_completo ====
-// NOVO 12/09/2026 — a tela de Retorno lia a coleção INTEIRA de notas toda
-// vez que abria, porque "nota ainda aberta" (retorno_finalizado + peças
-// chegadas vs total) é uma regra que não dava pra escrever direto numa
-// consulta do Firestore. A partir de agora toda nota NOVA já nasce com o
-// campo `retorno_completo` certinho (ver designacao.js), mas as notas
-// ANTIGAS não têm esse campo — esse botão preenche ele em todas de uma vez,
-// só 1 vez. Depois disso o Retorno passa a consultar só "== false" em vez
-// de ler tudo (ver retorno.js).
+// ==== MANUTENÇÃO: migração retorno_completo + tem_chegada ====
+// NOVO 12/09/2026 — Retorno e Arremate liam a coleção INTEIRA de notas toda
+// vez que abriam, porque as regras deles ("nota ainda aberta", "nota já
+// teve alguma chegada") não davam pra escrever direto numa consulta do
+// Firestore. A partir de agora toda nota NOVA já nasce com os campos
+// `retorno_completo` e `tem_chegada` certinhos (ver designacao.js), mas as
+// notas ANTIGAS não têm esses campos — esse botão preenche os dois em
+// todas de uma vez, só 1 vez (a mesma leitura da coleção inteira serve pra
+// calcular ambos). Depois disso as duas telas passam a consultar só o que
+// precisam em vez de ler tudo (ver retorno.js e arremate.js).
 //
-// Mesma lógica de "nota aberta" usada em retorno.js — duplicada aqui de
-// propósito (retorno.js não é carregado nessa tela) em vez de forçar
-// dependência entre as duas telas por uma função pequena.
+// Mesma lógica usada nas telas — duplicada aqui de propósito (retorno.js e
+// arremate.js não são carregados nessa tela) em vez de forçar dependência
+// entre telas por causa de umas funções pequenas.
 function calcularTotalChegouMig(n) {
   const c1 = n.chegada_1?.qtds || {};
   const c2 = n.chegada_2?.qtds || {};
@@ -623,18 +624,25 @@ function ehNotaAbertaMig(n) {
   if (n.retorno_finalizado) return false;
   return calcularTotalChegouMig(n) < (n.total_saida || 0);
 }
+function temChegadaMig(n) {
+  if (calcularTotalChegouMig(n) > 0) return true;
+  if (n.retorno_finalizado === true) {
+    return (n.itens || []).reduce((a, i) => a + (Number(i.qtd) || 0), 0) > 0;
+  }
+  return false;
+}
 
 async function mostrarStatusMigracaoRetorno() {
   const info = document.getElementById('migrar-retorno-info');
   if (!info) return;
   try {
-    const migrado = await retornoCompletoMigrado();
-    if (migrado) {
+    const [retornoOk, arremateOk] = await Promise.all([retornoCompletoMigrado(), temChegadaMigrado()]);
+    if (retornoOk && arremateOk) {
       info.style.color = 'var(--success)';
-      info.textContent = '✓ Já rodou — o Retorno já está usando a consulta rápida.';
+      info.textContent = '✓ Já rodou — Retorno e Arremate já estão usando a consulta rápida.';
     } else {
       info.style.color = 'var(--warning)';
-      info.textContent = '○ Ainda não rodou — o Retorno continua lendo a coleção inteira por enquanto.';
+      info.textContent = '○ Ainda não rodou — Retorno e Arremate continuam lendo a coleção inteira por enquanto.';
     }
   } catch (e) { console.warn('Erro checando status da migração:', e); }
 }
@@ -653,10 +661,12 @@ async function migrarRetornoCompleto() {
     const paraAtualizar = [];
     snap.forEach(doc => {
       const n = doc.data();
-      const certo = !ehNotaAbertaMig(n);
-      if (n.retorno_completo !== certo) {
-        paraAtualizar.push({ id: doc.id, valor: certo });
-      }
+      const campos = {};
+      const retornoCompletoCerto = !ehNotaAbertaMig(n);
+      const temChegadaCerto = temChegadaMig(n);
+      if (n.retorno_completo !== retornoCompletoCerto) campos.retorno_completo = retornoCompletoCerto;
+      if (n.tem_chegada !== temChegadaCerto) campos.tem_chegada = temChegadaCerto;
+      if (Object.keys(campos).length > 0) paraAtualizar.push({ id: doc.id, campos });
     });
 
     // Grava em lotes (limite do Firestore é 500 operações por batch)
@@ -665,15 +675,18 @@ async function migrarRetornoCompleto() {
       status.textContent = `⏳ Gravando... ${i}/${paraAtualizar.length}`;
       const batch = db.batch();
       grupo.forEach(item => {
-        batch.update(colNotas().doc(item.id), { retorno_completo: item.valor });
+        batch.update(colNotas().doc(item.id), item.campos);
       });
       await batch.commit();
     }
 
-    await PRODUCAO.doc('meta').set({ retorno_completo_migrado: true }, { merge: true });
+    await PRODUCAO.doc('meta').set({
+      retorno_completo_migrado: true,
+      tem_chegada_migrado: true
+    }, { merge: true });
 
     status.style.color = 'var(--success)';
-    status.textContent = `✓ Concluído — ${paraAtualizar.length} de ${snap.size} notas atualizadas. O Retorno já passa a usar a consulta rápida.`;
+    status.textContent = `✓ Concluído — ${paraAtualizar.length} de ${snap.size} notas atualizadas. Retorno e Arremate já passam a usar a consulta rápida.`;
     await mostrarStatusMigracaoRetorno();
   } catch (e) {
     console.error('Erro na migração:', e);
