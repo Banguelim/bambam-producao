@@ -186,6 +186,17 @@ async function listarPedidosConcluidos() {
   pedidos.sort((a, b) => (b.data_pedido || '').localeCompare(a.data_pedido || ''));
   return pedidos;
 }
+// CORREÇÃO 12/09/2026 — a tela de Pedidos chamava listarPedidosConcluidos()
+// (função acima) toda vez que abria, sem filtro de quantidade — exatamente
+// o mesmo formato do bug já corrigido em Contas a Receber (coleção que só
+// cresce, lida por inteiro em toda visita). Agora a tela carrega só os mais
+// recentes por padrão (rápido, sempre) e só chama a função acima (histórico
+// completo) se alguém pedir explicitamente pra ver tudo.
+async function listarPedidosConcluidosRecentes(limite = 60) {
+  const snap = await colPedidos().where('status', '==', 'concluido')
+    .orderBy('data_pedido', 'desc').limit(limite).get();
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
 // CORREÇÃO 11/09/2026 — lia a coleção INTEIRA de pedidos só pra pegar os
 // N mais recentes. Agora pede só o necessário direto no Firestore
 // (orderBy + limit), sem trazer o histórico todo pra ordenar no cliente.

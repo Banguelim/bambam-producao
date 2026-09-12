@@ -4,11 +4,23 @@
 
 let pedidosAbertosCache = [];
 let pedidosConcluidosCache = [];
+let historicoCompletoCarregado = false;
+
+// CORREÇÃO 12/09/2026 — carregava TODOS os pedidos concluídos (sem limite)
+// toda vez que a tela abria — coleção que só cresce, mesmo formato do bug
+// já corrigido em Contas a Receber. Agora carrega só os mais recentes por
+// padrão; "Carregar histórico completo" (abaixo da lista) busca o resto
+// só quando alguém realmente precisar achar um pedido mais antigo.
+const LIMITE_CONCLUIDOS_PADRAO = 60;
 
 async function init() {
   await protegerRota();
   document.getElementById('busca-pedido-aberto').addEventListener('input', renderPedidosAbertos);
   document.getElementById('busca-pedido-concluido').addEventListener('input', renderPedidosConcluidos);
+  document.getElementById('btn-carregar-todos-concluidos').addEventListener('click', async (e) => {
+    e.preventDefault();
+    await carregarTodosConcluidos();
+  });
   await carregarPedidos();
 }
 
@@ -18,18 +30,43 @@ async function carregarPedidos() {
   try {
     const [abertos, concluidos] = await Promise.all([
       listarPedidosEmAberto(),
-      listarPedidosConcluidos()
+      listarPedidosConcluidosRecentes(LIMITE_CONCLUIDOS_PADRAO)
     ]);
     pedidosAbertosCache = abertos;
     pedidosConcluidosCache = concluidos;
     document.getElementById('lbl-pedidos-abertos-total').textContent = `(${pedidosAbertosCache.length})`;
-    document.getElementById('lbl-pedidos-concluidos-total').textContent = `(${pedidosConcluidosCache.length})`;
+    atualizarLabelConcluidos();
     renderPedidosAbertos();
     renderPedidosConcluidos();
+    // Se vieram menos do que o limite, é porque já é o histórico inteiro —
+    // não faz sentido oferecer "carregar mais".
+    document.getElementById('aviso-concluidos-parcial').style.display =
+      concluidos.length >= LIMITE_CONCLUIDOS_PADRAO ? '' : 'none';
   } catch (e) {
     contAberto.innerHTML = '<div class="vazio-itens">Erro ao carregar</div>';
     contConcluido.innerHTML = '<div class="vazio-itens">Erro ao carregar</div>';
     console.warn(e);
+  }
+}
+
+function atualizarLabelConcluidos() {
+  const sufixo = historicoCompletoCarregado ? '' : '+';
+  document.getElementById('lbl-pedidos-concluidos-total').textContent = `(${pedidosConcluidosCache.length}${sufixo})`;
+}
+
+async function carregarTodosConcluidos() {
+  const link = document.getElementById('btn-carregar-todos-concluidos');
+  const textoOriginal = link.textContent;
+  link.textContent = 'Carregando...';
+  try {
+    pedidosConcluidosCache = await listarPedidosConcluidos();
+    historicoCompletoCarregado = true;
+    atualizarLabelConcluidos();
+    renderPedidosConcluidos();
+    document.getElementById('aviso-concluidos-parcial').style.display = 'none';
+  } catch (e) {
+    link.textContent = textoOriginal;
+    toast('Erro ao carregar histórico completo: ' + e.message, 'err');
   }
 }
 
