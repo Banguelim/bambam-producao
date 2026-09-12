@@ -59,6 +59,7 @@ async function init() {
 
   // Carregar dados
   await carregarTudo();
+  await mostrarUltimoBackup();
 }
 
 async function carregarTudo() {
@@ -397,6 +398,40 @@ async function salvarPrecoBtn() {
 }
 
 // ==== BACKUP ====
+// NOVO 12/09/2026 — lembrete de "faz tempo que ninguém tira backup". O
+// backup em si continua manual (baixa um CSV), mas sem um aviso é fácil
+// esquecer por semanas. Guarda a data do último backup bem-sucedido em
+// PRODUCAO.doc('meta') (1 leitura/gravação — igual ao contador de nota,
+// insignificante perto do resto) e mostra aqui quantos dias faz.
+async function mostrarUltimoBackup() {
+  const info = document.getElementById('backup-ultimo-info');
+  if (!info) return;
+  try {
+    const meta = await PRODUCAO.doc('meta').get();
+    const ultimo = meta.exists ? meta.data().ultimo_backup : null;
+    if (!ultimo) {
+      info.style.color = 'var(--text-danger)';
+      info.textContent = '⚠ Nenhum backup registrado ainda — gere um agora.';
+      return;
+    }
+    const dias = Math.round((new Date(hojeISO()) - new Date(ultimo)) / 86400000);
+    if (dias <= 7) {
+      info.style.color = 'var(--success)';
+      info.textContent = dias <= 0
+        ? `✓ Último backup: hoje (${formatDataBR(ultimo)})`
+        : `✓ Último backup: ${formatDataBR(ultimo)} (${dias} dia${dias > 1 ? 's' : ''} atrás)`;
+    } else if (dias <= 14) {
+      info.style.color = 'var(--warning)';
+      info.textContent = `⚠ Último backup: ${formatDataBR(ultimo)} (${dias} dias atrás) — já passou de 1 semana`;
+    } else {
+      info.style.color = 'var(--text-danger)';
+      info.textContent = `⚠ Último backup: ${formatDataBR(ultimo)} (${dias} dias atrás) — faz tempo, gere um novo`;
+    }
+  } catch (e) {
+    console.warn('Erro checando último backup:', e);
+  }
+}
+
 async function fazerBackup() {
   const btn = document.getElementById('btn-backup');
   const status = document.getElementById('backup-status');
@@ -545,6 +580,12 @@ async function fazerBackup() {
     };
     status.style.color = 'var(--success)';
     status.innerHTML = `✓ Backup baixado (${Object.entries(totais).map(([k, v]) => `${v} ${k}`).join(' · ')}). O arquivo abre no Excel/LibreOffice.`;
+
+    // Registra a data pra alimentar o lembrete (mostrarUltimoBackup)
+    try {
+      await PRODUCAO.doc('meta').set({ ultimo_backup: hojeISO() }, { merge: true });
+      await mostrarUltimoBackup();
+    } catch (e) { console.warn('Não deu pra registrar data do backup:', e); }
   } catch (e) {
     console.error('Backup erro:', e);
     status.style.color = 'var(--text-danger)';
