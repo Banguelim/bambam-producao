@@ -189,6 +189,15 @@ function salvarEntradaNovaEmColItem(col) {
   const cor = corInput.value.trim().toUpperCase();
   const q = parseInt(qtyInput.value);
   if (!cor || !q) return;
+  // NOVO 15/09/2026 — barra vira separador de "pastas" no banco de dados,
+  // então uma cor com "/" quebra a baixa de estoque na hora de concluir o
+  // pedido (geralmente sinal de que várias cores foram digitadas juntas
+  // nessa caixinha, em vez de uma cor por vez). Barra logo aqui, antes de
+  // virar item do pedido.
+  if (cor.includes('/')) {
+    toast('Cor não pode ter "/" — lance uma cor de cada vez (cor → Enter → quantidade → Enter)', 'err');
+    return;
+  }
 
   addEntradaItem(col, cor, q);
   salvarCorSeNova(cor);
@@ -508,6 +517,19 @@ async function concluirPedidoBtn() {
   const vencBase = document.getElementById('p-vencimento').value;
   if (!vencBase) { toast('Preencha a data do 1º vencimento', 'err'); return; }
   if (!confirm(`Concluir este pedido vai:\n\n• Dar baixa no estoque das peças\n• Gerar ${parcelas} parcela(s) em Contas a Receber\n\nDepois de concluído não dá mais pra editar os itens. Confirma?`)) return;
+
+  // NOVO 15/09/2026 — confere TODOS os itens antes de mexer em qualquer
+  // coisa. A baixa de estoque abaixo é uma chamada por item/tamanho (não é
+  // uma transação só) — se um item no meio da lista tiver ref/cor inválida
+  // (ex: "/" digitado por engano, que quebra o identificador no banco), os
+  // itens anteriores já teriam sido baixados do estoque e os itens
+  // seguintes ficariam de fora, deixando o estoque inconsistente. Barra
+  // isso aqui, antes de escrever qualquer coisa.
+  const itemInvalido = pedidoItens.find(it => (it.ref || '').includes('/') || (it.cor || '').includes('/'));
+  if (itemInvalido) {
+    toast(`Item "${itemInvalido.ref} ${itemInvalido.cor}" tem "/" na ref ou na cor — corrija antes de concluir`, 'err');
+    return;
+  }
 
   const btn = document.getElementById('btn-concluir-pedido');
   btn.disabled = true;
