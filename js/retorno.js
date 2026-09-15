@@ -632,7 +632,21 @@ async function confirmarDefeito() {
       const desconto = qtd * precoPeca;
       msgExtra = ` · desconto ${formatBRL(desconto)} no pagamento (novo total: ${formatBRL(novoValor)})`;
     } else if (jaFoiPaga) {
-      msgExtra = ` · ⚠ nota já paga, valor NÃO atualizado`;
+      // NOVO 15/09/2026 — defeito lançado numa nota que JÁ tinha pagamento.
+      // O valor pago fica como está (a costureira já recebeu), mas o STATUS
+      // precisa ser reavaliado: o defeito reduz quantas peças eram esperadas,
+      // então um pagamento que antes era "parcial" pode ter passado a cobrir
+      // o total. Sem isso a nota ficava presa em "Notas em aberto" pra
+      // sempre, mesmo já totalmente quitada (nada mais a pagar).
+      const pagamentosAtuais = notaAtual.pagamentos || [];
+      const pecasPagasTotal = pagamentosAtuais.reduce((a, p) => a + (p.pecas || 0), 0);
+      const pecasEsperadasComDefeito = Math.max(0, totalSaida - totalDefeitos);
+      if (status !== 'paga_total' && pecasEsperadasComDefeito > 0 && pecasPagasTotal >= pecasEsperadasComDefeito) {
+        updates.status = 'paga_total';
+        msgExtra = ` · ✓ com o defeito descontado, o pagamento já cobre o total — nota marcada como paga`;
+      } else {
+        msgExtra = ` · ⚠ nota já paga, valor NÃO atualizado`;
+      }
     }
 
     await atualizarNota(notaAtual.numero, updates);

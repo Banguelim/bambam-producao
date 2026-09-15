@@ -57,13 +57,39 @@ async function carregarDadosCostureira() {
       notasEmAbertoDaCostureira(costureiraAtual)
     ]);
     saldoAdiantAtual = saldo;
-    notasCarregadas = notas;
+    notasCarregadas = await corrigirNotasQuitadasPorDefeito(notas);
     renderAdiantamento();
     renderNotas();
   } catch (e) {
     console.error('Erro carregando dados:', e);
     toast('Erro: ' + e.message, 'err');
   }
+}
+
+// NOVO 15/09/2026 — auto-corrige notas que ficaram presas em "aberto"/
+// "paga_parcial" por causa de defeito lançado DEPOIS do pagamento (bug já
+// corrigido na origem em retorno.js, mas notas antigas continuam presas até
+// alguém abrir a tela de Pagamento pra elas de novo). Se as peças já pagas
+// cobrem o total esperado (chegou − defeito), a nota está de fato quitada —
+// corrige o status no banco e tira ela da lista de "em aberto" na hora.
+async function corrigirNotasQuitadasPorDefeito(notas) {
+  const aindaAbertas = [];
+  for (const n of notas) {
+    const chegou = calcularTotalChegou(n);
+    const defeitos = Number(n.defeito_retorno_total) || 0;
+    const pecasValidas = Math.max(0, chegou - defeitos);
+    const pecasJaPagas = totalPecasJaPagasDaNota(n);
+    if (pecasValidas > 0 && pecasJaPagas >= pecasValidas && n.status !== 'paga_total') {
+      try {
+        await atualizarNota(n.numero, { status: 'paga_total' });
+        continue; // sai da lista de abertas
+      } catch (e) {
+        console.warn(`Falha corrigindo status da nota #${n.numero}:`, e);
+      }
+    }
+    aindaAbertas.push(n);
+  }
+  return aindaAbertas;
 }
 
 function renderAdiantamento() {
