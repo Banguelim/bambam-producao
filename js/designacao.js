@@ -830,6 +830,31 @@ async function gerarNota() {
     return;
   }
 
+  // NOVO 17/09/2026 — avisa antes de gerar nota duplicada pro mesmo corte.
+  // Cenário comum: paga a nota adiantado (antes da chegada) e quando as
+  // peças voltam não acha ela já paga na tela Retorno — aí gera outra nota
+  // aqui achando que é lote novo. 1 consulta só, e só nesse clique (não
+  // roda em toda carga de tela).
+  try {
+    const notasDoCorte = await colNotas().where('corte_id', '==', corteAtual.id).get();
+    const pendente = notasDoCorte.docs
+      .map(d => d.data())
+      .find(n => {
+        const semChegada = Object.keys(n.chegada_1?.qtds || {}).length === 0
+          && Object.keys(n.chegada_2?.qtds || {}).length === 0;
+        return n.costureira === nome && semChegada;
+      });
+    if (pendente) {
+      const seguir = confirm(
+        `Já existe a nota #${pendente.numero} desse mesmo corte com ${nome}, ainda sem chegada registrada ` +
+        `(pode já estar paga — só falta bater o retorno dela). Se as peças que você tá designando agora são ` +
+        `outra leva, pode confirmar. Mas se é a MESMA leva que ainda não voltou, cancele e use a tela Retorno ` +
+        `na nota #${pendente.numero} em vez de gerar outra.\n\nGerar mesmo assim uma nota nova?`
+      );
+      if (!seguir) { btn.disabled = false; return; }
+    }
+  } catch (e) { console.warn('[gerarNota] falha checando nota duplicada:', e); }
+
   try {
     const numero = await proximoNumeroNota(false);
     console.log('[gerarNota] próximo número:', numero);

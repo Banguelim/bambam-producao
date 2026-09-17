@@ -135,12 +135,18 @@ function renderChips() {
   filtradas.forEach(n => {
     const totalChegou = calcularTotalChegou(n);
     const isParcial = totalChegou > 0 && totalChegou < n.total_saida;
+    // NOVO 17/09/2026 — sinaliza quando a nota já tem pagamento registrado
+    // mas a chegada ainda não foi batida (comum quando se paga adiantado,
+    // antes das peças voltarem). Sem isso a pessoa não reconhece que essa
+    // é a mesma nota já paga e acaba gerando outra na Designação por engano.
+    // Não faz consulta nova — status/pagamentos já vêm carregados aqui.
+    const jaPaga = n.status === 'paga_total' || n.status === 'paga_parcial';
     const chip = document.createElement('div');
     chip.className = 'chip-nota';
     chip.innerHTML = `
       <span class="dot ${isParcial ? 'parcial' : ''}"></span>
       <span>${n.lote}/${n.ref}</span>
-      <span class="meta">${n.costureira} · ${n.total_saida}pç · #${n.numero}</span>
+      <span class="meta">${n.costureira} · ${n.total_saida}pç · #${n.numero}${jaPaga ? ' · <b style="color:var(--success)">💰 já paga</b>' : ''}</span>
     `;
     chip.addEventListener('click', () => abrirNota(n));
     chips.appendChild(chip);
