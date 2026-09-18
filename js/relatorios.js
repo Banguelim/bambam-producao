@@ -17,7 +17,7 @@ async function init() {
   await protegerRota();
 
   document.querySelectorAll('.abas button').forEach(b => {
-    b.addEventListener('click', () => trocarAba(b.dataset.aba));
+    b.addEventListener('click', () => { trocarAba(b.dataset.aba); salvarEstadoR(); });
   });
 
   await carregarTudo();
@@ -27,7 +27,71 @@ async function init() {
   const dl = document.getElementById('costureiras-list');
   if (dl) dl.innerHTML = cs.map(c => `<option value="${escapeHtmlR(c)}">`).join('');
 
+  if (!restaurarEstadoR()) buscarFora();
+}
+
+// =========== ESTADO (aba + filtros) ===========
+// Guarda a aba e os filtros usados na última busca de cada aba pra, ao voltar
+// pra essa tela depois de ir em outra página (ex: registrar um pagamento e
+// voltar pra conferir), o relatório já aparecer aberto com a mesma consulta —
+// sem precisar escolher a aba, redigitar os filtros e clicar em Buscar de novo.
+// Fica em sessionStorage (não em memória) porque a navegação entre páginas
+// desse app recarrega o JS do zero; e não em localStorage pra não deixar
+// filtro antigo carregado se o usuário voltar num outro dia.
+const REL_STATE_KEY = 'bambam_relatorios_estado';
+
+function salvarEstadoR() {
+  try {
+    const estado = {
+      aba: document.querySelector('.abas button.ativa')?.dataset.aba || 'fora',
+      fora: {
+        cost: document.getElementById('fora-cost').value,
+        ref: document.getElementById('fora-ref').value
+      },
+      paraMandar: {
+        ref: document.getElementById('pman-ref').value,
+        status: document.getElementById('pman-status').value
+      },
+      pagamentos: {
+        cost: document.getElementById('pag-cost').value,
+        de: document.getElementById('pag-de').value,
+        ate: document.getElementById('pag-ate').value
+      },
+      retornos: {
+        cost: document.getElementById('ret-cost').value,
+        ref: document.getElementById('ret-ref').value
+      }
+    };
+    sessionStorage.setItem(REL_STATE_KEY, JSON.stringify(estado));
+  } catch (e) { /* sessionStorage indisponível — sem persistência, sem quebrar a tela */ }
+}
+
+// Restaura filtros + aba salvos e reexecuta as 4 buscas (com os dados recém
+// carregados) pra cada aba já aparecer pronta. Retorna false se não havia
+// nada salvo (primeira visita da sessão).
+function restaurarEstadoR() {
+  let estado = null;
+  try {
+    estado = JSON.parse(sessionStorage.getItem(REL_STATE_KEY) || 'null');
+  } catch (e) { estado = null; }
+  if (!estado) return false;
+
+  document.getElementById('fora-cost').value = estado.fora?.cost || '';
+  document.getElementById('fora-ref').value = estado.fora?.ref || '';
+  document.getElementById('pman-ref').value = estado.paraMandar?.ref || '';
+  document.getElementById('pman-status').value = estado.paraMandar?.status || 'todos';
+  document.getElementById('pag-cost').value = estado.pagamentos?.cost || '';
+  document.getElementById('pag-de').value = estado.pagamentos?.de || '';
+  document.getElementById('pag-ate').value = estado.pagamentos?.ate || '';
+  document.getElementById('ret-cost').value = estado.retornos?.cost || '';
+  document.getElementById('ret-ref').value = estado.retornos?.ref || '';
+
   buscarFora();
+  buscarParaMandar();
+  buscarPagamentos();
+  buscarRetornos();
+  trocarAba(estado.aba || 'fora');
+  return true;
 }
 
 async function carregarTudo() {
@@ -136,6 +200,7 @@ function notasForaFiltradas() {
 }
 
 function buscarFora() {
+  salvarEstadoR();
   const list = notasForaFiltradas();
   const folha = document.getElementById('fora-folha');
   const vazio = document.getElementById('fora-vazio');
@@ -237,6 +302,7 @@ function cortesParaMandarFiltrados() {
 }
 
 function buscarParaMandar() {
+  salvarEstadoR();
   const list = cortesParaMandarFiltrados();
   const folha = document.getElementById('pman-folha');
   const vazio = document.getElementById('pman-vazio');
@@ -298,6 +364,7 @@ function pagamentosFiltrados() {
 }
 
 function buscarPagamentos() {
+  salvarEstadoR();
   const list = pagamentosFiltrados();
   const folha = document.getElementById('pag-folha');
   const vazio = document.getElementById('pag-vazio');
@@ -409,6 +476,7 @@ function retornosFiltrados() {
 }
 
 function buscarRetornos() {
+  salvarEstadoR();
   const list = retornosFiltrados();
   const folha = document.getElementById('ret-folha');
   const vazio = document.getElementById('ret-vazio');
