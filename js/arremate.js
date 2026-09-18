@@ -44,8 +44,7 @@ async function carregarDados() {
   const chips = document.getElementById('chips-notas');
   chips.innerHTML = '<span style="color:var(--text-muted);font-size:12px">carregando...</span>';
   try {
-    const snap = await colNotas().get();
-    const todas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const todas = await getColecaoCacheada('notas', colNotas);
     // Inclui TODAS as notas que tiveram qualquer chegada — ativas E finalizadas
     notasComRetorno = todas.filter(n => totalChegouNota(n) > 0);
     console.log(`[arremate] ${todas.length} notas total, ${notasComRetorno.length} com retorno`);

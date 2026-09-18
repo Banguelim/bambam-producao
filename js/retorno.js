@@ -58,8 +58,7 @@ async function carregarNotasAbertas() {
   const chips = document.getElementById('chips-notas');
   chips.innerHTML = '<span style="color:var(--text-muted);font-size:12px">carregando...</span>';
   try {
-    const snap = await colNotas().get();
-    const todas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const todas = (await getColecaoCacheada('notas', colNotas)).slice();
     todas.sort((a, b) => (b.data_saida || '').localeCompare(a.data_saida || ''));
 
     todasNotasAbertas = todas.filter(n => {

@@ -12,6 +12,68 @@ const colNotas       = () => PRODUCAO.doc('op').collection('notas');
 const colAdiants     = () => PRODUCAO.doc('op').collection('adiantamentos');
 const colEstoque     = () => PRODUCAO.doc('op').collection('estoque');
 
+// ============ CACHE DE LEITURAS ============
+// Telas como Relatórios, Retorno, Arremate, Designação e Folha da Costureira
+// buscavam a coleção INTEIRA de notas/cortes/pagamentos do zero toda vez que
+// abriam — mesmo quando outra tela tinha acabado de buscar a mesma coisa
+// segundos antes. Com o histórico crescendo, isso soma leituras rápido e foi
+// o que estourou a cota diária do Firestore (18/09/2026).
+//
+// getColecaoCacheada() guarda o resultado em sessionStorage (sobrevive à
+// troca de página dentro da mesma aba do navegador, some ao fechar a aba) com
+// um teto de 5 min. Toda função de escrita abaixo invalida o cache da
+// coleção que ela mexeu — então uma tela aberta logo depois de salvar algo
+// (ex: voltar pra Relatórios depois de registrar um pagamento) sempre vê o
+// dado fresco; o teto de 5 min é só uma rede de segurança pro caso de algum
+// escritor esquecer de invalidar.
+const CACHE_TTL_MS = 5 * 60 * 1000;
+const CACHE_PREFIX = 'bambam_cache_';
+
+// Firestore Timestamp (serverTimestamp) não sobrevive a JSON.stringify — vira
+// um objeto {seconds,nanoseconds} sem o método .toDate() que o resto do app
+// usa. Converte pra ISO string antes de cachear; todo lugar que lê essas
+// datas já trata string via `new Date(v)` como fallback (ver relatorios.js,
+// folha-costureira.js, pagamento-historico.js).
+function prepararDocParaCache(doc) {
+  const copia = { ...doc };
+  Object.keys(copia).forEach(k => {
+    const v = copia[k];
+    if (v && typeof v.toDate === 'function') copia[k] = v.toDate().toISOString();
+  });
+  return copia;
+}
+
+function cacheGet(chave) {
+  try {
+    const raw = sessionStorage.getItem(CACHE_PREFIX + chave);
+    if (!raw) return null;
+    const { ts, dados } = JSON.parse(raw);
+    if (Date.now() - ts > CACHE_TTL_MS) return null;
+    return dados;
+  } catch (e) { return null; }
+}
+function cacheSet(chave, dados) {
+  try {
+    sessionStorage.setItem(CACHE_PREFIX + chave, JSON.stringify({ ts: Date.now(), dados }));
+  } catch (e) { /* sessionStorage indisponível ou cheio — segue sem cache, sem quebrar a tela */ }
+}
+function cacheInvalidar(...chaves) {
+  try {
+    chaves.forEach(c => sessionStorage.removeItem(CACHE_PREFIX + c));
+  } catch (e) { /* ignora */ }
+}
+
+// Busca todos os docs de uma coleção reusando o cache se ainda válido, em vez
+// de ler tudo de novo do Firestore. `colFn` é uma das funções colX() acima.
+async function getColecaoCacheada(chave, colFn) {
+  const cache = cacheGet(chave);
+  if (cache) return cache;
+  const snap = await colFn().get();
+  const docs = snap.docs.map(d => prepararDocParaCache({ id: d.id, ...d.data() }));
+  cacheSet(chave, docs);
+  return docs;
+}
+
 // ============ CORES ============
 async function listarCoresSalvas() {
   try {
@@ -95,6 +157,7 @@ async function salvarCorte(corte) {
   corte.criado_em = firebase.firestore.FieldValue.serverTimestamp();
   corte.criado_por = auth.currentUser?.uid || 'anon';
   const doc = await colCortes().add(corte);
+  cacheInvalidar('cortes');
   return doc.id;
 }
 async function buscarCorte(id) {
@@ -103,8 +166,7 @@ async function buscarCorte(id) {
 }
 async function listarCortesRecentes(limite = 100) {
   // Busca todos e ordena no cliente (evita problema com cortes migrados sem criado_em)
-  const snap = await colCortes().get();
-  const cortes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const cortes = (await getColecaoCacheada('cortes', colCortes)).slice();
   // Ordena por data_corte desc, depois por criado_em se tiver
   cortes.sort((a, b) => {
     const da = a.data_corte || a.criado_em || '';
@@ -121,10 +183,8 @@ async function listarCortesRecentes(limite = 100) {
 // últimos ficava invisível na lista pra sempre. Aqui filtra primeiro,
 // então nada pendente se perde.
 async function listarCortesPendentes() {
-  const snap = await colCortes().get();
-  const pendentes = snap.docs
-    .map(d => ({ id: d.id, ...d.data() }))
-    .filter(c => c.status !== 'designado_total');
+  const cortes = await getColecaoCacheada('cortes', colCortes);
+  const pendentes = cortes.filter(c => c.status !== 'designado_total');
   pendentes.sort((a, b) => (b.data_corte || '').localeCompare(a.data_corte || ''));
   return pendentes;
 }
@@ -145,6 +205,7 @@ async function salvarNota(nota) {
   nota.criado_em = firebase.firestore.FieldValue.serverTimestamp();
   nota.criado_por = auth.currentUser?.uid || 'anon';
   await colNotas().doc(nota.numero).set(nota);
+  cacheInvalidar('notas');
   return nota.numero;
 }
 async function notasEmAbertoDaCostureira(costureira) {
@@ -157,10 +218,8 @@ async function notasEmAbertoDaCostureira(costureira) {
 // Lista TODAS as notas em aberto/paga_parcial (pra tela de retorno)
 // Busca tudo e filtra no cliente (evita problema de índice composto no Firestore)
 async function listarTodasNotasEmAberto() {
-  const snap = await colNotas().get();
-  const notas = snap.docs
-    .map(d => ({ id: d.id, ...d.data() }))
-    .filter(n => !n.status || n.status === 'aberta' || n.status === 'paga_parcial');
+  const todas = await getColecaoCacheada('notas', colNotas);
+  const notas = todas.filter(n => !n.status || n.status === 'aberta' || n.status === 'paga_parcial');
   // Ordena por data_saida desc
   notas.sort((a, b) => (b.data_saida || '').localeCompare(a.data_saida || ''));
   return notas;
@@ -169,6 +228,7 @@ async function listarTodasNotasEmAberto() {
 // Atualiza campos específicos de uma nota (ex: chegada_1, chegada_2, costureira)
 async function atualizarNota(numero, campos) {
   await colNotas().doc(numero).update(campos);
+  cacheInvalidar('notas');
 }
 
 async function listarNotasDoCorte(corteId) {
@@ -181,6 +241,7 @@ async function listarNotasDoCorte(corteId) {
 
 async function deletarNota(numero) {
   await colNotas().doc(numero).delete();
+  cacheInvalidar('notas');
 }
 
 // ============ ADIANTAMENTOS ============
@@ -233,6 +294,7 @@ async function salvarPagamento(pag) {
   pag.criado_em = firebase.firestore.FieldValue.serverTimestamp();
   pag.criado_por = auth.currentUser?.uid || 'anon';
   const doc = await colPagamentos().add(pag);
+  cacheInvalidar('pagamentos');
   return doc.id;
 }
 
@@ -271,7 +333,7 @@ async function registrarPagamentoTransacional({ costureira, data, forma, observa
       .sort((a, b) => a.dataOrdenacao.localeCompare(b.dataOrdenacao)); // FIFO — mais antigos primeiro
   }
 
-  return db.runTransaction(async (tx) => {
+  const resultado = await db.runTransaction(async (tx) => {
     // ---- 1) LER tudo primeiro (regra do Firestore: toda leitura antes de qualquer escrita numa tx) ----
     const notaSnaps = await Promise.all(notaRefsInfo.map(x => tx.get(x.ref)));
     const adiantSnaps = await Promise.all(adiantRefsInfo.map(x => tx.get(x.ref)));
@@ -350,6 +412,8 @@ async function registrarPagamentoTransacional({ costureira, data, forma, observa
 
     return { pagId: pagRef.id, pag };
   });
+  cacheInvalidar('notas', 'pagamentos');
+  return resultado;
 }
 
 // ============ ESTOQUE ============
@@ -365,16 +429,15 @@ async function adicionarAoEstoque(ref, cor, tam, qtd, data) {
     qtd: firebase.firestore.FieldValue.increment(Number(qtd)),
     ultima_entrada: data || hojeISO()
   }, { merge: true });
+  cacheInvalidar('estoque');
 }
 async function listarEstoque() {
-  const snap = await colEstoque().get();
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }))
-    .sort((a, b) => a.ref.localeCompare(b.ref) || a.cor.localeCompare(b.cor));
+  const estoque = (await getColecaoCacheada('estoque', colEstoque)).slice();
+  return estoque.sort((a, b) => a.ref.localeCompare(b.ref) || a.cor.localeCompare(b.cor));
 }
 // Notas com 1ª chegada mas pendentes de 2ª chegada (aguardando arremate pra entrar no estoque)
 async function listarNotasAguardandoArremate() {
-  const snap = await colNotas().get();
-  const notas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const notas = await getColecaoCacheada('notas', colNotas);
   return notas.filter(n => {
     const chegou1 = Object.values(n.chegada_1?.qtds || {}).reduce((a, v) => a + v, 0);
     const chegou2 = Object.values(n.chegada_2?.qtds || {}).reduce((a, v) => a + v, 0);

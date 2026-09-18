@@ -22,8 +22,7 @@ async function init() {
 async function carregarNotas() {
   const sel = document.getElementById('sel-costureira');
   try {
-    const snap = await colNotas().get();
-    TODAS_NOTAS_FC = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    TODAS_NOTAS_FC = await getColecaoCacheada('notas', colNotas);
     const abertas = TODAS_NOTAS_FC.filter(n =>
       n.retorno_finalizado !== true && pendenteDaNota(n) > 0);
     const nomes = [...new Set(abertas.map(n => n.costureira).filter(Boolean))]

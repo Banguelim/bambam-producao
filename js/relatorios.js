@@ -103,14 +103,14 @@ async function carregarTudo() {
       ? colPagamentos
       : () => firebase.firestore().collection('producao_dados').doc('op').collection('pagamentos');
 
-    const [snapN, snapC, snapP] = await Promise.all([
-      colNotas().get(),
-      _colCortes().get(),
-      _colPag().get().catch(() => ({ docs: [] }))
+    const [notas, cortes, pagamentos] = await Promise.all([
+      getColecaoCacheada('notas', colNotas),
+      getColecaoCacheada('cortes', _colCortes),
+      getColecaoCacheada('pagamentos', _colPag).catch(() => [])
     ]);
-    TODAS_NOTAS_R      = snapN.docs.map(d => ({ id: d.id, ...d.data() }));
-    TODOS_CORTES_R     = snapC.docs.map(d => ({ id: d.id, ...d.data() }));
-    TODOS_PAGAMENTOS_R = snapP.docs.map(d => ({ id: d.id, ...d.data() }));
+    TODAS_NOTAS_R      = notas;
+    TODOS_CORTES_R     = cortes;
+    TODOS_PAGAMENTOS_R = pagamentos;
     console.log(`[relatorios] ${TODAS_NOTAS_R.length} notas, ${TODOS_CORTES_R.length} cortes, ${TODOS_PAGAMENTOS_R.length} pagamentos`);
   } catch (e) {
     console.error('Erro carregando dados:', e);
