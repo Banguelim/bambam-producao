@@ -134,9 +134,10 @@ async function onRefChange() {
 }
 
 // ==== GRADE DE ENTRADA (5 colunas RN/P/M/G/GG, igual ao Novo Corte) ====
-// Cada coluna guarda suas próprias linhas cor+qtd, de forma independente
-// (aqui NÃO replica pras outras colunas — cada tamanho tem sua quantidade,
-// porque num pedido de venda os tamanhos raramente vêm iguais).
+// NOVO 24/09/2026 — funciona igual ao Novo Corte: digitou cor + qtd numa
+// coluna e apertou Enter, a mesma cor/qtd é repetida em todos os tamanhos
+// HABILITADOS. Depois é só ajustar a qtd (clica no número), tirar a cor de
+// algum tamanho (×) ou desabilitar o tamanho inteiro.
 
 function buildColItem(tam) {
   const col = document.createElement('div');
@@ -183,7 +184,9 @@ function buildColItem(tam) {
   return col;
 }
 
-function salvarEntradaNovaEmColItem(col) {
+// replicar=false: lança só na própria coluna (usado ao confirmar sozinho o que
+// ficou digitado sem Enter, pra não multiplicar a mesma entrada 5 vezes).
+function salvarEntradaNovaEmColItem(col, replicar = true) {
   const corInput = col.querySelector('.cor-input');
   const qtyInput = col.querySelector('.qty-input');
   const cor = corInput.value.trim().toUpperCase();
@@ -199,13 +202,15 @@ function salvarEntradaNovaEmColItem(col) {
     return;
   }
 
-  addEntradaItem(col, cor, q);
+  const destinos = replicar
+    ? [...document.querySelectorAll('#grade-item .col')].filter(c => !c.classList.contains('desabilitada'))
+    : [col];
+  destinos.forEach(c => { addEntradaItem(c, cor, q); atualizarBtnColItem(c); });
   salvarCorSeNova(cor);
 
   corInput.value = '';
   qtyInput.value = '';
   corInput.focus();
-  atualizarBtnColItem(col);
   recalcItem();
 }
 
@@ -280,7 +285,7 @@ function confirmarEntradasPendentes() {
     if (col.classList.contains('desabilitada')) return;
     const corInput = col.querySelector('.cor-input');
     const qtyInput = col.querySelector('.qty-input');
-    if (corInput.value.trim() && qtyInput.value) salvarEntradaNovaEmColItem(col);
+    if (corInput.value.trim() && qtyInput.value) salvarEntradaNovaEmColItem(col, false);
   });
 }
 
