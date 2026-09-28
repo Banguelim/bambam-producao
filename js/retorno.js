@@ -54,12 +54,25 @@ async function init() {
   });
 }
 
-async function carregarNotasAbertas() {
+// NOVO 28/09/2026 — a coleção inteira de notas só é lida quando a tela abre.
+// Depois de registrar chegada/defeito/troca/finalizar/devolver, relê SÓ a
+// nota que mudou (1 leitura em vez de centenas) — antes cada ação relia
+// todas as notas e ajudava a estourar a cota diária do Firestore.
+let todasNotasCache = null;
+
+async function carregarNotasAbertas(numeroAlterado) {
   const chips = document.getElementById('chips-notas');
   chips.innerHTML = '<span style="color:var(--text-muted);font-size:12px">carregando...</span>';
   try {
-    const snap = await colNotas().get();
-    const todas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (numeroAlterado && todasNotasCache) {
+      const doc = await colNotas().doc(String(numeroAlterado)).get();
+      todasNotasCache = todasNotasCache.filter(n => n.id !== doc.id);
+      if (doc.exists) todasNotasCache.push({ id: doc.id, ...doc.data() });
+    } else {
+      const snap = await colNotas().get();
+      todasNotasCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }
+    const todas = [...todasNotasCache];
     todas.sort((a, b) => (b.data_saida || '').localeCompare(a.data_saida || ''));
 
     todasNotasAbertas = todas.filter(n => {
@@ -191,7 +204,7 @@ function renderFinalizadas() {
       try {
         await atualizarNota(n.numero, { retorno_finalizado: false });
         toast(`Nota #${n.numero} reabilitada`, 'ok');
-        await carregarNotasAbertas();
+        await carregarNotasAbertas(n.numero);
       } catch (err) {
         toast('Erro: ' + err.message, 'err');
       }
@@ -443,8 +456,9 @@ async function registrarChegada() {
       toast(`✓ ${total} peças registradas na ${qualChegada}ª chegada da nota #${notaAtual.numero}`, 'ok');
     }
 
+    const numAlterado = notaAtual.numero;
     setTimeout(async () => {
-      await carregarNotasAbertas();
+      await carregarNotasAbertas(numAlterado);
       fecharPainel();
       btn.disabled = false;
     }, 1200);
@@ -517,8 +531,9 @@ async function confirmarTroca() {
     toast(`✓ Nota #${notaAtual.numero} transferida pra ${novaCost}`, 'ok');
     document.getElementById('modal-trocar').classList.remove('visivel');
 
+    const numAlterado = notaAtual.numero;
     setTimeout(async () => {
-      await carregarNotasAbertas();
+      await carregarNotasAbertas(numAlterado);
       fecharPainel();
     }, 1200);
   } catch (e) {
@@ -660,8 +675,9 @@ async function confirmarDefeito() {
     toast(`✓ ${qtd} peça${qtd>1?'s':''} com defeito no ${tam}${msgExtra}`, 'ok');
     document.getElementById('modal-defeito').classList.remove('visivel');
 
+    const numAlterado = notaAtual.numero;
     setTimeout(async () => {
-      await carregarNotasAbertas();
+      await carregarNotasAbertas(numAlterado);
       fecharPainel();
       btn.disabled = false;
     }, 1500);
@@ -692,8 +708,9 @@ Ela vai sair da lista de ativas e ficar disponível só pra consulta.`;
   try {
     await atualizarNota(notaAtual.numero, { retorno_finalizado: true });
     toast(`✓ Retorno da nota #${notaAtual.numero} finalizado`, 'ok');
+    const numAlterado = notaAtual.numero;
     setTimeout(async () => {
-      await carregarNotasAbertas();
+      await carregarNotasAbertas(numAlterado);
       fecharPainel();
     }, 1000);
   } catch (e) {
@@ -718,8 +735,9 @@ async function devolverParaDesignacao() {
       await colCortes().doc(notaAtual.corte_id).update({ status: 'designado_parcial' });
     }
     toast(`Nota #${notaAtual.numero} cancelada — peças liberadas pra redesignar`, 'ok');
+    const numAlterado = notaAtual.numero;
     setTimeout(async () => {
-      await carregarNotasAbertas();
+      await carregarNotasAbertas(numAlterado);
       fecharPainel();
     }, 1200);
   } catch (e) {
