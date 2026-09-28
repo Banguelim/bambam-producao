@@ -52,12 +52,16 @@ async function carregarDadosCostureira() {
 
   // Carrega adiantamentos e notas em paralelo
   try {
-    const [saldo, notas] = await Promise.all([
+    // Uma leitura só das notas da costureira: serve pras em aberto e pra
+    // conferir as marcadas como pagas por engano.
+    const [saldo, snapNotas] = await Promise.all([
       saldoAdiantamento(costureiraAtual),
-      notasEmAbertoDaCostureira(costureiraAtual)
+      colNotas().where('costureira', '==', costureiraAtual).get()
     ]);
     saldoAdiantAtual = saldo;
-    const reabertas = await reabrirNotasQuitadasPorEngano(costureiraAtual);
+    const todasDaCost = snapNotas.docs.map(d => ({ id: d.id, ...d.data() }));
+    const notas = todasDaCost.filter(n => !n.status || n.status === 'aberta' || n.status === 'paga_parcial');
+    const reabertas = await reabrirNotasQuitadasPorEngano(todasDaCost);
     notasCarregadas = await corrigirNotasQuitadasPorDefeito([...notas, ...reabertas]);
     renderAdiantamento();
     renderNotas();
@@ -102,11 +106,9 @@ async function corrigirNotasQuitadasPorDefeito(notas) {
 // valor da nota) volta pra "paga_parcial" e reaparece em "Notas em aberto".
 // Só mexe em nota em que todo pagamento tem as peças anotadas — nota antiga
 // sem essa informação fica como está.
-async function reabrirNotasQuitadasPorEngano(costureira) {
-  const snap = await colNotas().where('costureira', '==', costureira).get();
+async function reabrirNotasQuitadasPorEngano(todasDaCost) {
   const reabertas = [];
-  for (const d of snap.docs) {
-    const n = { id: d.id, ...d.data() };
+  for (const n of todasDaCost) {
     if (n.status !== 'paga_total') continue;
     const pags = n.pagamentos || [];
     if (pags.length === 0 || pags.some(p => !(Number(p.pecas) > 0))) continue;
