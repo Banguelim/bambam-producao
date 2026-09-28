@@ -43,6 +43,12 @@
     border: none; border-radius: var(--radius); font-weight: 700; font-size: 13px;
   }
   .btn-add-ref:disabled { opacity: 0.5; }
+  /* Salvar ao lado do "Adicionar ao pedido" — cor diferente (verde) pra não confundir os dois */
+  .btn-salvar-item {
+    padding: 10px 20px; background: var(--success); color: white;
+    border: none; border-radius: var(--radius); font-weight: 700; font-size: 13px;
+  }
+  .btn-salvar-item:disabled { opacity: 0.5; }
   .bloco-item { margin-bottom: 22px; }
 
   .tabela-itens { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 13px; }
@@ -197,6 +203,7 @@
           ⚠ Este pedido já foi concluído — clica em "+ novo pedido" pra lançar outro
         </span>
         <button class="btn-add-ref" id="btn-add-ref">✓ Adicionar ao pedido</button>
+        <button class="btn-salvar-item" id="btn-salvar-pedido-2" title="Salva o pedido com os itens já adicionados">💾 Salvar pedido</button>
       </div>
     </div>
 

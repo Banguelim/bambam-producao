@@ -52,6 +52,7 @@ async function init() {
   document.getElementById('btn-add-ref').addEventListener('click', confirmarRefNoPedido);
   document.getElementById('btn-novo-pedido').addEventListener('click', () => { if (confirm('Descartar e começar um pedido novo?')) limparFormulario(); });
   document.getElementById('btn-salvar-pedido').addEventListener('click', () => salvarPedidoBtn(false));
+  document.getElementById('btn-salvar-pedido-2').addEventListener('click', () => salvarPedidoBtn(false));
   document.getElementById('btn-concluir-pedido').addEventListener('click', concluirPedidoBtn);
   document.getElementById('btn-excluir-pedido').addEventListener('click', excluirPedidoAtual);
   document.getElementById('btn-romaneio-separacao').addEventListener('click', () => imprimirRomaneio('separacao'));
@@ -495,8 +496,8 @@ function validarCabecalho() {
 
 async function salvarPedidoBtn(silencioso) {
   if (!validarCabecalho()) return;
-  const btn = document.getElementById('btn-salvar-pedido');
-  btn.disabled = true;
+  const btns = [document.getElementById('btn-salvar-pedido'), document.getElementById('btn-salvar-pedido-2')];
+  btns.forEach(b => b.disabled = true);
   try {
     const pedido = montarPedidoObj();
     pedido.status = 'aberto';
@@ -512,7 +513,7 @@ async function salvarPedidoBtn(silencioso) {
   } catch (e) {
     toast('Erro ao salvar: ' + e.message, 'err');
   } finally {
-    btn.disabled = false;
+    btns.forEach(b => b.disabled = false);
   }
 }
 
@@ -582,6 +583,7 @@ function atualizarCabecalhoNumero() {
   // Antes o botão só ficava cinza sem explicar por quê — parecia travado/quebrado.
   document.getElementById('lbl-add-ref-motivo').style.display = pedidoConcluido ? '' : 'none';
   document.getElementById('btn-salvar-pedido').style.display = pedidoConcluido ? 'none' : '';
+  document.getElementById('btn-salvar-pedido-2').style.display = pedidoConcluido ? 'none' : '';
   document.getElementById('btn-concluir-pedido').style.display = pedidoConcluido ? 'none' : '';
   // Excluir só aparece pra pedido já salvo (precisa ter número). Pedido em
   // aberto: apaga direto. Pedido concluído: também dá, mas primeiro estorna
