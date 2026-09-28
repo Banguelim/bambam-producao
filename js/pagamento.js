@@ -57,7 +57,8 @@ async function carregarDadosCostureira() {
       notasEmAbertoDaCostureira(costureiraAtual)
     ]);
     saldoAdiantAtual = saldo;
-    notasCarregadas = await corrigirNotasQuitadasPorDefeito(notas);
+    const reabertas = await reabrirNotasQuitadasPorEngano(costureiraAtual);
+    notasCarregadas = await corrigirNotasQuitadasPorDefeito([...notas, ...reabertas]);
     renderAdiantamento();
     renderNotas();
   } catch (e) {
@@ -72,14 +73,18 @@ async function carregarDadosCostureira() {
 // alguém abrir a tela de Pagamento pra elas de novo). Se as peças já pagas
 // cobrem o total esperado (chegou − defeito), a nota está de fato quitada —
 // corrige o status no banco e tira ela da lista de "em aberto" na hora.
+// CORREÇÃO 28/09/2026 — compara com o TOTAL DO LOTE (saída − defeito), igual
+// ao registrarPagamentoTransacional. Antes comparava com o que já tinha
+// CHEGADO: lote de 300 com 200 chegadas e 200 pagas virava "paga_total" só
+// de abrir esta tela, e quando as 100 restantes chegavam não aparecia mais
+// nada a pagar.
 async function corrigirNotasQuitadasPorDefeito(notas) {
   const aindaAbertas = [];
   for (const n of notas) {
-    const chegou = calcularTotalChegou(n);
     const defeitos = Number(n.defeito_retorno_total) || 0;
-    const pecasValidas = Math.max(0, chegou - defeitos);
+    const pecasEsperadas = Math.max(0, (n.total_saida || 0) - defeitos);
     const pecasJaPagas = totalPecasJaPagasDaNota(n);
-    if (pecasValidas > 0 && pecasJaPagas >= pecasValidas && n.status !== 'paga_total') {
+    if (pecasEsperadas > 0 && pecasJaPagas >= pecasEsperadas && n.status !== 'paga_total') {
       try {
         await atualizarNota(n.numero, { status: 'paga_total' });
         continue; // sai da lista de abertas
@@ -90,6 +95,35 @@ async function corrigirNotasQuitadasPorDefeito(notas) {
     aindaAbertas.push(n);
   }
   return aindaAbertas;
+}
+
+// Desfaz o estrago do bug acima: nota marcada "paga_total" que ainda tem
+// peças E dinheiro a pagar (peças pagas < saída − defeito e valor pago <
+// valor da nota) volta pra "paga_parcial" e reaparece em "Notas em aberto".
+// Só mexe em nota em que todo pagamento tem as peças anotadas — nota antiga
+// sem essa informação fica como está.
+async function reabrirNotasQuitadasPorEngano(costureira) {
+  const snap = await colNotas().where('costureira', '==', costureira).get();
+  const reabertas = [];
+  for (const d of snap.docs) {
+    const n = { id: d.id, ...d.data() };
+    if (n.status !== 'paga_total') continue;
+    const pags = n.pagamentos || [];
+    if (pags.length === 0 || pags.some(p => !(Number(p.pecas) > 0))) continue;
+    const defeitos = Number(n.defeito_retorno_total) || 0;
+    const pecasEsperadas = Math.max(0, (n.total_saida || 0) - defeitos);
+    const faltaValor = (n.valor_nota || 0) - totalJaPagoDaNota(n);
+    if (totalPecasJaPagasDaNota(n) < pecasEsperadas && faltaValor > 0.01) {
+      try {
+        await atualizarNota(n.numero, { status: 'paga_parcial' });
+        n.status = 'paga_parcial';
+        reabertas.push(n);
+      } catch (e) {
+        console.warn(`Falha reabrindo nota #${n.numero}:`, e);
+      }
+    }
+  }
+  return reabertas;
 }
 
 function renderAdiantamento() {
