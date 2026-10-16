@@ -645,6 +645,12 @@ async function excluirPedidoAtual() {
 async function estornarPedidoConcluido(numero, itens) {
   const contasSnap = await colContasReceber().where('pedido_id', '==', numero).get();
   const contas = contasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  if (contas.some(c => c.status === 'agrupada')) {
+    throw new Error(
+      'Alguma parcela desse pedido foi juntada com outras no Financeiro — clique em "↺ separar" ' +
+      'na parcela juntada antes de excluir o pedido.'
+    );
+  }
   const pagas = contas.filter(c => c.status === 'pago');
   if (pagas.length > 0) {
     throw new Error(

@@ -304,6 +304,66 @@ async function reabrirConta(id) {
 async function salvarObservacaoConta(id, texto) {
   await colContasReceber().doc(id).update({ historico: texto });
 }
+// Juros por atraso: guarda o valor original da parcela na 1ª vez e o valor
+// passa a ser original + juros. Chamar de novo SUBSTITUI os juros (não soma
+// em cima) — juros = 0 volta pro valor original.
+async function aplicarJurosConta(conta, juros) {
+  const original = conta.valor_original ?? conta.valor ?? 0;
+  const j = Math.round(Math.max(0, Number(juros) || 0) * 100) / 100;
+  const campos = {
+    valor_original: original,
+    juros: j,
+    valor: Math.round((original + j) * 100) / 100
+  };
+  await colContasReceber().doc(conta.id).update(campos);
+  return campos;
+}
+
+// Junta várias parcelas em aberto do MESMO cliente numa parcela só. As
+// originais NÃO são apagadas: ficam com status 'agrupada' (somem da lista
+// de pendentes, que só lê status 'aberto') e apontam pra nova — assim dá pra
+// desfazer (separarJuncaoContas) e o histórico não se perde.
+async function juntarContas(contas, dataVencimento) {
+  const nova = colContasReceber().doc();
+  const total = Math.round(contas.reduce((a, c) => a + (c.valor || 0), 0) * 100) / 100;
+  const pedidos = [...new Set(contas.map(c => c.pedido_id).filter(Boolean))];
+  const descricao = contas.map(c =>
+    `${c.pedido_id ? 'Ped ' + c.pedido_id + ' ' : ''}${c.parcela_num}/${c.parcelas_total} (${formatBRL(c.valor || 0)})`
+  ).join(' + ');
+  const batch = db.batch();
+  batch.set(nova, {
+    pedido_id: pedidos.length === 1 ? pedidos[0] : null,
+    pedidos_agrupados: pedidos,
+    cliente: contas[0].cliente,
+    cliente_id: contas[0].cliente_id || null,
+    parcela_num: 1,
+    parcelas_total: 1,
+    valor: total,
+    data_emissao: hojeISO(),
+    data_vencimento: dataVencimento,
+    status: 'aberto',
+    agrupa_ids: contas.map(c => c.id),
+    historico: `Junção de: ${descricao}`,
+    criado_em: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  contas.forEach(c => batch.update(colContasReceber().doc(c.id), { status: 'agrupada', agrupada_em: nova.id }));
+  await batch.commit();
+  return nova.id;
+}
+
+// Desfaz uma junção ainda não paga: as parcelas originais voltam pra
+// 'aberto' e a parcela juntada é apagada.
+async function separarJuncaoContas(conta) {
+  if (conta.status === 'pago') throw new Error('Essa parcela já foi paga — reabra antes de separar');
+  const batch = db.batch();
+  (conta.agrupa_ids || []).forEach(id => batch.update(colContasReceber().doc(id), {
+    status: 'aberto',
+    agrupada_em: firebase.firestore.FieldValue.delete()
+  }));
+  batch.delete(colContasReceber().doc(conta.id));
+  await batch.commit();
+}
+
 async function deletarContasDoPedido(numeroPedido) {
   const snap = await colContasReceber().where('pedido_id', '==', numeroPedido).get();
   const batch = db.batch();

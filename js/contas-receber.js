@@ -12,6 +12,7 @@ let contasPendentes = [];       // sempre carregadas (leve)
 let contasPagasCache = null;    // null = ainda não carregado; carrega sob demanda
 let agregadosPago = { total: 0, qtd: 0 }; // totais de "pago" mantidos incrementalmente (ver db-vendas.js)
 let carregandoPagas = false;
+let selecionadas = new Set();   // ids das parcelas marcadas pra juntar
 
 async function init() {
   await protegerRota();
@@ -26,6 +27,8 @@ async function init() {
     document.getElementById('f-data-ate').value = '';
     render();
   });
+  document.getElementById('btn-desmarcar').addEventListener('click', () => { selecionadas.clear(); render(); });
+  document.getElementById('btn-juntar').addEventListener('click', juntarSelecionadasBtn);
   await carregar();
 }
 
@@ -52,7 +55,7 @@ async function onFiltroChange() {
     if (carregandoPagas) return;
     carregandoPagas = true;
     const corpo = document.getElementById('contas-corpo');
-    corpo.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text-muted)">Carregando histórico de pagas (${agregadosPago.qtd} registros)...</td></tr>`;
+    corpo.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--text-muted)">Carregando histórico de pagas (${agregadosPago.qtd} registros)...</td></tr>`;
     try {
       contasPagasCache = await listarContasReceberPagas();
     } catch (e) {
@@ -90,7 +93,7 @@ function render() {
     if (dataDe && (!c.data_vencimento || c.data_vencimento < dataDe)) return false;
     if (dataAte && (!c.data_vencimento || c.data_vencimento > dataAte)) return false;
     if (busca) {
-      const alvo = `${c.cliente || ''} ${c.pedido_id || ''}`.toUpperCase();
+      const alvo = `${c.cliente || ''} ${c.pedido_id || ''} ${(c.pedidos_agrupados || []).join(' ')}`.toUpperCase();
       if (!alvo.includes(busca)) return false;
     }
     return true;
@@ -125,6 +128,11 @@ function render() {
   document.getElementById('s-pago').textContent = formatBRL(somaPago);
   document.getElementById('s-total').textContent = contasPendentes.length + qtdPago;
 
+  // Marcadas que sumiram da lista (baixa, outra aba etc.) saem da seleção
+  const idsPendentes = new Set(contasPendentes.map(c => c.id));
+  [...selecionadas].forEach(id => { if (!idsPendentes.has(id)) selecionadas.delete(id); });
+  renderBarraJuntar();
+
   const corpo = document.getElementById('contas-corpo');
   const vazio = document.getElementById('contas-vazio');
   corpo.innerHTML = '';
@@ -141,12 +149,22 @@ function render() {
     const st = statusReal(c);
     const tr = document.createElement('tr');
     tr.className = st === 'vencido' ? 'vencida' : (st === 'pago' ? 'paga' : '');
+    const juntada = (c.agrupa_ids || []).length > 0;
+    const pedidosAgr = c.pedidos_agrupados || [];
+    const celPedido = c.pedido_id
+      ? `<a href="pedido-novo.html?pedido=${c.pedido_id}">${c.pedido_id}</a>`
+      : (pedidosAgr.length
+        ? pedidosAgr.map(p => `<a href="pedido-novo.html?pedido=${p}">${p}</a>`).join(', ')
+        : '<span style="color:var(--text-muted)">—</span>');
+    const jurosInfo = c.juros > 0
+      ? `<span class="juros-info">${formatBRL(c.valor_original)} + ${formatBRL(c.juros)} juros</span>` : '';
     tr.innerHTML = `
-      <td>${c.pedido_id ? `<a href="pedido-novo.html?pedido=${c.pedido_id}">${c.pedido_id}</a>` : '<span style="color:var(--text-muted)">—</span>'}</td>
+      <td>${st !== 'pago' ? `<input type="checkbox" class="chk-juntar" ${selecionadas.has(c.id) ? 'checked' : ''}>` : ''}</td>
+      <td>${celPedido}</td>
       <td class="cliente">${c.cliente || '—'}</td>
-      <td>${c.parcela_num}/${c.parcelas_total}</td>
+      <td>${juntada ? `🔗 junção (${c.agrupa_ids.length})` : `${c.parcela_num}/${c.parcelas_total}`}</td>
       <td>${formatDataBR(c.data_vencimento)}</td>
-      <td class="num">${formatBRL(c.valor)}</td>
+      <td class="num">${formatBRL(c.valor)}${jurosInfo}</td>
       <td><span class="badge ${st}">${st === 'pago' ? '✓ pago' : (st === 'vencido' ? '⚠ vencido' : 'aberto')}</span></td>
       <td class="obs"><span class="obs-editavel" contenteditable="true" spellcheck="false" data-id="${c.id}">${c.historico || ''}</span></td>
       <td></td>
@@ -154,7 +172,13 @@ function render() {
     const obsEl = tr.querySelector('.obs-editavel');
     obsEl.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); obsEl.blur(); } });
     obsEl.addEventListener('blur', () => salvarObservacaoBtn(c, obsEl));
+    const chk = tr.querySelector('.chk-juntar');
+    if (chk) chk.addEventListener('change', () => {
+      if (chk.checked) selecionadas.add(c.id); else selecionadas.delete(c.id);
+      renderBarraJuntar();
+    });
     const acaoTd = tr.lastElementChild;
+    acaoTd.className = 'acoes';
     if (st === 'pago') {
       const btn = document.createElement('button');
       btn.className = 'btn-mini';
@@ -167,6 +191,19 @@ function render() {
       btn.textContent = '✓ dar baixa';
       btn.addEventListener('click', () => darBaixaBtn(c));
       acaoTd.appendChild(btn);
+      const btnJuros = document.createElement('button');
+      btnJuros.className = 'btn-mini warn';
+      btnJuros.textContent = c.juros > 0 ? '✎ juros' : '+ juros';
+      btnJuros.addEventListener('click', () => jurosBtn(c));
+      acaoTd.appendChild(btnJuros);
+      if (juntada) {
+        const btnSep = document.createElement('button');
+        btnSep.className = 'btn-mini';
+        btnSep.textContent = '↺ separar';
+        btnSep.title = 'Desfaz a junção: as parcelas originais voltam pra lista';
+        btnSep.addEventListener('click', () => separarBtn(c));
+        acaoTd.appendChild(btnSep);
+      }
     }
     corpo.appendChild(tr);
   });
@@ -206,6 +243,85 @@ async function darBaixaBtn(c) {
     await darBaixaConta(c.id, dataPag, valor);
     toast(`✓ Baixa registrada — parcela ${c.parcela_num}/${c.parcelas_total} de ${c.cliente}`, 'ok');
     await recarregarApos();
+  } catch (e) {
+    toast('Erro: ' + e.message, 'err');
+  }
+}
+
+// Juros por atraso: sugere 2% ao mês proporcional aos dias de atraso (só
+// sugestão — a pessoa digita o valor combinado). Substitui os juros
+// anteriores; 0 tira os juros e volta pro valor original.
+async function jurosBtn(c) {
+  const original = c.valor_original ?? c.valor ?? 0;
+  const dias = c.data_vencimento
+    ? Math.max(0, Math.floor((new Date(hojeISO() + 'T00:00:00') - new Date(c.data_vencimento + 'T00:00:00')) / 86400000))
+    : 0;
+  const sugestao = c.juros > 0 ? c.juros : Math.round(original * 0.02 * (dias / 30) * 100) / 100;
+  const msg = `${c.cliente} — parcela de ${formatBRL(original)}` +
+    (dias > 0 ? `, vencida há ${dias} dia(s).` : ', ainda não vencida.') +
+    `\n\nValor dos JUROS a acrescentar (R$):` +
+    (dias > 0 && !(c.juros > 0) ? `\n(sugestão: 2% ao mês pelos dias de atraso — pode trocar)` : '') +
+    `\nDigite 0 pra tirar os juros.`;
+  const str = prompt(msg, String(sugestao.toFixed(2)));
+  if (str === null) return;
+  const juros = parseFloat(str.replace(',', '.'));
+  if (isNaN(juros) || juros < 0) { toast('Valor inválido', 'err'); return; }
+  try {
+    const campos = await aplicarJurosConta(c, juros);
+    Object.assign(c, campos);
+    toast(juros > 0
+      ? `✓ Juros de ${formatBRL(campos.juros)} — parcela agora ${formatBRL(campos.valor)}`
+      : `✓ Juros retirados — parcela volta pra ${formatBRL(campos.valor)}`, 'ok');
+    render();
+  } catch (e) {
+    toast('Erro: ' + e.message, 'err');
+  }
+}
+
+function contasSelecionadas() {
+  return contasPendentes.filter(c => selecionadas.has(c.id));
+}
+
+function renderBarraJuntar() {
+  const sel = contasSelecionadas();
+  const barra = document.getElementById('barra-juntar');
+  barra.classList.toggle('visivel', sel.length > 0);
+  if (!sel.length) return;
+  const clientes = [...new Set(sel.map(c => c.cliente))];
+  document.getElementById('juntar-qtd').textContent = sel.length;
+  document.getElementById('juntar-cliente').textContent = clientes.length === 1 ? clientes[0] : `${clientes.length} clientes diferentes ⚠`;
+  document.getElementById('juntar-total').textContent = formatBRL(sel.reduce((a, c) => a + (c.valor || 0), 0));
+}
+
+async function juntarSelecionadasBtn() {
+  const sel = contasSelecionadas();
+  if (sel.length < 2) { toast('Marque pelo menos 2 parcelas pra juntar', 'err'); return; }
+  const clientes = new Set(sel.map(c => (c.cliente || '').toUpperCase()));
+  if (clientes.size > 1) { toast('Só dá pra juntar parcelas do MESMO cliente', 'err'); return; }
+  const total = sel.reduce((a, c) => a + (c.valor || 0), 0);
+  const venc = prompt(
+    `Juntar ${sel.length} parcelas de ${sel[0].cliente} numa só, de ${formatBRL(total)}.\n` +
+    `As parcelas marcadas saem da lista (dá pra desfazer com "↺ separar").\n\n` +
+    `Vencimento da nova parcela (AAAA-MM-DD):`, hojeISO());
+  if (!venc) return;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(venc)) { toast('Data inválida — use AAAA-MM-DD', 'err'); return; }
+  try {
+    await juntarContas(sel, venc);
+    selecionadas.clear();
+    toast(`✓ ${sel.length} parcelas juntadas numa só de ${formatBRL(total)}`, 'ok');
+    await carregar();
+  } catch (e) {
+    toast('Erro ao juntar: ' + e.message, 'err');
+  }
+}
+
+async function separarBtn(c) {
+  if (!confirm(`Desfazer a junção de ${c.cliente} (${formatBRL(c.valor)})?\n\nAs ${c.agrupa_ids.length} parcelas originais voltam pra lista e esta parcela juntada é apagada.` +
+    (c.juros > 0 ? `\n\n⚠ Os juros de ${formatBRL(c.juros)} lançados nela se perdem.` : ''))) return;
+  try {
+    await separarJuncaoContas(c);
+    toast('✓ Junção desfeita — parcelas originais de volta', 'ok');
+    await carregar();
   } catch (e) {
     toast('Erro: ' + e.message, 'err');
   }
