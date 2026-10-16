@@ -163,7 +163,8 @@ function render() {
       <td>${celPedido}</td>
       <td class="cliente">${c.cliente || '—'}</td>
       <td>${juntada ? `🔗 junção (${c.agrupa_ids.length})` : `${c.parcela_num}/${c.parcelas_total}`}</td>
-      <td>${formatDataBR(c.data_vencimento)}</td>
+      <td>${formatDataBR(c.data_vencimento)}${c.vencimento_original && c.vencimento_original !== c.data_vencimento
+        ? `<span class="juros-info" style="color:var(--text-muted)">era ${formatDataBR(c.vencimento_original)}</span>` : ''}</td>
       <td class="num">${formatBRL(c.valor)}${jurosInfo}</td>
       <td><span class="badge ${st}">${st === 'pago' ? '✓ pago' : (st === 'vencido' ? '⚠ vencido' : 'aberto')}</span></td>
       <td class="obs"><span class="obs-editavel" contenteditable="true" spellcheck="false" data-id="${c.id}">${c.historico || ''}</span></td>
@@ -196,6 +197,11 @@ function render() {
       btnJuros.textContent = c.juros > 0 ? '✎ juros' : '+ juros';
       btnJuros.addEventListener('click', () => jurosBtn(c));
       acaoTd.appendChild(btnJuros);
+      const btnProrr = document.createElement('button');
+      btnProrr.className = 'btn-mini';
+      btnProrr.textContent = '📅 prorrogar';
+      btnProrr.addEventListener('click', () => prorrogarBtn(c));
+      acaoTd.appendChild(btnProrr);
       if (juntada) {
         const btnSep = document.createElement('button');
         btnSep.className = 'btn-mini';
@@ -272,6 +278,29 @@ async function jurosBtn(c) {
     toast(juros > 0
       ? `✓ Juros de ${formatBRL(campos.juros)} — parcela agora ${formatBRL(campos.valor)}`
       : `✓ Juros retirados — parcela volta pra ${formatBRL(campos.valor)}`, 'ok');
+    render();
+  } catch (e) {
+    toast('Erro: ' + e.message, 'err');
+  }
+}
+
+async function prorrogarBtn(c) {
+  const sugestao = new Date((c.data_vencimento > hojeISO() ? c.data_vencimento : hojeISO()) + 'T00:00:00');
+  sugestao.setDate(sugestao.getDate() + 30);
+  const str = prompt(
+    `${c.cliente} — parcela de ${formatBRL(c.valor)}, vence em ${formatDataBR(c.data_vencimento)}.\n\n` +
+    `Nova data de vencimento (DD/MM/AAAA):`,
+    formatDataBR(sugestao.toISOString().slice(0, 10)));
+  if (!str) return;
+  const m = str.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!m) { toast('Data inválida — use DD/MM/AAAA (ex: 15/11/2026)', 'err'); return; }
+  const iso = `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  const teste = new Date(iso + 'T00:00:00');
+  if (isNaN(teste) || teste.toISOString().slice(0, 10) !== iso) { toast('Data inválida', 'err'); return; }
+  try {
+    Object.assign(c, await prorrogarConta(c, iso));
+    toast(`✓ Vencimento de ${c.cliente} prorrogado pra ${formatDataBR(iso)}`, 'ok');
+    contasPendentes.sort((a, b) => (a.data_vencimento || '').localeCompare(b.data_vencimento || ''));
     render();
   } catch (e) {
     toast('Erro: ' + e.message, 'err');

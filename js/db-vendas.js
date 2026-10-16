@@ -319,6 +319,17 @@ async function aplicarJurosConta(conta, juros) {
   return campos;
 }
 
+// Prorroga o vencimento. Guarda o vencimento ORIGINAL na 1ª prorrogação
+// (não sobrescreve nas seguintes) pra não perder quando a parcela venceria.
+async function prorrogarConta(conta, novaData) {
+  const campos = {
+    data_vencimento: novaData,
+    vencimento_original: conta.vencimento_original || conta.data_vencimento || null
+  };
+  await colContasReceber().doc(conta.id).update(campos);
+  return campos;
+}
+
 // Junta várias parcelas em aberto do MESMO cliente numa parcela só. As
 // originais NÃO são apagadas: ficam com status 'agrupada' (somem da lista
 // de pendentes, que só lê status 'aberto') e apontam pra nova — assim dá pra
