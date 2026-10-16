@@ -53,6 +53,12 @@ async function onFiltroChange() {
   const filtro = document.getElementById('f-status').value;
   if ((filtro === 'pago' || filtro === 'todos') && contasPagasCache === null) {
     if (carregandoPagas) return;
+    if (!confirm(`Ver as pagas vai ler o histórico inteiro (${agregadosPago.qtd.toLocaleString('pt-BR')} contas).\n` +
+                 `O limite grátis do Firebase é 50.000 leituras por dia para TODO o sistema (inclusive o ponto).\n\nContinuar?`)) {
+      document.getElementById('f-status').value = 'pendentes';
+      render();
+      return;
+    }
     carregandoPagas = true;
     const corpo = document.getElementById('contas-corpo');
     corpo.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--text-muted)">Carregando histórico de pagas (${agregadosPago.qtd} registros)...</td></tr>`;
@@ -215,14 +221,13 @@ function render() {
   });
 }
 
-// A conta muda de lado (pendente ↔ paga) — invalida o cache de pagas e
-// recarrega. Se o filtro atual precisa ver as pagas, busca de novo na
-// hora (onFiltroChange); senão só atualiza pendentes/agregados (leve).
-async function recarregarApos() {
-  contasPagasCache = null;
+// A conta muda de lado (pendente ↔ paga). NÃO relê o histórico de pagas
+// (16 mil+ docs) — isso estourava a cota a cada baixa com filtro "pagas"/
+// "todas". O cache de pagas é ajustado aqui mesmo (ajustarCache) e só as
+// pendentes (leve) são relidas do Firestore.
+async function recarregarApos(ajustarCache) {
+  if (contasPagasCache !== null && ajustarCache) ajustarCache(contasPagasCache);
   await carregar();
-  const filtro = document.getElementById('f-status').value;
-  if (filtro === 'pago' || filtro === 'todos') await onFiltroChange();
 }
 
 // Salva a observação da parcela ao sair do campo (blur) — só grava se
@@ -248,7 +253,9 @@ async function darBaixaBtn(c) {
   try {
     await darBaixaConta(c.id, dataPag, valor);
     toast(`✓ Baixa registrada — parcela ${c.parcela_num}/${c.parcelas_total} de ${c.cliente}`, 'ok');
-    await recarregarApos();
+    await recarregarApos(cache => {
+      cache.push({ ...c, status: 'pago', data_pagamento: dataPag, valor_pago: valor });
+    });
   } catch (e) {
     toast('Erro: ' + e.message, 'err');
   }
@@ -361,7 +368,10 @@ async function reabrirBtn(c) {
   try {
     await reabrirConta(c.id);
     toast('✓ Parcela reaberta', 'ok');
-    await recarregarApos();
+    await recarregarApos(cache => {
+      const i = cache.findIndex(x => x.id === c.id);
+      if (i >= 0) cache.splice(i, 1);
+    });
   } catch (e) {
     toast('Erro: ' + e.message, 'err');
   }
