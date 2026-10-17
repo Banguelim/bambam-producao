@@ -30,27 +30,52 @@ async function init() {
   buscarFora();
 }
 
+// NOVO 17/10/2026 — economia de leituras: ao abrir a tela lê SÓ as notas
+// (usadas nas abas "fora" e "retornos"). Cortes e pagamentos só são lidos
+// na PRIMEIRA vez que a aba deles é aberta, e depois ficam guardados
+// enquanto a tela estiver aberta. Antes as 3 coleções eram lidas inteiras
+// toda vez que a tela abria, mesmo sem usar as outras abas.
+let _cortesCarregados = false;
+let _pagamentosCarregados = false;
+
 async function carregarTudo() {
+  try {
+    const snapN = await colNotas().get();
+    TODAS_NOTAS_R = snapN.docs.map(d => ({ id: d.id, ...d.data() }));
+    console.log(`[relatorios] ${TODAS_NOTAS_R.length} notas`);
+  } catch (e) {
+    console.error('Erro carregando dados:', e);
+    if (typeof toast === 'function') toast('Erro ao carregar: ' + e.message, 'err');
+  }
+}
+
+async function garantirCortes() {
+  if (_cortesCarregados) return;
   try {
     const _colCortes = (typeof colCortes === 'function')
       ? colCortes
       : () => firebase.firestore().collection('producao_dados').doc('op').collection('cortes');
+    const snapC = await _colCortes().get();
+    TODOS_CORTES_R = snapC.docs.map(d => ({ id: d.id, ...d.data() }));
+    _cortesCarregados = true;
+  } catch (e) {
+    console.error('Erro carregando cortes:', e);
+    if (typeof toast === 'function') toast('Erro ao carregar cortes: ' + e.message, 'err');
+  }
+}
+
+async function garantirPagamentos() {
+  if (_pagamentosCarregados) return;
+  try {
     const _colPag = (typeof colPagamentos === 'function')
       ? colPagamentos
       : () => firebase.firestore().collection('producao_dados').doc('op').collection('pagamentos');
-
-    const [snapN, snapC, snapP] = await Promise.all([
-      colNotas().get(),
-      _colCortes().get(),
-      _colPag().get().catch(() => ({ docs: [] }))
-    ]);
-    TODAS_NOTAS_R      = snapN.docs.map(d => ({ id: d.id, ...d.data() }));
-    TODOS_CORTES_R     = snapC.docs.map(d => ({ id: d.id, ...d.data() }));
+    const snapP = await _colPag().get();
     TODOS_PAGAMENTOS_R = snapP.docs.map(d => ({ id: d.id, ...d.data() }));
-    console.log(`[relatorios] ${TODAS_NOTAS_R.length} notas, ${TODOS_CORTES_R.length} cortes, ${TODOS_PAGAMENTOS_R.length} pagamentos`);
+    _pagamentosCarregados = true;
   } catch (e) {
-    console.error('Erro carregando dados:', e);
-    if (typeof toast === 'function') toast('Erro ao carregar: ' + e.message, 'err');
+    console.error('Erro carregando pagamentos:', e);
+    if (typeof toast === 'function') toast('Erro ao carregar pagamentos: ' + e.message, 'err');
   }
 }
 
@@ -59,6 +84,9 @@ function trocarAba(aba) {
     b.classList.toggle('ativa', b.dataset.aba === aba));
   document.querySelectorAll('.painel').forEach(p =>
     p.classList.toggle('ativo', p.dataset.painel === aba));
+  // Carrega os dados da aba só quando ela é aberta pela primeira vez
+  if (aba === 'para-mandar') garantirCortes();
+  if (aba === 'pagamentos') garantirPagamentos();
 }
 
 // =========== HELPERS ===========
@@ -236,7 +264,8 @@ function cortesParaMandarFiltrados() {
   });
 }
 
-function buscarParaMandar() {
+async function buscarParaMandar() {
+  await garantirCortes();
   const list = cortesParaMandarFiltrados();
   const folha = document.getElementById('pman-folha');
   const vazio = document.getElementById('pman-vazio');
@@ -297,7 +326,8 @@ function pagamentosFiltrados() {
   return list.sort((a, b) => (toDate(b.data) || 0) - (toDate(a.data) || 0));
 }
 
-function buscarPagamentos() {
+async function buscarPagamentos() {
+  await garantirPagamentos();
   const list = pagamentosFiltrados();
   const folha = document.getElementById('pag-folha');
   const vazio = document.getElementById('pag-vazio');
