@@ -21,6 +21,11 @@
   table { width: 100%; border-collapse: collapse; font-size: 12px; }
   th, td { text-align: left; padding: 4px 6px; border-bottom: 0.5px solid var(--border); }
   th { color: var(--text-secondary); font-weight: 500; }
+  .btn-apagar {
+    background: none; border: 0.5px solid #f87171; color: #fca5a5;
+    border-radius: 4px; padding: 2px 8px; font-size: 11px; cursor: pointer;
+  }
+  .btn-apagar:disabled { opacity: .5; cursor: wait; }
   .resumo { font-size: 13px; margin: 12px 0; color: var(--text-secondary); }
   .resumo b { color: var(--text-primary); }
 </style>
@@ -35,9 +40,11 @@
     <h1>Notas duplicadas</h1>
     <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px">
       Procura notas do <b>mesmo lote/ref com a mesma costureira</b> (como aconteceu com a 2036B/112).
-      Só lê — <b>não altera nada</b>. Notas em vermelho foram <b>pagas mais de uma vez</b>.
-      Atenção: às vezes é legítimo ter 2 notas (o corte foi entregue em levas diferentes) —
-      confira as peças de cada uma antes de apagar ou estornar.
+      Em vermelho: lote com <b>pagamento lançado em mais de uma nota</b>.
+      Às vezes é legítimo ter 2 notas (o corte foi entregue em levas diferentes, com data e
+      peças diferentes) — nesses casos não mexa. Quando for duplicada de verdade, clique em
+      <b>🗑 apagar duplicada</b> na nota falsa: apaga a nota e o pagamento lançado nela, e
+      devolve o adiantamento se tiver sido usado. <b>Não pode ser desfeito.</b>
     </p>
     <button class="btn btn-primary" id="btn" onclick="verificar()">Verificar todas as notas</button>
     <div id="resumo" class="resumo"></div>
@@ -94,13 +101,13 @@
 
         document.getElementById('resumo').innerHTML =
           `${notas.length} notas lidas · <b>${suspeitos.length}</b> lote(s) com mais de uma nota pra mesma costureira · ` +
-          `<b style="color:#fca5a5">${graves.length}</b> pago(s) mais de uma vez` +
-          (graves.length ? ` (até <b>${brl(valorDobrado)}</b> pago a mais)` : '');
+          `<b style="color:#fca5a5">${graves.length}</b> com pagamento lançado em mais de uma nota` +
+          (graves.length ? ` (até <b>${brl(valorDobrado)}</b> lançado a mais)` : '');
 
         document.getElementById('lista').innerHTML = suspeitos.length ? suspeitos.map(s => {
           const n0 = s.g[0];
           const motivo = s.grave
-            ? `💸 PAGO ${s.pagas.length}x — notas ${s.pagas.map(n => '#' + n.numero).join(', ')}`
+            ? `💸 pagamento lançado ${s.pagas.length}x — notas ${s.pagas.map(n => '#' + n.numero).join(', ')}`
             : s.mesmasPecas ? '⚠ mesmas peças (cor/tam/qtd) em mais de uma nota'
             : 'peças diferentes — pode ser entrega em levas, confira';
           return `
@@ -108,7 +115,7 @@
               <h3>${esc(n0.lote)}/${esc(n0.ref)} · ${esc(n0.costureira)}</h3>
               <div class="motivo ${s.grave ? '' : 'leve'}">${motivo}</div>
               <table>
-                <tr><th>Nota</th><th>Saída</th><th>Peças</th><th>Chegou</th><th>Status</th><th>Valor nota</th><th>Pago</th><th>Pago em</th></tr>
+                <tr><th>Nota</th><th>Saída</th><th>Peças</th><th>Chegou</th><th>Status</th><th>Valor nota</th><th>Pago</th><th>Pago em</th><th></th></tr>
                 ${s.g.map(n => `
                   <tr>
                     <td>#${esc(n.numero)}</td>
@@ -119,6 +126,7 @@
                     <td>${brl(n.valor_nota)}</td>
                     <td>${totalPago(n) ? brl(totalPago(n)) : '—'}</td>
                     <td>${esc((n.pagamentos || []).map(p => p.data).filter(Boolean).join(', '))}</td>
+                    <td><button class="btn-apagar" onclick="apagarDuplicada('${esc(n.id)}', this)">🗑 apagar duplicada</button></td>
                   </tr>`).join('')}
               </table>
             </div>`;
@@ -129,6 +137,113 @@
       } finally {
         btn.disabled = false;
         btn.textContent = 'Verificar todas as notas';
+      }
+    }
+
+    // Apaga uma nota duplicada junto com o pagamento lançado nela. Se o
+    // pagamento era só dessa nota, o recibo some e o adiantamento usado nele
+    // volta pro saldo. Se o recibo tinha outras notas junto, só tira essa
+    // nota dele (e devolve o adiantamento que sobrar). Tudo numa transação.
+    const numDaNp = np => String(np.nota_numero ?? np.numero ?? np.num ?? '');
+    const idDoConsumo = c => c.id || c.adiant_id;
+    const chaveDoConsumo = c => (c.consumido != null ? 'consumido' : 'valor');
+
+    async function apagarDuplicada(numero, btn) {
+      btn.disabled = true;
+      try {
+        const notaSnap = await colNotas().doc(numero).get();
+        if (!notaSnap.exists) { alert(`Nota #${numero} não existe mais.`); return; }
+        const nota = notaSnap.data();
+
+        // Recibos dessa nota: pelo pag_id gravado na nota e, pra recibos
+        // antigos sem pag_id, procurando nos recibos da costureira.
+        const pagIds = new Set((nota.pagamentos || []).map(p => p.pag_id).filter(Boolean));
+        const pagsCost = await colPagamentos().where('costureira', '==', nota.costureira).get();
+        pagsCost.docs.forEach(d => {
+          if ((d.data().notas_pagas || []).some(np => numDaNp(np) === String(numero))) pagIds.add(d.id);
+        });
+        const recibos = pagsCost.docs.filter(d => pagIds.has(d.id));
+        const comOutras = recibos.filter(d => (d.data().notas_pagas || []).some(np => numDaNp(np) !== String(numero)));
+
+        const noEstoque = Object.values(nota.arremate || {}).reduce((a, t) => a + (Number(t.estoque) || 0), 0);
+
+        let msg = `Apagar a nota #${numero} (${nota.lote}/${nota.ref} · ${nota.costureira} · ${nota.total_saida || 0} peças)?\n\n`;
+        msg += recibos.length
+          ? `O pagamento de ${brl(totalPago(nota))} lançado nela também vai ser apagado.\n`
+          : `Ela não tem pagamento lançado.\n`;
+        if (comOutras.length) {
+          msg += `\n⚠ O pagamento dela foi feito junto com outras notas — só essa nota sai do recibo, as outras continuam pagas.\n`;
+        }
+        if (noEstoque > 0) {
+          msg += `\n⚠ Essa nota já passou pelo Arremate (${noEstoque} peças lançadas no estoque). O estoque NÃO é mexido — confira o estoque da ref ${nota.ref} depois.\n`;
+        }
+        msg += `\nNão pode ser desfeito. Confira que é a nota FALSA (a outra continua).\n\nDigite APAGAR pra confirmar:`;
+        if (prompt(msg) !== 'APAGAR') return;
+
+        await db.runTransaction(async (tx) => {
+          const notaRef = colNotas().doc(numero);
+          const ns = await tx.get(notaRef);
+          if (!ns.exists) throw new Error(`Nota #${numero} não existe mais.`);
+
+          const pagSnaps = await Promise.all(recibos.map(d => tx.get(d.ref)));
+          const devolver = {};
+          const somar = (id, v) => { if (id && v > 0) devolver[id] = (devolver[id] || 0) + v; };
+          const escritas = [];
+
+          pagSnaps.forEach(ps => {
+            if (!ps.exists) return;
+            const pag = ps.data();
+            const nps = pag.notas_pagas || [];
+            const outras = nps.filter(np => numDaNp(np) !== String(numero));
+            const consumidos = (pag.adiantamentos_consumidos || []).map(c => ({ ...c }));
+
+            if (outras.length === 0) {
+              consumidos.forEach(c => somar(idDoConsumo(c), Number(c[chaveDoConsumo(c)]) || 0));
+              escritas.push(() => tx.delete(ps.ref));
+              return;
+            }
+
+            const valorDela = nps.filter(np => numDaNp(np) === String(numero))
+              .reduce((a, np) => a + (Number(np.valor) || 0), 0);
+            const bruto = Math.max(0, (Number(pag.valor_bruto) || 0) - valorDela);
+            let adiantUsado = Number(pag.adiantamento_usado) || 0;
+            let excesso = adiantUsado - bruto;
+            // Adiantamento que passa do novo valor bruto volta pro saldo (do último consumido pro primeiro)
+            for (let i = consumidos.length - 1; i >= 0 && excesso > 0.001; i--) {
+              const c = consumidos[i], k = chaveDoConsumo(c);
+              const d = Math.min(Number(c[k]) || 0, excesso);
+              if (d <= 0) continue;
+              somar(idDoConsumo(c), d);
+              c[k] = (Number(c[k]) || 0) - d;
+              excesso -= d;
+              adiantUsado -= d;
+            }
+            escritas.push(() => tx.update(ps.ref, {
+              notas_pagas: outras,
+              valor_bruto: bruto,
+              adiantamento_usado: adiantUsado,
+              valor_liquido: bruto - adiantUsado,
+              adiantamentos_consumidos: consumidos.filter(c => (Number(c[chaveDoConsumo(c)]) || 0) > 0)
+            }));
+          });
+
+          const adIds = Object.keys(devolver);
+          const adSnaps = await Promise.all(adIds.map(id => tx.get(colAdiants().doc(id))));
+
+          adSnaps.forEach((s, i) => {
+            if (s.exists) tx.update(s.ref, { saldo: (Number(s.data().saldo) || 0) + devolver[adIds[i]] });
+          });
+          escritas.forEach(f => f());
+          tx.delete(notaRef);
+        });
+
+        alert(`✓ Nota #${numero} apagada.`);
+        await verificar();
+      } catch (e) {
+        console.error(e);
+        alert('Erro ao apagar: ' + (e.message || e));
+      } finally {
+        btn.disabled = false;
       }
     }
 
