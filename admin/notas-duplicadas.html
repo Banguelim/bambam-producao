@@ -75,7 +75,10 @@
     const origem = n => {
       if (n.importado_de_planilha || n.corte_id === 'importado') return 'planilha (importação)';
       const d = n.criado_em?.toDate?.();
-      return 'designação' + (d ? ' ' + d.toLocaleDateString('pt-BR') : '');
+      // Final do id do corte: se duas notas do mesmo lote vêm de cortes
+      // diferentes, o corte foi cadastrado em dobro no Novo Corte.
+      const corte = n.corte_id ? ` · corte …${esc(String(n.corte_id).slice(-4))}` : '';
+      return 'designação' + (d ? ' ' + d.toLocaleDateString('pt-BR') : '') + corte;
     };
 
     async function verificar() {
