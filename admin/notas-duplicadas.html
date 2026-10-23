@@ -71,6 +71,13 @@
     const assinaturaItens = n => (n.itens || [])
       .map(i => `${norm(i.cor)}|${i.tam}|${i.qtd}`).sort().join(';');
 
+    // Notas da planilha (admin/importar.html) não têm criado_em nem corte de verdade
+    const origem = n => {
+      if (n.importado_de_planilha || n.corte_id === 'importado') return 'planilha (importação)';
+      const d = n.criado_em?.toDate?.();
+      return 'designação' + (d ? ' ' + d.toLocaleDateString('pt-BR') : '');
+    };
+
     async function verificar() {
       const btn = document.getElementById('btn');
       btn.disabled = true;
@@ -115,10 +122,11 @@
               <h3>${esc(n0.lote)}/${esc(n0.ref)} · ${esc(n0.costureira)}</h3>
               <div class="motivo ${s.grave ? '' : 'leve'}">${motivo}</div>
               <table>
-                <tr><th>Nota</th><th>Saída</th><th>Peças</th><th>Chegou</th><th>Status</th><th>Valor nota</th><th>Pago</th><th>Pago em</th><th></th></tr>
+                <tr><th>Nota</th><th>Origem</th><th>Saída</th><th>Peças</th><th>Chegou</th><th>Status</th><th>Valor nota</th><th>Pago</th><th>Pago em</th><th></th></tr>
                 ${s.g.map(n => `
                   <tr>
                     <td>#${esc(n.numero)}</td>
+                    <td>${origem(n)}</td>
                     <td>${esc(n.data_saida)}</td>
                     <td>${n.total_saida || 0}</td>
                     <td>${totalChegou(n)}</td>
