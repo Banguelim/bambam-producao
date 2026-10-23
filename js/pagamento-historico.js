@@ -258,17 +258,21 @@
       // 2) Devolver adiantamento se houve
       const consumidos = pag.adiantamentos_consumidos || [];
       for (const c of consumidos) {
-        if (!c || !c.adiant_id || !c.valor) continue;
+        // Recibos gravam { id, consumido } (registrarPagamentoTransacional);
+        // aceita também o formato antigo { adiant_id, valor }.
+        const adiantId = c && (c.id || c.adiant_id);
+        const valorDevolver = c && Number(c.consumido ?? c.valor);
+        if (!adiantId || !valorDevolver) continue;
         try {
           const adiantRef = db.collection('producao_dados').doc('op')
-            .collection('adiantamentos').doc(c.adiant_id);
+            .collection('adiantamentos').doc(adiantId);
           const doc = await adiantRef.get();
           if (doc.exists) {
             const saldoAtual = Number(doc.data().saldo) || 0;
-            await adiantRef.update({ saldo: saldoAtual + Number(c.valor) });
+            await adiantRef.update({ saldo: saldoAtual + valorDevolver });
           }
         } catch (e) {
-          console.warn(`[pag-hist] falha devolvendo adiantamento ${c.adiant_id}:`, e);
+          console.warn(`[pag-hist] falha devolvendo adiantamento ${adiantId}:`, e);
         }
       }
 
