@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>BAMBAM · Notas duplicadas</title>
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/forms.css">
+<style>
+  .grupo {
+    background: var(--surface-1);
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 10px;
+  }
+  .grupo.grave { border-color: #f87171; }
+  .grupo h3 { margin-bottom: 4px; }
+  .grupo .motivo { font-size: 12px; margin-bottom: 8px; }
+  .grupo.grave .motivo { color: #fca5a5; font-weight: 600; }
+  .grupo .motivo.leve { color: var(--warning, #fbbf24); }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { text-align: left; padding: 4px 6px; border-bottom: 0.5px solid var(--border); }
+  th { color: var(--text-secondary); font-weight: 500; }
+  .resumo { font-size: 13px; margin: 12px 0; color: var(--text-secondary); }
+  .resumo b { color: var(--text-primary); }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <span class="logo">BAMBAM <b>BABY</b> · Admin</span>
+    <nav class="nav"><a href="../index.html">← voltar ao painel</a></nav>
+  </div>
+
+  <div class="wrap" style="max-width:1000px">
+    <h1>Notas duplicadas</h1>
+    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px">
+      Procura notas do <b>mesmo lote/ref com a mesma costureira</b> (como aconteceu com a 2036B/112).
+      Só lê — <b>não altera nada</b>. Notas em vermelho foram <b>pagas mais de uma vez</b>.
+      Atenção: às vezes é legítimo ter 2 notas (o corte foi entregue em levas diferentes) —
+      confira as peças de cada uma antes de apagar ou estornar.
+    </p>
+    <button class="btn btn-primary" id="btn" onclick="verificar()">Verificar todas as notas</button>
+    <div id="resumo" class="resumo"></div>
+    <div id="lista"></div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="../js/firebase-config.js"></script>
+  <script src="../js/acesso.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+  <script src="../js/db.js"></script>
+  <script>
+    // "2139 B" e "2139B" contam como o mesmo lote
+    const norm = s => String(s || '').toUpperCase().replace(/\s+/g, '');
+    const brl = v => (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+    const totalPago = n => (n.pagamentos || []).reduce((a, p) => a + (Number(p.valor) || 0), 0);
+    const totalChegou = n => ['chegada_1', 'chegada_2']
+      .reduce((a, k) => a + Object.values(n[k]?.qtds || {}).reduce((x, q) => x + (Number(q) || 0), 0), 0);
+    const assinaturaItens = n => (n.itens || [])
+      .map(i => `${norm(i.cor)}|${i.tam}|${i.qtd}`).sort().join(';');
+
+    async function verificar() {
+      const btn = document.getElementById('btn');
+      btn.disabled = true;
+      btn.textContent = '⏳ lendo notas...';
+      try {
+        const snap = await colNotas().get();
+        const notas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        const grupos = {};
+        notas.forEach(n => {
+          const chave = `${norm(n.lote)}/${norm(n.ref)}|${norm(n.costureira)}`;
+          (grupos[chave] = grupos[chave] || []).push(n);
+        });
+
+        const suspeitos = Object.values(grupos)
+          .filter(g => g.length > 1)
+          .map(g => {
+            g.sort((a, b) => (a.numero || '').localeCompare(b.numero || ''));
+            const pagas = g.filter(n => totalPago(n) > 0);
+            const mesmasPecas = new Set(g.map(assinaturaItens)).size < g.length;
+            return { g, pagas, mesmasPecas, grave: pagas.length > 1 };
+          })
+          .sort((a, b) => (b.grave - a.grave) || (b.mesmasPecas - a.mesmasPecas));
+
+        const graves = suspeitos.filter(s => s.grave);
+        const valorDobrado = graves.reduce((a, s) =>
+          a + s.pagas.slice(1).reduce((x, n) => x + totalPago(n), 0), 0);
+
+        document.getElementById('resumo').innerHTML =
+          `${notas.length} notas lidas · <b>${suspeitos.length}</b> lote(s) com mais de uma nota pra mesma costureira · ` +
+          `<b style="color:#fca5a5">${graves.length}</b> pago(s) mais de uma vez` +
+          (graves.length ? ` (até <b>${brl(valorDobrado)}</b> pago a mais)` : '');
+
+        document.getElementById('lista').innerHTML = suspeitos.length ? suspeitos.map(s => {
+          const n0 = s.g[0];
+          const motivo = s.grave
+            ? `💸 PAGO ${s.pagas.length}x — notas ${s.pagas.map(n => '#' + n.numero).join(', ')}`
+            : s.mesmasPecas ? '⚠ mesmas peças (cor/tam/qtd) em mais de uma nota'
+            : 'peças diferentes — pode ser entrega em levas, confira';
+          return `
+            <div class="grupo ${s.grave ? 'grave' : ''}">
+              <h3>${esc(n0.lote)}/${esc(n0.ref)} · ${esc(n0.costureira)}</h3>
+              <div class="motivo ${s.grave ? '' : 'leve'}">${motivo}</div>
+              <table>
+                <tr><th>Nota</th><th>Saída</th><th>Peças</th><th>Chegou</th><th>Status</th><th>Valor nota</th><th>Pago</th><th>Pago em</th></tr>
+                ${s.g.map(n => `
+                  <tr>
+                    <td>#${esc(n.numero)}</td>
+                    <td>${esc(n.data_saida)}</td>
+                    <td>${n.total_saida || 0}</td>
+                    <td>${totalChegou(n)}</td>
+                    <td>${esc(n.status || 'aberta')}</td>
+                    <td>${brl(n.valor_nota)}</td>
+                    <td>${totalPago(n) ? brl(totalPago(n)) : '—'}</td>
+                    <td>${esc((n.pagamentos || []).map(p => p.data).filter(Boolean).join(', '))}</td>
+                  </tr>`).join('')}
+              </table>
+            </div>`;
+        }).join('') : '<p>✓ Nenhuma nota duplicada encontrada.</p>';
+      } catch (e) {
+        console.error(e);
+        document.getElementById('resumo').innerHTML = `<span style="color:#fca5a5">✗ Erro: ${esc(e.message || e)}</span>`;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Verificar todas as notas';
+      }
+    }
+
+    protegerRota();
+  </script>
+</body>
+</html>
