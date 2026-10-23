@@ -386,8 +386,16 @@
 
     async function importarLotes() {
       log('Importando lotes ativos (FORA) como notas em aberto...');
-      let n = 0;
+      // Não importa de novo lote que já tem nota com a mesma costureira —
+      // rodar este botão uma 2ª vez gerava todas as notas em dobro (com número
+      // novo), e elas apareciam pra pagar de novo.
+      const norm = s => String(s || '').toUpperCase().replace(/\s+/g, '');
+      const chave = (lote, ref, cost) => `${norm(lote)}/${norm(ref)}|${norm(cost)}`;
+      const existentes = new Set((await colNotas().get()).docs
+        .map(d => d.data()).map(x => chave(x.lote, x.ref, x.costureira)));
+      let n = 0, pulados = 0;
       for (const l of seedLotes) {
+        if (existentes.has(chave(l.lote, l.ref, l.costureira || 'SEM_NOME'))) { pulados++; continue; }
         // Vira uma nota em aberto
         const numero = await proximoNumeroNota();
         const itens = l.itens.map(i => ({ cor: i.cor, tam: i.tam, qtd: i.qtd }));
@@ -412,7 +420,7 @@
         n++;
         if (n % 10 === 0) log(`  ${n}/${seedLotes.length}`);
       }
-      log(`✓ ${n} lotes importados como notas em aberto`, 'ok');
+      log(`✓ ${n} lotes importados como notas em aberto` + (pulados ? ` · ${pulados} pulados (já tinham nota)` : ''), 'ok');
     }
 
     protegerRota().then(carregarSeeds);
