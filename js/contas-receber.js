@@ -13,6 +13,10 @@ let contasPagasCache = null;    // null = ainda não carregado; carrega sob dema
 let agregadosPago = { total: 0, qtd: 0 }; // totais de "pago" mantidos incrementalmente (ver db-vendas.js)
 let carregandoPagas = false;
 let selecionadas = new Set();   // ids das parcelas marcadas pra juntar
+// CNPJ e vendedor vêm do cadastro do cliente (a parcela só guarda cliente_id
+// e o nome). Clientes são ~200 docs — leve.
+let clientesPorId = new Map();
+let clientesPorNome = new Map();
 
 async function init() {
   await protegerRota();
@@ -20,17 +24,39 @@ async function init() {
   document.getElementById('f-busca').addEventListener('input', render);
   document.getElementById('f-data-de').addEventListener('change', render);
   document.getElementById('f-data-ate').addEventListener('change', render);
+  document.getElementById('f-vendedor').addEventListener('change', render);
   document.getElementById('btn-limpar-filtros').addEventListener('click', () => {
     document.getElementById('f-status').value = 'pendentes';
     document.getElementById('f-busca').value = '';
     document.getElementById('f-data-de').value = '';
     document.getElementById('f-data-ate').value = '';
+    document.getElementById('f-vendedor').value = '';
     render();
   });
   document.getElementById('btn-desmarcar').addEventListener('click', () => { selecionadas.clear(); render(); });
   document.getElementById('btn-juntar').addEventListener('click', juntarSelecionadasBtn);
-  await carregar();
+  await Promise.all([carregar(), carregarClientes()]);
 }
+
+async function carregarClientes() {
+  try {
+    const clientes = await listarClientes();
+    clientesPorId = new Map(clientes.map(c => [String(c.id), c]));
+    clientesPorNome = new Map(clientes.map(c => [(c.nome || '').toUpperCase(), c]));
+    const vendedores = [...new Set(clientes.map(c => (c.vendedor || '').trim().toUpperCase()).filter(Boolean))].sort();
+    const sel = document.getElementById('f-vendedor');
+    sel.innerHTML = '<option value="">Todos</option>' +
+      vendedores.map(v => `<option value="${v}">${v}</option>`).join('');
+    render();
+  } catch (e) {
+    console.warn('Não deu pra carregar clientes (busca por CNPJ/vendedor):', e);
+  }
+}
+
+function clienteDaConta(c) {
+  return clientesPorId.get(String(c.cliente_id)) || clientesPorNome.get((c.cliente || '').toUpperCase()) || null;
+}
+const soDigitos = s => String(s || '').replace(/\D/g, '');
 
 async function carregar() {
   try {
@@ -84,6 +110,8 @@ function render() {
   const busca = (document.getElementById('f-busca').value || '').toUpperCase();
   const dataDe = document.getElementById('f-data-de').value;
   const dataAte = document.getElementById('f-data-ate').value;
+  const vendedor = document.getElementById('f-vendedor').value;
+  const buscaDigitos = soDigitos(busca);
   const precisaPagas = filtro === 'pago' || filtro === 'todos';
 
   if (precisaPagas && contasPagasCache === null) return; // ainda carregando — onFiltroChange chama render() de novo quando terminar
@@ -98,9 +126,15 @@ function render() {
     if (filtro === 'pendentes' && st === 'pago') return false;
     if (dataDe && (!c.data_vencimento || c.data_vencimento < dataDe)) return false;
     if (dataAte && (!c.data_vencimento || c.data_vencimento > dataAte)) return false;
+    const cli = clienteDaConta(c);
+    if (vendedor && (cli?.vendedor || '').trim().toUpperCase() !== vendedor) return false;
     if (busca) {
       const alvo = `${c.cliente || ''} ${c.pedido_id || ''} ${(c.pedidos_agrupados || []).join(' ')}`.toUpperCase();
-      if (!alvo.includes(busca)) return false;
+      // CNPJ: compara só os números (6+ pra não confundir com nº de pedido),
+      // então "31.299.087" e "31299087" acham o mesmo
+      const cnpj = soDigitos(c.cnpj || cli?.cnpj || c.cliente_id);
+      const achouCnpj = buscaDigitos.length >= 6 && cnpj.includes(buscaDigitos);
+      if (!alvo.includes(busca) && !achouCnpj) return false;
     }
     return true;
   });
@@ -167,7 +201,11 @@ function render() {
     tr.innerHTML = `
       <td>${st !== 'pago' ? `<input type="checkbox" class="chk-juntar" ${selecionadas.has(c.id) ? 'checked' : ''}>` : ''}</td>
       <td>${celPedido}</td>
-      <td class="cliente">${c.cliente || '—'}</td>
+      <td class="cliente">${c.cliente || '—'}${(() => {
+        const cli = clienteDaConta(c);
+        const info = [c.cnpj || cli?.cnpj, cli?.vendedor && 'vend. ' + cli.vendedor].filter(Boolean).join(' · ');
+        return info ? `<span class="juros-info" style="color:var(--text-muted)">${info}</span>` : '';
+      })()}</td>
       <td>${juntada ? `🔗 junção (${c.agrupa_ids.length})` : `${c.parcela_num}/${c.parcelas_total}`}</td>
       <td>${formatDataBR(c.data_vencimento)}${c.vencimento_original && c.vencimento_original !== c.data_vencimento
         ? `<span class="juros-info" style="color:var(--text-muted)">era ${formatDataBR(c.vencimento_original)}</span>` : ''}</td>
