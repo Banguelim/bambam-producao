@@ -110,8 +110,14 @@
         <input type="date" id="f-data-ate">
       </div>
       <div class="campo" style="flex:1;min-width:200px">
-        <label class="lbl">Buscar cliente / pedido</label>
-        <input id="f-busca" placeholder="🔎 nome do cliente ou nº do pedido">
+        <label class="lbl">Buscar cliente / pedido / CNPJ</label>
+        <input id="f-busca" placeholder="🔎 nome, nº do pedido ou CNPJ">
+      </div>
+      <div class="campo">
+        <label class="lbl">Vendedor</label>
+        <select id="f-vendedor">
+          <option value="">Todos</option>
+        </select>
       </div>
       <div class="campo">
         <button class="btn btn-secondary" id="btn-limpar-filtros" style="padding:8px 14px">✕ limpar</button>
