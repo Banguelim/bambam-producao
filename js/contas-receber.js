@@ -129,7 +129,8 @@ function render() {
     const cli = clienteDaConta(c);
     if (vendedor && (cli?.vendedor || '').trim().toUpperCase() !== vendedor) return false;
     if (busca) {
-      const alvo = `${c.cliente || ''} ${c.pedido_id || ''} ${(c.pedidos_agrupados || []).join(' ')}`.toUpperCase();
+      // Observação (campo "historico") entra na busca — é onde se anota o nº da NF
+      const alvo = `${c.cliente || ''} ${c.pedido_id || ''} ${(c.pedidos_agrupados || []).join(' ')} ${c.historico || ''}`.toUpperCase();
       // CNPJ: compara só os números (6+ pra não confundir com nº de pedido),
       // então "31.299.087" e "31299087" acham o mesmo
       const cnpj = soDigitos(c.cnpj || cli?.cnpj || c.cliente_id);
