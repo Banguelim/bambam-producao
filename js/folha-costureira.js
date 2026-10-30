@@ -243,7 +243,8 @@ function formatarDataFC(iso) {
 
 function formatarDataCurtaFC(v) {
   if (!v) return '—';
-  const d = v?.toDate ? v.toDate() : new Date(v);
+  const m = typeof v === 'string' && v.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const d = v?.toDate ? v.toDate() : m ? new Date(+m[1], m[2] - 1, +m[3]) : new Date(v);
   if (isNaN(d.getTime())) return '—';
   const dd = String(d.getDate()).padStart(2, '0');
   const mm = String(d.getMonth() + 1).padStart(2, '0');

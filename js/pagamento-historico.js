@@ -304,7 +304,9 @@
     if (!v) return null;
     if (v.toDate) return v.toDate();
     if (v instanceof Date) return v;
-    const d = new Date(v);
+    // 'YYYY-MM-DD' é data local — new Date() leria como UTC e mostraria o dia anterior
+    const m = typeof v === 'string' && v.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    const d = m ? new Date(+m[1], m[2] - 1, +m[3]) : new Date(v);
     return isNaN(d.getTime()) ? null : d;
   }
   function dataBR(v) {

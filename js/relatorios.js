@@ -94,7 +94,9 @@ function toDate(v) {
   if (!v) return null;
   if (v.toDate) return v.toDate();
   if (v instanceof Date) return v;
-  const d = new Date(v);
+  // 'YYYY-MM-DD' é data local — new Date() leria como UTC e mostraria o dia anterior
+  const m = typeof v === 'string' && v.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const d = m ? new Date(+m[1], m[2] - 1, +m[3]) : new Date(v);
   return isNaN(d.getTime()) ? null : d;
 }
 function dataStr(v) {
@@ -111,7 +113,8 @@ function dataCurta(v) {
 }
 function dataISO(v) {
   const d = toDate(v);
-  return d ? d.toISOString().slice(0, 10) : '';
+  if (!d) return '';
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 function fmtBRL(v) {
   return (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
