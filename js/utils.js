@@ -31,7 +31,8 @@ function formatDataBR(iso) {
 // Data de hoje em ISO (YYYY-MM-DD)
 function hojeISO() {
   const d = new Date();
-  return d.toISOString().slice(0, 10);
+  // Usa a data local (não UTC) — senão depois das 21h vira o dia seguinte
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 // Selecionar tudo dentro de um contenteditable — pra que ao focar, já pode digitar substituindo
