@@ -12,14 +12,14 @@
 //
 // Nomes de tela válidos (arquivo .html sem o .html):
 //   'index'  'novo-corte'  'designacao'  'retorno'  'pagamento'
-//   'arremate'  'estoque'  'cadastros'  'relatorios'
+//   'arremate'  'estoque'  'cadastros'  'relatorios'  'etiquetas'
 //   'pedido'  'pedido-novo'  'vendas-cadastros'  'contas-receber'
 
 const PERMISSOES = {
   'pss@bambam.com':               'todas',
   'beutimar@bambam.com':          'todas',
   'braulio@bambam.com':           'todas',
-  'corte@bambam.com':             ['index', 'novo-corte', 'designacao'],
+  'corte@bambam.com':             ['index', 'novo-corte', 'designacao', 'etiquetas'],
   'retorno@bambam.com':           ['index', 'retorno', 'arremate', 'designacao']
 };
 
