@@ -268,6 +268,42 @@ async function excluirRef(ref) {
     toast('Erro: ' + e.message, 'err');
   }
 }
+// Edição inline da ref: tecido, composição e "ref composta" (gera outro corte sozinha)
+function editarRef(r, item) {
+  const aberto = item.nextElementSibling;
+  if (aberto && aberto.classList.contains('edit-ref')) { aberto.remove(); return; }
+  const box = document.createElement('div');
+  box.className = 'edit-ref';
+  box.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr 90px auto;gap:8px;padding:10px 14px;background:var(--bg-accent);align-items:end;font-size:12px';
+  box.innerHTML = `
+    <label>Tecido<input data-f="tecido" placeholder="ex: malha"></label>
+    <label>Composição<input data-f="composicao" list="composicoes-list" placeholder="escolha ou digite"><datalist id="composicoes-list"><option value="100% ALGODÃO"><option value="67% POLIESTER / 33% VISCOSE"></datalist></label>
+    <label>Composta com a ref<input data-f="composta_com" list="ref-preco-list" placeholder="vazio = não composta" style="text-transform:uppercase"></label>
+    <label>Tamanho<select data-f="composta_tam"><option>RN</option><option>P</option><option>M</option><option>G</option><option>GG</option></select></label>
+    <button class="btn-mini success" data-f="salvar">✓ salvar</button>`;
+  const f = n => box.querySelector(`[data-f="${n}"]`);
+  f('tecido').value = r.tecido || '';
+  f('composicao').value = r.composicao || '';
+  f('composta_com').value = r.composta_com || '';
+  f('composta_tam').value = r.composta_tam || 'RN';
+  f('salvar').addEventListener('click', async () => {
+    const alvo = f('composta_com').value.trim().toUpperCase();
+    if (alvo && alvo === r.ref) { toast('Uma ref não pode compor com ela mesma', 'err'); return; }
+    if (alvo && !refs.some(x => x.ref === alvo)) { toast(`A ref ${alvo} não está cadastrada`, 'err'); return; }
+    try {
+      await salvarRef({
+        ref: r.ref,
+        tecido: f('tecido').value.trim(),
+        composicao: f('composicao').value.trim(),
+        composta_com: alvo,
+        composta_tam: alvo ? f('composta_tam').value : ''
+      });
+      toast(`✓ Ref ${r.ref} atualizada`, 'ok');
+      await carregarTudo();
+    } catch (e) { toast('Erro: ' + e.message, 'err'); }
+  });
+  item.after(box);
+}
 function renderRefs() {
   const lista = document.getElementById('ref-lista');
   const busca = (document.getElementById('ref-busca').value || '').toUpperCase();
@@ -282,14 +318,21 @@ function renderRefs() {
   filtradas.slice(0, 200).forEach(r => {
     const item = document.createElement('div');
     item.className = 'item-cad';
+    const info = [r.tecido, r.composicao].filter(Boolean).join(' · ');
+    const comp = r.composta_com ? `🔗 gera ${r.composta_com} (${r.composta_tam || 'RN'})` : '';
     item.innerHTML = `
       <span class="nome-cad">${r.ref}</span>
-      <span></span>
-      <span></span>
+      <span class="info-extra"></span>
+      <span class="info-extra"></span>
       <div class="acoes-btn">
+        <button class="btn-mini" data-acao="editar">✎ editar</button>
         <button class="btn-mini danger" data-acao="excluir">✗ excluir</button>
       </div>
     `;
+    const extras = item.querySelectorAll('.info-extra');
+    extras[0].textContent = info;
+    extras[1].textContent = comp;
+    item.querySelector('[data-acao="editar"]').addEventListener('click', () => editarRef(r, item));
     item.querySelector('[data-acao="excluir"]').addEventListener('click', () => excluirRef(r.ref));
     lista.appendChild(item);
   });
