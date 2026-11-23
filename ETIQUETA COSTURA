@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BAMBAM · Etiquetas</title>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/forms.css">
+<style>
+  .bloco { background: var(--surface-1); border: 0.5px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 12px; }
+  .bloco h2 { margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: .5px; color: var(--text-muted); }
+  .lin { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; }
+  .lin label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--text-secondary); font-weight: 600; }
+  .lin input, .lin select { padding: 9px 10px; border-radius: 6px; border: 0.5px solid var(--border); background: var(--surface-2); color: var(--text-primary); font-size: 14px; min-height: 38px; }
+  .btn { padding: 9px 16px; border-radius: 6px; border: none; background: var(--bg-accent-strong); color: #fff; font-weight: 700; font-size: 13px; cursor: pointer; min-height: 38px; }
+  .btn.sec { background: none; border: 0.5px solid var(--border-accent); color: var(--text-primary); }
+  .chips button { margin: 0 6px 6px 0; }
+  .qtds { display: grid; grid-template-columns: repeat(5, 90px); gap: 10px; }
+  .qtds input { width: 100%; text-align: center; font-weight: 700; font-size: 16px; }
+  .aviso { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+  .prev { background: #fff; display: inline-block; padding: 8px; border-radius: 6px; }
+  .prev .et { outline: 1px dashed #bbb; }
+  #folha { display: none; }
+  /* Etiqueta 3,35 cm x 5,4 cm */
+  .et { width: 3.35cm; height: 5cm; box-sizing: border-box; padding: .15cm .18cm; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: #000; background: #fff; font-family: Arial, Helvetica, sans-serif; overflow: hidden; }
+  .et .t { font-size: 17pt; font-weight: 900; line-height: 1; margin-bottom: .08cm; }
+  .et .c { font-size: 7.5pt; font-weight: 800; line-height: 1.12; }
+  .et .e { font-size: 5.6pt; font-weight: 700; line-height: 1.1; margin-top: .08cm; max-height: 1.3em; overflow: hidden; }
+  .et .n { font-size: 6pt; line-height: 1.15; }
+  .et .s { display: flex; gap: .04cm; margin: .1cm 0; }
+  .et .s svg { width: .56cm; height: .62cm; fill: none; stroke: #000; stroke-width: .9; stroke-linecap: round; stroke-linejoin: round; }
+  .et .b { font-size: 7.5pt; font-weight: 800; }
+  .et .l { font-size: 7pt; font-weight: 600; margin-top: .05cm; }
+  @page { size: 100.5mm 50mm; margin: 0; }
+  @media print {
+    html, body { margin: 0 !important; background: #fff !important; }
+    body > *:not(#folha) { display: none !important; }
+    #folha { display: block; }
+    .linha { display: grid; grid-template-columns: repeat(3, 3.35cm); width: 10.05cm; height: 5cm; page-break-after: always; break-after: page; }
+    .linha:last-child { page-break-after: auto; break-after: auto; }
+    .et { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <span class="logo">BAMBAM <b>BABY</b></span>
+    <nav class="nav">
+      <a href="index.html">Painel</a>
+      <a href="novo-corte.html">Novo corte</a>
+      <a href="designacao.html">Designação</a>
+      <a href="retorno.html">Retorno</a>
+      <a href="pagamento.html">Pagamento</a>
+      <a href="arremate.html">Arremate</a>
+      <a href="estoque.html">Estoque</a>
+      <a href="cadastros.html">Cadastros</a>
+      <a href="etiquetas.html" class="ativo">Etiquetas</a>
+      <a href="relatorios.html">Relatórios</a>
+      <a href="pedido.html">Pedidos</a>
+      <a href="pedido-novo.html">Pedido Novo</a>
+      <a href="vendas-cadastros.html">Clientes</a>
+      <a href="contas-receber.html">Financeiro</a>
+    </nav>
+    <div class="user">
+      <span id="user-email">—</span>
+      <button class="logout" onclick="logout()">sair</button>
+    </div>
+  </div>
+
+  <datalist id="empresas-list"></datalist>
+  <div class="wrap">
+    <h1 style="margin:0 0 10px">Etiquetas de costura</h1>
+
+    <div class="bloco">
+      <h2>1. Corte</h2>
+      <div class="lin">
+        <label>Lote<input id="lote" placeholder="ex: 2332B" style="text-transform:uppercase"></label>
+        <button class="btn" id="btn-buscar">Buscar</button>
+        <span class="aviso" id="info-corte">Digite o lote, ou abra pelo botão Etiquetas na Designação.</span>
+      </div>
+      <div class="chips" id="chips" style="margin-top:10px"></div>
+    </div>
+
+    <div id="painel" style="display:none">
+      <div class="bloco">
+        <h2>2. Empresa na etiqueta</h2>
+        <div class="lin">
+          <label>Razão social / CNPJ<select id="empresa" style="min-width:320px"></select></label>
+          <button class="btn sec" id="btn-nova-emp">+ Nova empresa</button>
+        </div>
+        <div class="lin" id="form-emp" style="display:none;margin-top:10px">
+          <label>Razão social<input id="emp-nome" style="min-width:260px;text-transform:uppercase"></label>
+          <label>CNPJ<input id="emp-cnpj" placeholder="só números" style="width:190px"></label>
+          <button class="btn" id="btn-salvar-emp">Salvar empresa</button>
+        </div>
+      </div>
+
+      <div class="bloco">
+        <h2>3. Composição e cuidados</h2>
+        <div class="lin">
+          <label>Modelo de cuidados<select id="modelo"><option value="algodao">100% ALGODÃO</option><option value="mista">67% POLIESTER / 33% VISCOSE</option></select></label>
+          <span class="aviso" id="info-comp"></span>
+        </div>
+      </div>
+
+      <div class="bloco">
+        <h2>4. Quantidade de etiquetas por tamanho</h2>
+        <div class="qtds" id="qtds"></div>
+        <div class="aviso">Cada tamanho começa numa linha nova (3 etiquetas por linha), pra não misturar tamanhos na mesma linha.</div>
+      </div>
+
+      <div class="bloco">
+        <h2>5. Prévia e impressão</h2>
+        <div id="previa" class="prev"></div>
+        <div class="lin" style="margin-top:12px">
+          <button class="btn sec" id="btn-teste">Imprimir 1 linha de teste</button>
+          <button class="btn" id="btn-imprimir">Imprimir etiquetas</button>
+        </div>
+        <div class="aviso">Na janela de impressão: escolha a Zetex, tamanho de papel da etiqueta (10,05 × 5,0 cm), escala 100% e sem margens.</div>
+      </div>
+
+      <div class="bloco">
+        <h2>6. Ajuste fino (se a impressão sair deslocada)</h2>
+        <div class="lin">
+          <label>Altura da linha (mm)<input type="number" step="0.1" id="aj-h" value="50" style="width:100px"></label>
+          <label>Deslocar pra baixo (mm)<input type="number" step="0.1" id="aj-y" value="0" style="width:110px"></label>
+          <label>Deslocar pra direita (mm)<input type="number" step="0.1" id="aj-x" value="0" style="width:110px"></label>
+          <label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" id="aj-m" style="min-height:auto"> moldura (teste de alinhamento)</label>
+        </div>
+        <div class="aviso">Altura da linha = distância de um furo do rolo até o próximo. Use valores negativos pra deslocar pra cima ou pra esquerda. Fica salvo neste computador.</div>
+      </div>
+    </div>
+  </div>
+  <div id="folha"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/acesso.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/etiquetas.js"></script>
+</body>
+</html>
