@@ -4,6 +4,7 @@
 // diferente sem misturar destinos.
 
 let refsExtras = []; // refs adicionais além da principal
+let refsCad = [];    // cadastro de refs (tem tecido e 'composta_com')
 
 async function init() {
   await protegerRota();
@@ -12,6 +13,7 @@ async function init() {
   // Popular datalist de refs
   try {
     const refs = await listarRefs();
+    refsCad = refs;
     const dl = document.getElementById('refs-list');
     refs.forEach(r => {
       const opt = document.createElement('option');
@@ -296,8 +298,28 @@ async function salvarCorteBtn() {
     return;
   }
 
-  const refs = [refPrincipal, ...refsExtras];
   const totalPecasPorRef = itensBase.reduce((a, i) => a + i.qtd, 0);
+  if (!refsCad.length) {
+    toast('Cadastro de refs não carregou — recarregue a página antes de salvar', 'err');
+    btn.disabled = false;
+    return;
+  }
+  // Refs compostas: se a ref digitada está marcada no cadastro como composta com outra,
+  // o corte da outra ref é gerado junto, com a mesma quantidade por cor, no tamanho fixo (RN).
+  const refs = [refPrincipal, ...refsExtras];
+  const itensDaRef = {};
+  const autoComp = [];
+  [...refs].forEach(r => {
+    const cad = refsCad.find(x => x.ref === r);
+    const alvo = cad && cad.composta_com;
+    if (!alvo || refs.includes(alvo)) return;
+    const tam = cad.composta_tam || 'RN';
+    const porCor = {};
+    itensBase.forEach(i => { porCor[i.cor] = (porCor[i.cor] || 0) + i.qtd; });
+    itensDaRef[alvo] = Object.entries(porCor).map(([cor, qtd]) => ({ cor, tam, qtd }));
+    refs.push(alvo);
+    autoComp.push(`${alvo} ${tam}`);
+  });
 
   // Valida duplicidade de todas as refs de uma vez — mas em vez de só bloquear,
   // pergunta se quer ACRESCENTAR os itens novos (ex: um tamanho que faltou) ao
@@ -342,7 +364,8 @@ async function salvarCorteBtn() {
     let refsNovas = [], refsAcrescentadas = [];
 
     for (const ref of refs) {
-      const itensNovos = itensBase.map(i => ({ ref, ...i }));
+      const itensRef = itensDaRef[ref] || itensBase;
+      const itensNovos = itensRef.map(i => ({ ref, ...i }));
       const existente = existentesPorRef[ref];
 
       if (existente) {
@@ -382,7 +405,7 @@ async function salvarCorteBtn() {
           refs: [ref],           // array com uma ref só (mantém compat com o resto do sistema)
           data_corte: data,
           itens: itensNovos,
-          total_pecas: totalPecasPorRef,
+          total_pecas: itensRef.reduce((a, i) => a + i.qtd, 0),
           status: 'cortado'
         };
         batch.set(docRef, corte);
@@ -395,7 +418,7 @@ async function salvarCorteBtn() {
     const partes = [];
     if (refsNovas.length > 0) partes.push(`${refsNovas.length} corte(s) novo(s) (${refsNovas.join(', ')})`);
     if (refsAcrescentadas.length > 0) partes.push(`acrescentado no corte existente de ${refsAcrescentadas.join(', ')}`);
-    toast(`✓ Lote ${lote}: ${partes.join(' · ')} (${totalPecasPorRef} peças por ref)`, 'ok');
+    toast(`✓ Lote ${lote}: ${partes.join(' · ')} (${totalPecasPorRef} peças por ref)${autoComp.length ? ' · gerado junto: ' + autoComp.join(', ') : ''}`, 'ok');
 
     // Salva cores novas no Firestore pra próxima vez aparecerem no autocomplete
     try {
