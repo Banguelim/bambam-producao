@@ -349,6 +349,9 @@ async function abrirCorte(id) {
     document.getElementById('info-txt').innerHTML =
       `Corte <b>${corteAtual.lote}</b> · Ref <b>${refsTxt}</b> · <b>${corteAtual.total_pecas}</b> peças · ${formatDataBR(corteAtual.data_corte)}`;
 
+    const bEtq = document.getElementById('btn-etiquetas');
+    if (bEtq) bEtq.href = 'etiquetas.html?corte=' + corteAtual.id;
+
     // Descobre o que ainda pode ser designado (subtrai o que já foi)
     const restante = await calcularRestante(corteAtual);
     renderizarGrade(restante);
