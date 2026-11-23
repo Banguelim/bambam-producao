@@ -201,6 +201,7 @@ function renderListaCortes(pendentes, infos, filtro) {
       <span class="pecas">${c.total_pecas} peças</span>
       <span class="status ${statusClass}">${statusTxt}</span>
       <button class="btn-editar-corte" title="Editar quantidades deste corte">✎</button>
+      <button class="btn-editar-corte btn-etq-corte" title="Imprimir etiquetas deste corte">🏷 etiquetas</button>
       <button class="btn-excluir-corte" title="Excluir este corte">✕</button>
       ${detalheDesig}
     `;
@@ -215,6 +216,12 @@ function renderListaCortes(pendentes, infos, filtro) {
     div.querySelector('.btn-editar-corte').addEventListener('click', (e) => {
       e.stopPropagation();
       abrirEditarCorte(c);
+    });
+
+    // Botão etiquetas (abre a tela de etiquetas já com este corte)
+    div.querySelector('.btn-etq-corte').addEventListener('click', (e) => {
+      e.stopPropagation();
+      location.href = 'etiquetas.html?corte=' + c.id;
     });
 
     // Botão excluir
