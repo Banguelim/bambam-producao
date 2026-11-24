@@ -4,7 +4,7 @@
 // diferente sem misturar destinos.
 
 let refsExtras = []; // refs adicionais além da principal
-let refsCad = [];    // cadastro de refs (tem tecido e 'composta_com')
+let refsCad = [];    // cadastro de refs (tem tecido e 'composta_com' = refs vinculadas)
 
 async function init() {
   await protegerRota();
@@ -304,21 +304,19 @@ async function salvarCorteBtn() {
     btn.disabled = false;
     return;
   }
-  // Refs compostas: se a ref digitada está marcada no cadastro como composta com outra,
-  // o corte da outra ref é gerado junto, com a mesma quantidade por cor, no tamanho fixo (RN).
+  // Refs vinculadas: se a ref digitada tem vínculo cadastrado (Cadastros → Referências),
+  // o corte de cada ref vinculada é gerado junto, no mesmo lote, com os MESMOS
+  // tamanhos, cores e quantidades (só troca a referência).
   const refs = [refPrincipal, ...refsExtras];
   const itensDaRef = {};
   const autoComp = [];
   [...refs].forEach(r => {
     const cad = refsCad.find(x => x.ref === r);
-    const alvo = cad && cad.composta_com;
-    if (!alvo || refs.includes(alvo)) return;
-    const tam = cad.composta_tam || 'RN';
-    const porCor = {};
-    itensBase.forEach(i => { porCor[i.cor] = (porCor[i.cor] || 0) + i.qtd; });
-    itensDaRef[alvo] = Object.entries(porCor).map(([cor, qtd]) => ({ cor, tam, qtd }));
-    refs.push(alvo);
-    autoComp.push(`${alvo} ${tam}`);
+    listaVinculos(cad).forEach(alvo => {
+      if (refs.includes(alvo)) return;
+      refs.push(alvo);
+      autoComp.push(alvo);
+    });
   });
 
   // Valida duplicidade de todas as refs de uma vez — mas em vez de só bloquear,
@@ -444,6 +442,14 @@ async function salvarCorteBtn() {
     toast('Erro ao salvar: ' + e.message, 'err');
     btn.disabled = false;
   }
+}
+
+// Lê os vínculos de uma ref cadastrada. Aceita texto "004" ou "004, 007" (ou lista).
+function listaVinculos(cad) {
+  const v = cad && cad.composta_com;
+  if (!v) return [];
+  const arr = Array.isArray(v) ? v : String(v).split(',');
+  return arr.map(x => String(x).trim().toUpperCase()).filter(Boolean);
 }
 
 function limparFormularioPraNovoCorte(loteAnterior) {
