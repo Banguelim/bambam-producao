@@ -268,35 +268,65 @@ async function excluirRef(ref) {
     toast('Erro: ' + e.message, 'err');
   }
 }
-// Edição inline da ref: tecido, composição e "ref composta" (gera outro corte sozinha)
+
+// Lê os vínculos de uma ref (aceita texto "004" ou "004, 007", ou lista)
+function vinculosDaRef(r) {
+  const v = r && r.composta_com;
+  if (!v) return [];
+  const arr = Array.isArray(v) ? v : String(v).split(',');
+  return arr.map(x => String(x).trim().toUpperCase()).filter(Boolean);
+}
+
+// Salva o vínculo digitado direto na linha da ref (vazio = sem vínculo)
+async function salvarVinculo(r, input) {
+  const atual = vinculosDaRef(r);
+  const lista = [...new Set(input.value.split(/[,;\s]+/).map(x => x.trim().toUpperCase()).filter(Boolean))];
+  if (lista.join(',') === atual.join(',')) { input.value = lista.join(', '); return; }
+  for (const alvo of lista) {
+    if (alvo === r.ref) {
+      toast('Uma ref não pode compor com ela mesma', 'err');
+      input.value = atual.join(', ');
+      return;
+    }
+    if (!refs.some(x => x.ref === alvo)) {
+      toast(`A ref ${alvo} não está cadastrada`, 'err');
+      input.value = atual.join(', ');
+      return;
+    }
+  }
+  try {
+    await salvarRef({ ...r, composta_com: lista.join(',') });
+    r.composta_com = lista.join(',');
+    input.value = lista.join(', ');
+    toast(lista.length
+      ? `✓ ${r.ref} agora compõe com ${lista.join(', ')}`
+      : `✓ Vínculo da ref ${r.ref} removido`, 'ok');
+  } catch (e) {
+    toast('Erro: ' + e.message, 'err');
+    input.value = atual.join(', ');
+  }
+}
+
+// Edição da ref: tecido e composição (o vínculo é na própria linha)
 function editarRef(r, item) {
   const aberto = item.nextElementSibling;
   if (aberto && aberto.classList.contains('edit-ref')) { aberto.remove(); return; }
   const box = document.createElement('div');
   box.className = 'edit-ref';
-  box.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr 90px auto;gap:8px;padding:10px 14px;background:var(--bg-accent);align-items:end;font-size:12px';
+  box.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto;gap:8px;padding:10px 14px;background:var(--bg-accent);align-items:end;font-size:12px';
   box.innerHTML = `
     <label>Tecido<input data-f="tecido" placeholder="ex: malha"></label>
     <label>Composição<input data-f="composicao" list="composicoes-list" placeholder="escolha ou digite"><datalist id="composicoes-list"><option value="100% ALGODÃO"><option value="67% POLIESTER / 33% VISCOSE"></datalist></label>
-    <label>Composta com a ref<input data-f="composta_com" list="ref-preco-list" placeholder="vazio = não composta" style="text-transform:uppercase"></label>
-    <label>Tamanho<select data-f="composta_tam"><option>RN</option><option>P</option><option>M</option><option>G</option><option>GG</option></select></label>
     <button class="btn-mini success" data-f="salvar">✓ salvar</button>`;
   const f = n => box.querySelector(`[data-f="${n}"]`);
   f('tecido').value = r.tecido || '';
   f('composicao').value = r.composicao || '';
-  f('composta_com').value = r.composta_com || '';
-  f('composta_tam').value = r.composta_tam || 'RN';
   f('salvar').addEventListener('click', async () => {
-    const alvo = f('composta_com').value.trim().toUpperCase();
-    if (alvo && alvo === r.ref) { toast('Uma ref não pode compor com ela mesma', 'err'); return; }
-    if (alvo && !refs.some(x => x.ref === alvo)) { toast(`A ref ${alvo} não está cadastrada`, 'err'); return; }
     try {
       await salvarRef({
-        ref: r.ref,
+        ...r,
         tecido: f('tecido').value.trim(),
-        composicao: f('composicao').value.trim(),
-        composta_com: alvo,
-        composta_tam: alvo ? f('composta_tam').value : ''
+        composicao: f('composicao').value.trim()
       });
       toast(`✓ Ref ${r.ref} atualizada`, 'ok');
       await carregarTudo();
@@ -319,19 +349,23 @@ function renderRefs() {
     const item = document.createElement('div');
     item.className = 'item-cad';
     const info = [r.tecido, r.composicao].filter(Boolean).join(' · ');
-    const comp = r.composta_com ? `🔗 gera ${r.composta_com} (${r.composta_tam || 'RN'})` : '';
     item.innerHTML = `
       <span class="nome-cad">${r.ref}</span>
       <span class="info-extra"></span>
-      <span class="info-extra"></span>
+      <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-secondary);white-space:nowrap">🔗 compõe com
+        <input class="vinc-input" list="ref-preco-list" placeholder="vazio" autocomplete="off"
+               style="width:150px;padding:4px 8px;font-size:12px;text-transform:uppercase">
+      </label>
       <div class="acoes-btn">
         <button class="btn-mini" data-acao="editar">✎ editar</button>
         <button class="btn-mini danger" data-acao="excluir">✗ excluir</button>
       </div>
     `;
-    const extras = item.querySelectorAll('.info-extra');
-    extras[0].textContent = info;
-    extras[1].textContent = comp;
+    item.querySelector('.info-extra').textContent = info;
+    const vinc = item.querySelector('.vinc-input');
+    vinc.value = vinculosDaRef(r).join(', ');
+    vinc.addEventListener('change', () => salvarVinculo(r, vinc));
+    vinc.addEventListener('keydown', e => { if (e.key === 'Enter') vinc.blur(); });
     item.querySelector('[data-acao="editar"]').addEventListener('click', () => editarRef(r, item));
     item.querySelector('[data-acao="excluir"]').addEventListener('click', () => excluirRef(r.ref));
     lista.appendChild(item);
