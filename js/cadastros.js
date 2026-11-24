@@ -307,18 +307,25 @@ async function salvarVinculo(r, input) {
   }
 }
 
-// Edição da ref: tecido e composição (o vínculo é na própria linha)
+// Edição da ref: tecido, composição e nome do tamanho na etiqueta (o vínculo é na própria linha)
 function editarRef(r, item) {
   const aberto = item.nextElementSibling;
   if (aberto && aberto.classList.contains('edit-ref')) { aberto.remove(); return; }
   const box = document.createElement('div');
   box.className = 'edit-ref';
   box.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto;gap:8px;padding:10px 14px;background:var(--bg-accent);align-items:end;font-size:12px';
+  const tamsEtiqueta = ['RN', 'P', 'M', 'G', 'GG'];
   box.innerHTML = `
     <label>Tecido<input data-f="tecido" placeholder="ex: malha"></label>
     <label>Composição<input data-f="composicao" list="composicoes-list" placeholder="escolha ou digite"><datalist id="composicoes-list"><option value="100% ALGODÃO"><option value="67% POLIESTER / 33% VISCOSE"></datalist></label>
-    <button class="btn-mini success" data-f="salvar">✓ salvar</button>`;
+    <button class="btn-mini success" data-f="salvar">✓ salvar</button>
+    <div style="grid-column:1/-1;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <span style="color:var(--text-secondary)">Tamanho na etiqueta <i>(vazio = igual ao do sistema; ex: P → 1)</i>:</span>
+      ${tamsEtiqueta.map(t => `<label style="display:flex;align-items:center;gap:4px">${t}<input data-t="${t}" maxlength="6" style="width:52px;padding:4px 6px"></label>`).join('')}
+    </div>`;
   const f = n => box.querySelector(`[data-f="${n}"]`);
+  const mapaAtual = r.etiqueta_tam || {};
+  tamsEtiqueta.forEach(t => { box.querySelector(`[data-t="${t}"]`).value = mapaAtual[t] || ''; });
   f('tecido').value = r.tecido || '';
   f('composicao').value = r.composicao || '';
   f('salvar').addEventListener('click', async () => {
@@ -326,7 +333,9 @@ function editarRef(r, item) {
       await salvarRef({
         ...r,
         tecido: f('tecido').value.trim(),
-        composicao: f('composicao').value.trim()
+        composicao: f('composicao').value.trim(),
+        // todos os 5 tamanhos sempre gravados ('' = igual ao sistema), pra limpar valores antigos
+        etiqueta_tam: Object.fromEntries(tamsEtiqueta.map(t => [t, box.querySelector(`[data-t="${t}"]`).value.trim()]))
       });
       toast(`✓ Ref ${r.ref} atualizada`, 'ok');
       await carregarTudo();
