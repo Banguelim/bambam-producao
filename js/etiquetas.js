@@ -177,22 +177,23 @@ async function abrirCorte(c) {
 // Ajuste fino: altura da linha, deslocamentos e moldura de teste (salvo neste computador)
 function aplicarAjustes(salvar) {
   const n = (id, pad) => { const v = parseFloat($(id).value); return isNaN(v) ? pad : v; };
-  const h = Math.max(10, n('aj-h', 50)), y = n('aj-y', 0), x = n('aj-x', 0), m = $('aj-m').checked;
-  if (salvar) localStorage.setItem('etq_aj', JSON.stringify({ h, y, x, m }));
+  const h = Math.max(10, n('aj-h', 50)), y = n('aj-y', 0), x = n('aj-x', 0), m = $('aj-m').checked, r = $('aj-r').checked, ml = Math.min(8, Math.max(0, n('aj-ml', 3)));
+  if (salvar) localStorage.setItem('etq_aj', JSON.stringify({ h, y, x, m, r, ml }));
   let st = document.getElementById('estilo-ajuste');
   if (!st) { st = document.createElement('style'); st.id = 'estilo-ajuste'; document.head.appendChild(st); }
-  st.textContent = `@page { size: 100.5mm ${h}mm; margin: 0; }
+  st.textContent = `.et { padding-left: ${ml}mm; padding-right: ${ml}mm; }
+@page { size: 100.5mm ${h}mm; margin: 0; }
 @media print {
-  .linha { height: ${h}mm !important; overflow: hidden; position: relative; left: ${x}mm; top: ${y}mm; }
+  .linha { height: ${h}mm !important; overflow: hidden; position: relative; left: ${x}mm; top: ${y}mm; ${r ? 'transform: rotate(180deg);' : ''} }
   .et { height: ${h}mm !important; ${m ? 'outline: .25mm solid #000; outline-offset: -.25mm;' : ''} }
 }`;
 }
 function carregarAjustes() {
   try {
     const a = JSON.parse(localStorage.getItem('etq_aj') || 'null');
-    if (a) { $('aj-h').value = a.h; $('aj-y').value = a.y; $('aj-x').value = a.x; $('aj-m').checked = !!a.m; }
+    if (a) { $('aj-h').value = a.h; $('aj-y').value = a.y; $('aj-x').value = a.x; $('aj-m').checked = !!a.m; $('aj-r').checked = !!a.r; if (a.ml !== undefined) $('aj-ml').value = a.ml; }
   } catch (e) { /* sem ajustes salvos */ }
-  ['aj-h', 'aj-y', 'aj-x', 'aj-m'].forEach(id => $(id).addEventListener('input', () => aplicarAjustes(true)));
+  ['aj-h', 'aj-y', 'aj-x', 'aj-m', 'aj-r', 'aj-ml'].forEach(id => $(id).addEventListener('input', () => aplicarAjustes(true)));
   aplicarAjustes(false);
 }
 
