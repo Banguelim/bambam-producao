@@ -381,3 +381,17 @@ async function deletarContasDoPedido(numeroPedido) {
   snap.forEach(d => batch.delete(d.ref));
   await batch.commit();
 }
+
+// Parcelas pagas dentro de um período de PAGAMENTO (AAAA-MM-DD). Lê só as
+// parcelas daquele intervalo — não o histórico inteiro. Usa só o campo
+// data_pagamento (índice automático do Firestore, não pede índice composto).
+// Parcela reaberta perde o campo data_pagamento, então não entra aqui.
+async function listarContasReceberPagasPeriodo(de, ate) {
+  const snap = await colContasReceber()
+    .where('data_pagamento', '>=', de)
+    .where('data_pagamento', '<=', ate)
+    .get();
+  const contas = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(c => c.status === 'pago');
+  contas.sort((a, b) => (a.data_pagamento || '').localeCompare(b.data_pagamento || ''));
+  return contas;
+}
