@@ -199,6 +199,7 @@ async function deletarPedido(numero) {
 // ============ CONTAS A RECEBER ============
 // Gera as parcelas de um pedido concluído. dataBase = data do 1º vencimento.
 // Cada parcela seguinte vence 30 dias após a anterior (padrão da planilha antiga).
+// Cada parcela guarda o vendedor do pedido (pedido.vendedor).
 async function gerarContasReceber(pedido, parcelas, dataBase) {
   const total = pedido.total_valor;
   const valorParcela = Math.floor((total / parcelas) * 100) / 100;
@@ -215,6 +216,7 @@ async function gerarContasReceber(pedido, parcelas, dataBase) {
       pedido_id: pedido.numero,
       cliente: pedido.cliente,
       cliente_id: pedido.cliente_id || null,
+      vendedor: pedido.vendedor || null,
       parcela_num: i,
       parcelas_total: parcelas,
       valor,
@@ -245,6 +247,19 @@ async function listarContasReceberPagas() {
   const snap = await colContasReceber().where('status', '==', 'pago').get();
   const contas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   contas.sort((a, b) => (a.data_vencimento || '').localeCompare(b.data_vencimento || ''));
+  return contas;
+}
+// Parcelas pagas dentro de um período de PAGAMENTO (AAAA-MM-DD). Lê só as
+// parcelas daquele intervalo — não o histórico inteiro. Usa só o campo
+// data_pagamento (índice automático do Firestore, não pede índice composto).
+// Parcela reaberta perde o campo data_pagamento, então não entra aqui.
+async function listarContasReceberPagasPeriodo(de, ate) {
+  const snap = await colContasReceber()
+    .where('data_pagamento', '>=', de)
+    .where('data_pagamento', '<=', ate)
+    .get();
+  const contas = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(c => c.status === 'pago');
+  contas.sort((a, b) => (a.data_pagamento || '').localeCompare(b.data_pagamento || ''));
   return contas;
 }
 // Totais acumulados de contas já pagas (soma em R$ e quantidade), mantidos
@@ -347,6 +362,7 @@ async function juntarContas(contas, dataVencimento) {
     pedidos_agrupados: pedidos,
     cliente: contas[0].cliente,
     cliente_id: contas[0].cliente_id || null,
+    vendedor: contas[0].vendedor || null,
     parcela_num: 1,
     parcelas_total: 1,
     valor: total,
@@ -380,18 +396,4 @@ async function deletarContasDoPedido(numeroPedido) {
   const batch = db.batch();
   snap.forEach(d => batch.delete(d.ref));
   await batch.commit();
-}
-
-// Parcelas pagas dentro de um período de PAGAMENTO (AAAA-MM-DD). Lê só as
-// parcelas daquele intervalo — não o histórico inteiro. Usa só o campo
-// data_pagamento (índice automático do Firestore, não pede índice composto).
-// Parcela reaberta perde o campo data_pagamento, então não entra aqui.
-async function listarContasReceberPagasPeriodo(de, ate) {
-  const snap = await colContasReceber()
-    .where('data_pagamento', '>=', de)
-    .where('data_pagamento', '<=', ate)
-    .get();
-  const contas = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(c => c.status === 'pago');
-  contas.sort((a, b) => (a.data_pagamento || '').localeCompare(b.data_pagamento || ''));
-  return contas;
 }
