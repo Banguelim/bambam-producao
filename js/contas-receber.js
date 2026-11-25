@@ -5,13 +5,17 @@
 // gratuito só dá 50 mil leituras/dia pro projeto INTEIRO. Por isso essa
 // tela NUNCA lê a coleção inteira de cara — só as contas "em aberto"
 // (pendentes/vencidas), que são um punhado. O histórico de pagas só é lido
-// se alguém realmente pedir (filtro "Só pagas" ou "Todas"), e uma vez lido
-// fica guardado aqui (contasPagasCache) pro resto da visita à tela.
+// se alguém realmente pedir (filtro "Só pagas", "Todas" ou data de
+// pagamento), e uma vez lido fica guardado aqui (contasPagasCache) pro
+// resto da visita à tela.
 
 let contasPendentes = [];       // sempre carregadas (leve)
 let contasPagasCache = null;    // null = ainda não carregado; carrega sob demanda
 let agregadosPago = { total: 0, qtd: 0 }; // totais de "pago" mantidos incrementalmente (ver db-vendas.js)
 let carregandoPagas = false;
+// Pagas buscadas por período de pagamento (só lê as do intervalo, não o histórico todo).
+// Chave "de|ate" -> lista. Cada período já buscado fica guardado e não gasta leitura de novo.
+const cachePeriodos = new Map();
 let selecionadas = new Set();   // ids das parcelas marcadas pra juntar
 // CNPJ e vendedor vêm do cadastro do cliente (a parcela só guarda cliente_id
 // e o nome). Clientes são ~200 docs — leve.
@@ -24,12 +28,16 @@ async function init() {
   document.getElementById('f-busca').addEventListener('input', render);
   document.getElementById('f-data-de').addEventListener('change', render);
   document.getElementById('f-data-ate').addEventListener('change', render);
+  document.getElementById('f-pag-de').addEventListener('change', onFiltroPagamento);
+  document.getElementById('f-pag-ate').addEventListener('change', onFiltroPagamento);
   document.getElementById('f-vendedor').addEventListener('change', render);
   document.getElementById('btn-limpar-filtros').addEventListener('click', () => {
     document.getElementById('f-status').value = 'pendentes';
     document.getElementById('f-busca').value = '';
     document.getElementById('f-data-de').value = '';
     document.getElementById('f-data-ate').value = '';
+    document.getElementById('f-pag-de').value = '';
+    document.getElementById('f-pag-ate').value = '';
     document.getElementById('f-vendedor').value = '';
     render();
   });
@@ -73,11 +81,54 @@ async function carregar() {
   }
 }
 
-// Filtros que precisam enxergar as pagas ("pago"/"todos") disparam a
-// carga pesada (uma vez só, depois fica em cache) — só quando pedido.
+// Tem filtro de data de pagamento preenchido?
+function filtroPagamentoAtivo() {
+  return !!(document.getElementById('f-pag-de').value || document.getElementById('f-pag-ate').value);
+}
+function chavePeriodoPag() {
+  const de = document.getElementById('f-pag-de').value || '0000-01-01';
+  const ate = document.getElementById('f-pag-ate').value || '9999-12-31';
+  return { de, ate, chave: de + '|' + ate };
+}
+
+// Ao preencher data de pagamento, só interessam as parcelas pagas daquele período:
+// busca no Firebase SÓ o intervalo (poucas leituras), sem ler o histórico inteiro.
+async function onFiltroPagamento() {
+  if (!filtroPagamentoAtivo()) {
+    document.getElementById('f-status').value = 'pendentes';
+    render();
+    return;
+  }
+  document.getElementById('f-status').value = 'pago';
+  await carregarPagasPeriodo();
+}
+async function carregarPagasPeriodo() {
+  const { de, ate, chave } = chavePeriodoPag();
+  // Se o histórico inteiro já está na tela (cache), filtra localmente sem ler nada
+  if (contasPagasCache === null && !cachePeriodos.has(chave)) {
+    if (carregandoPagas) return;
+    carregandoPagas = true;
+    const corpo = document.getElementById('contas-corpo');
+    corpo.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--text-muted)">Buscando pagamentos do período...</td></tr>`;
+    try {
+      cachePeriodos.set(chave, await listarContasReceberPagasPeriodo(de, ate));
+    } catch (e) {
+      toast('Erro ao buscar pagamentos: ' + e.message, 'err');
+    } finally {
+      carregandoPagas = false;
+    }
+  }
+  render();
+}
+
+// Filtros "Só pagas"/"Todas" precisam do histórico inteiro e disparam a carga
+// pesada (uma vez só, depois fica em cache) — só quando pedido. A busca por data
+// de pagamento NÃO passa por aqui: ela lê só o período (carregarPagasPeriodo).
 async function onFiltroChange() {
   const filtro = document.getElementById('f-status').value;
-  if ((filtro === 'pago' || filtro === 'todos') && contasPagasCache === null) {
+  if (filtroPagamentoAtivo()) { render(); return; } // com data de pagamento, o período manda
+  const precisaPagas = filtro === 'pago' || filtro === 'todos';
+  if (precisaPagas && contasPagasCache === null) {
     if (carregandoPagas) return;
     if (!confirm(`Ver as pagas vai ler o histórico inteiro (${agregadosPago.qtd.toLocaleString('pt-BR')} contas).\n` +
                  `O limite grátis do Firebase é 50.000 leituras por dia para TODO o sistema (inclusive o ponto).\n\nContinuar?`)) {
@@ -110,22 +161,43 @@ function render() {
   const busca = (document.getElementById('f-busca').value || '').toUpperCase();
   const dataDe = document.getElementById('f-data-de').value;
   const dataAte = document.getElementById('f-data-ate').value;
+  const pagDe = document.getElementById('f-pag-de').value;
+  const pagAte = document.getElementById('f-pag-ate').value;
+  const filtraPag = !!(pagDe || pagAte);
   const vendedor = document.getElementById('f-vendedor').value;
   const buscaDigitos = soDigitos(busca);
   const precisaPagas = filtro === 'pago' || filtro === 'todos';
 
-  if (precisaPagas && contasPagasCache === null) return; // ainda carregando — onFiltroChange chama render() de novo quando terminar
-
-  const todasContas = precisaPagas ? contasPendentes.concat(contasPagasCache) : contasPendentes;
+  let todasContas;
+  if (filtraPag) {
+    // Período de pagamento: usa o histórico inteiro se já estiver carregado, senão só o período buscado
+    if (contasPagasCache !== null) todasContas = contasPagasCache;
+    else {
+      const doPeriodo = cachePeriodos.get(chavePeriodoPag().chave);
+      if (!doPeriodo) return; // ainda buscando — carregarPagasPeriodo chama render() de novo
+      todasContas = doPeriodo;
+    }
+  } else {
+    if (precisaPagas && contasPagasCache === null) return; // ainda carregando — onFiltroChange chama render() de novo quando terminar
+    todasContas = precisaPagas ? contasPendentes.concat(contasPagasCache) : contasPendentes;
+  }
 
   const filtradas = todasContas.filter(c => {
     const st = statusReal(c);
-    if (filtro === 'aberto' && st !== 'aberto') return false;
-    if (filtro === 'vencido' && st !== 'vencido') return false;
-    if (filtro === 'pago' && st !== 'pago') return false;
-    if (filtro === 'pendentes' && st === 'pago') return false;
+    if (!filtraPag) {
+      if (filtro === 'aberto' && st !== 'aberto') return false;
+      if (filtro === 'vencido' && st !== 'vencido') return false;
+      if (filtro === 'pago' && st !== 'pago') return false;
+      if (filtro === 'pendentes' && st === 'pago') return false;
+    }
     if (dataDe && (!c.data_vencimento || c.data_vencimento < dataDe)) return false;
     if (dataAte && (!c.data_vencimento || c.data_vencimento > dataAte)) return false;
+    // Data de pagamento: só parcelas pagas, dentro do período
+    if (filtraPag) {
+      if (st !== 'pago' || !c.data_pagamento) return false;
+      if (pagDe && c.data_pagamento < pagDe) return false;
+      if (pagAte && c.data_pagamento > pagAte) return false;
+    }
     const cli = clienteDaConta(c);
     if (vendedor && (cli?.vendedor || '').trim().toUpperCase() !== vendedor) return false;
     if (busca) {
@@ -142,7 +214,7 @@ function render() {
 
   // Total do período (só aparece quando tem filtro de data ativo)
   const infoPeriodo = document.getElementById('total-periodo');
-  if (dataDe || dataAte) {
+  if (dataDe || dataAte || filtraPag) {
     const total = filtradas.reduce((a, c) => a + (statusReal(c) === 'pago' ? (c.valor_pago ?? c.valor ?? 0) : (c.valor || 0)), 0);
     document.getElementById('total-periodo-valor').textContent = formatBRL(total);
     document.getElementById('total-periodo-qtd').textContent = filtradas.length;
@@ -199,6 +271,8 @@ function render() {
         : '<span style="color:var(--text-muted)">—</span>');
     const jurosInfo = c.juros > 0
       ? `<span class="juros-info">${formatBRL(c.valor_original)} + ${formatBRL(c.juros)} juros</span>` : '';
+    const pagoEm = st === 'pago' && c.data_pagamento
+      ? `<span class="juros-info" style="color:var(--success)">pago em ${formatDataBR(c.data_pagamento)}</span>` : '';
     tr.innerHTML = `
       <td>${st !== 'pago' ? `<input type="checkbox" class="chk-juntar" ${selecionadas.has(c.id) ? 'checked' : ''}>` : ''}</td>
       <td>${celPedido}</td>
@@ -209,7 +283,7 @@ function render() {
       })()}</td>
       <td>${juntada ? `🔗 junção (${c.agrupa_ids.length})` : `${c.parcela_num}/${c.parcelas_total}`}</td>
       <td>${formatDataBR(c.data_vencimento)}${c.vencimento_original && c.vencimento_original !== c.data_vencimento
-        ? `<span class="juros-info" style="color:var(--text-muted)">era ${formatDataBR(c.vencimento_original)}</span>` : ''}</td>
+        ? `<span class="juros-info" style="color:var(--text-muted)">era ${formatDataBR(c.vencimento_original)}</span>` : ''}${pagoEm}</td>
       <td class="num">${formatBRL(c.valor)}${jurosInfo}</td>
       <td><span class="badge ${st}">${st === 'pago' ? '✓ pago' : (st === 'vencido' ? '⚠ vencido' : 'aberto')}</span></td>
       <td class="obs"><span class="obs-editavel" contenteditable="true" spellcheck="false" data-id="${c.id}">${c.historico || ''}</span></td>
@@ -266,7 +340,9 @@ function render() {
 // pendentes (leve) são relidas do Firestore.
 async function recarregarApos(ajustarCache) {
   if (contasPagasCache !== null && ajustarCache) ajustarCache(contasPagasCache);
+  cachePeriodos.clear(); // os períodos guardados ficaram desatualizados
   await carregar();
+  if (filtroPagamentoAtivo() && contasPagasCache === null) await carregarPagasPeriodo();
 }
 
 // Salva a observação da parcela ao sair do campo (blur) — só grava se
