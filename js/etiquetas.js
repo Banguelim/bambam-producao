@@ -51,7 +51,7 @@ function htmlEtiqueta(tam, ctx) {
   const m = MODELOS[ctx.modelo];
   const comp = (ctx.comp || m.texto).split('/').map(x => esc(x.trim())).join('<br>');
   return `<div class="et">
-    <div class="t">${esc(tam)}</div>
+    <div class="t">${esc((ctx.mapaTam && ctx.mapaTam[tam]) || tam)}</div>
     <div class="c">${comp}</div>
     <div class="e">${esc(ctx.emp.nome)}</div>
     <div class="n">CNPJ ${esc(fmtCnpj(ctx.emp.cnpj))}</div>
@@ -64,7 +64,9 @@ function htmlEtiqueta(tam, ctx) {
 function contexto() {
   const emp = empresas.find(e => e.id === $('empresa').value);
   if (!emp) return null;
-  return { emp, modelo: $('modelo').value, comp: refDoc && refDoc.composicao ? refDoc.composicao : '', lote: corte.lote };
+  // mapaTam: nome do tamanho na etiqueta, definido no cadastro da ref (ex.: P → 1). Vazio = igual ao sistema.
+  const mapaTam = (refDoc && refDoc.etiqueta_tam) || {};
+  return { emp, modelo: $('modelo').value, comp: refDoc && refDoc.composicao ? refDoc.composicao : '', lote: corte.lote, mapaTam };
 }
 function quantidades() {
   const q = {};
