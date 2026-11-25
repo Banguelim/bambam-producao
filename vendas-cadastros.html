@@ -49,6 +49,10 @@
   .campo-preco { display: flex; align-items: center; gap: 8px; }
   .campo-preco label { flex: 1; font-size: 12px; font-weight: 700; color: var(--text-secondary); }
   .campo-preco input { width: 90px; padding: 7px 8px; text-align: right; }
+  .grade-cliente { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; margin-bottom: 16px; }
+  .grade-cliente .campo { display: flex; flex-direction: column; gap: 4px; }
+  .grade-cliente .campo.largo { grid-column: 1 / -1; }
+  .grade-cliente input, .grade-cliente select { width: 100%; padding: 9px 12px; font-size: 14px; }
 </style>
 </head>
 <body>
@@ -95,6 +99,10 @@
             <label class="lbl">CNPJ/CPF</label>
             <input id="cli-cnpj" placeholder="00.000.000/0000-00">
           </div>
+          <div class="campo" style="flex:2;min-width:220px">
+            <label class="lbl">Endereço</label>
+            <input id="cli-endereco" placeholder="rua, número, bairro">
+          </div>
           <div class="campo">
             <label class="lbl">Cidade</label>
             <input id="cli-cidade" placeholder="cidade" style="text-transform:uppercase">
@@ -113,7 +121,7 @@
           </div>
           <div class="campo">
             <label class="lbl">Vendedor</label>
-            <input list="vend-list" id="cli-vendedor" placeholder="digite ou escolha">
+            <select id="cli-vendedor"></select>
           </div>
           <div class="campo">
             <label class="lbl">Tabela de preço padrão</label>
@@ -122,7 +130,6 @@
         </div>
         <button class="btn-add" id="btn-cli-add" disabled>+ Cadastrar</button>
       </div>
-      <datalist id="vend-list"></datalist>
       <div class="lista-cad">
         <div class="titulo">
           <span class="rot">Clientes cadastrados <span class="contagem" id="cli-contagem">(0)</span></span>
@@ -201,6 +208,54 @@
           <button class="btn btn-secondary" id="mp-cancelar">Cancelar</button>
           <button class="btn btn-primary" id="mp-salvar">✓ Salvar</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-nota" id="modal-cliente">
+    <div class="caixa" style="max-width:640px;background:var(--surface-1);color:var(--text-primary);font-family:inherit">
+      <h3 style="margin-bottom:12px" id="ec-titulo">Editar cliente</h3>
+      <div class="grade-cliente">
+        <div class="campo largo">
+          <label class="lbl">Razão social / nome</label>
+          <input id="ec-nome">
+        </div>
+        <div class="campo">
+          <label class="lbl">CNPJ/CPF</label>
+          <input id="ec-cnpj">
+        </div>
+        <div class="campo">
+          <label class="lbl">Telefone</label>
+          <input id="ec-telefone">
+        </div>
+        <div class="campo largo">
+          <label class="lbl">Endereço</label>
+          <input id="ec-endereco">
+        </div>
+        <div class="campo">
+          <label class="lbl">Cidade</label>
+          <input id="ec-cidade" style="text-transform:uppercase">
+        </div>
+        <div class="campo">
+          <label class="lbl">Estado</label>
+          <input id="ec-estado" style="text-transform:uppercase">
+        </div>
+        <div class="campo largo">
+          <label class="lbl">E-mail</label>
+          <input id="ec-email">
+        </div>
+        <div class="campo">
+          <label class="lbl">Vendedor</label>
+          <select id="ec-vendedor"></select>
+        </div>
+        <div class="campo">
+          <label class="lbl">Tabela de preço padrão</label>
+          <select id="ec-tabela"></select>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-secondary" id="ec-cancelar">Cancelar</button>
+        <button class="btn btn-primary" id="ec-salvar">✓ Salvar</button>
       </div>
     </div>
   </div>
