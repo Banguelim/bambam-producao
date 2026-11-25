@@ -51,7 +51,10 @@ async function carregarClientes() {
     const clientes = await listarClientes();
     clientesPorId = new Map(clientes.map(c => [String(c.id), c]));
     clientesPorNome = new Map(clientes.map(c => [(c.nome || '').toUpperCase(), c]));
-    const vendedores = [...new Set(clientes.map(c => (c.vendedor || '').trim().toUpperCase()).filter(Boolean))].sort();
+    // Lista do filtro = vendedores cadastrados + nomes que ainda estão nos clientes (grafias antigas somem quando o cliente for corrigido)
+    let cadastrados = [];
+    try { cadastrados = (await listarVendedores()).map(v => (v.nome || '').trim().toUpperCase()); } catch (e) { console.warn('Vendedores não carregados:', e); }
+    const vendedores = [...new Set([...cadastrados, ...clientes.map(c => (c.vendedor || '').trim().toUpperCase())].filter(Boolean))].sort();
     const sel = document.getElementById('f-vendedor');
     sel.innerHTML = '<option value="">Todos</option>' +
       vendedores.map(v => `<option value="${v}">${v}</option>`).join('');
@@ -199,7 +202,7 @@ function render() {
       if (pagAte && c.data_pagamento > pagAte) return false;
     }
     const cli = clienteDaConta(c);
-    if (vendedor && (cli?.vendedor || '').trim().toUpperCase() !== vendedor) return false;
+    if (vendedor && (c.vendedor || cli?.vendedor || '').trim().toUpperCase() !== vendedor) return false;
     if (busca) {
       // Observação (campo "historico") entra na busca — é onde se anota o nº da NF
       const alvo = `${c.cliente || ''} ${c.pedido_id || ''} ${(c.pedidos_agrupados || []).join(' ')} ${c.historico || ''}`.toUpperCase();
@@ -278,7 +281,8 @@ function render() {
       <td>${celPedido}</td>
       <td class="cliente">${c.cliente || '—'}${(() => {
         const cli = clienteDaConta(c);
-        const info = [c.cnpj || cli?.cnpj, cli?.vendedor && 'vend. ' + cli.vendedor].filter(Boolean).join(' · ');
+        const vendLinha = c.vendedor || cli?.vendedor;
+        const info = [c.cnpj || cli?.cnpj, vendLinha && 'vend. ' + vendLinha].filter(Boolean).join(' · ');
         return info ? `<span class="juros-info" style="color:var(--text-muted)">${info}</span>` : '';
       })()}</td>
       <td>${juntada ? `🔗 junção (${c.agrupa_ids.length})` : `${c.parcela_num}/${c.parcelas_total}`}</td>
