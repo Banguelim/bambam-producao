@@ -6,6 +6,7 @@ let vTabelas = [];
 let vProdutos = [];
 let acaoEdit = null;
 let produtoEmEdicao = null;
+let clienteEmEdicao = null;
 
 async function init() {
   await protegerRota();
@@ -19,6 +20,10 @@ async function init() {
   document.getElementById('cli-nome').addEventListener('keydown', e => { if (e.key === 'Enter') tentarAddCliente(); });
   document.getElementById('btn-cli-add').addEventListener('click', tentarAddCliente);
   document.getElementById('cli-busca').addEventListener('input', renderClientes);
+
+  // Modal de edição completa do cliente
+  document.getElementById('ec-cancelar').addEventListener('click', fecharModalCliente);
+  document.getElementById('ec-salvar').addEventListener('click', salvarModalCliente);
 
   // Vendedores
   document.getElementById('vend-nome').addEventListener('input', () => {
@@ -67,21 +72,25 @@ async function carregarTudo() {
     renderChipsTabelas();
     renderProdutos();
     popularSelectsTabela();
-    popularDatalists();
+    popularSelectVendedor();
   } catch (e) {
     console.error('Erro carregando cadastros de vendas:', e);
     toast('Erro: ' + e.message, 'err');
   }
 }
 
-function popularDatalists() {
-  const dlVend = document.getElementById('vend-list');
-  dlVend.innerHTML = '';
+// Lista de vendedores do formulário de novo cliente — só aceita vendedor já cadastrado
+function popularSelectVendedor() {
+  const sel = document.getElementById('cli-vendedor');
+  const atual = sel.value;
+  sel.innerHTML = '<option value="">— sem vendedor —</option>';
   vVendedores.forEach(v => {
     const opt = document.createElement('option');
     opt.value = v.nome;
-    dlVend.appendChild(opt);
+    opt.textContent = v.nome;
+    sel.appendChild(opt);
   });
+  if (atual && vVendedores.some(v => v.nome === atual)) sel.value = atual;
 }
 
 function popularSelectsTabela() {
@@ -115,19 +124,18 @@ async function tentarAddCliente() {
     cnpj: document.getElementById('cli-cnpj').value.trim(),
     cidade: document.getElementById('cli-cidade').value.trim().toUpperCase(),
     estado: document.getElementById('cli-estado').value.trim().toUpperCase(),
+    endereco: document.getElementById('cli-endereco').value.trim(),
     telefone: document.getElementById('cli-telefone').value.trim(),
     email: document.getElementById('cli-email').value.trim(),
-    vendedor: document.getElementById('cli-vendedor').value.trim().toUpperCase(),
+    vendedor: document.getElementById('cli-vendedor').value,
     tabela_preco: document.getElementById('cli-tabela').value || 'BASE',
     ativo: true
   };
   try {
-    if (cliente.vendedor && !vVendedores.some(v => v.nome === cliente.vendedor)) {
-      await salvarVendedor(cliente.vendedor);
-    }
     await salvarCliente(cliente);
     toast(`✓ ${nome} cadastrado(a)`, 'ok');
-    ['cli-nome', 'cli-cnpj', 'cli-cidade', 'cli-estado', 'cli-telefone', 'cli-email', 'cli-vendedor'].forEach(id => document.getElementById(id).value = '');
+    ['cli-nome', 'cli-cnpj', 'cli-cidade', 'cli-estado', 'cli-endereco', 'cli-telefone', 'cli-email'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('cli-vendedor').value = '';
     document.getElementById('btn-cli-add').disabled = true;
     await carregarTudo();
   } catch (e) {
@@ -158,18 +166,81 @@ async function excluirCliente(id, nome) {
     toast('Erro: ' + e.message, 'err');
   }
 }
+
+// Edição completa do cliente (todos os campos, não só o nome)
 function editarCliente(c) {
-  document.getElementById('edit-titulo').textContent = 'Editar cliente';
-  document.getElementById('edit-nome').value = c.nome;
-  acaoEdit = async (novoNome) => {
-    if (!novoNome) return;
-    await salvarCliente({ id: c.id, nome: novoNome });
-    document.getElementById('modal-editar').classList.remove('visivel');
-    toast('✓ Nome atualizado', 'ok');
-    await carregarTudo();
-  };
-  document.getElementById('modal-editar').classList.add('visivel');
+  clienteEmEdicao = c;
+  const set = (id, v) => { document.getElementById(id).value = v || ''; };
+  set('ec-nome', c.nome);
+  set('ec-cnpj', c.cnpj);
+  set('ec-cidade', c.cidade);
+  set('ec-estado', c.estado);
+  set('ec-endereco', c.endereco);
+  set('ec-telefone', c.telefone);
+  set('ec-email', c.email);
+  document.getElementById('ec-titulo').textContent = 'Editar cliente';
+
+  // Vendedor: só os cadastrados. Se o cliente tem um nome antigo que não está
+  // cadastrado (ex: grafia errada da importação), ele aparece marcado pra você trocar.
+  const selV = document.getElementById('ec-vendedor');
+  selV.innerHTML = '<option value="">— sem vendedor —</option>';
+  vVendedores.forEach(v => {
+    const o = document.createElement('option');
+    o.value = v.nome; o.textContent = v.nome;
+    selV.appendChild(o);
+  });
+  const vendAtual = (c.vendedor || '').trim();
+  if (vendAtual && !vVendedores.some(v => v.nome === vendAtual)) {
+    const o = document.createElement('option');
+    o.value = vendAtual;
+    o.textContent = `${vendAtual} (não cadastrado — troque por um da lista)`;
+    selV.appendChild(o);
+  }
+  selV.value = vendAtual;
+
+  const selT = document.getElementById('ec-tabela');
+  selT.innerHTML = '';
+  const tabs = [...vTabelas];
+  if (c.tabela_preco && !tabs.includes(c.tabela_preco)) tabs.push(c.tabela_preco);
+  tabs.forEach(t => {
+    const o = document.createElement('option');
+    o.value = t; o.textContent = t;
+    selT.appendChild(o);
+  });
+  selT.value = c.tabela_preco || 'BASE';
+
+  document.getElementById('modal-cliente').classList.add('visivel');
 }
+function fecharModalCliente() {
+  document.getElementById('modal-cliente').classList.remove('visivel');
+  clienteEmEdicao = null;
+}
+async function salvarModalCliente() {
+  if (!clienteEmEdicao) return;
+  const nome = document.getElementById('ec-nome').value.trim();
+  if (!nome) { toast('Preencha o nome / razão social', 'err'); return; }
+  const dados = {
+    id: clienteEmEdicao.id,
+    nome,
+    cnpj: document.getElementById('ec-cnpj').value.trim(),
+    cidade: document.getElementById('ec-cidade').value.trim().toUpperCase(),
+    estado: document.getElementById('ec-estado').value.trim().toUpperCase(),
+    endereco: document.getElementById('ec-endereco').value.trim(),
+    telefone: document.getElementById('ec-telefone').value.trim(),
+    email: document.getElementById('ec-email').value.trim(),
+    vendedor: document.getElementById('ec-vendedor').value,
+    tabela_preco: document.getElementById('ec-tabela').value || 'BASE'
+  };
+  try {
+    await salvarCliente(dados);
+    toast(`✓ ${nome} atualizado`, 'ok');
+    fecharModalCliente();
+    await carregarTudo();
+  } catch (e) {
+    toast('Erro: ' + e.message, 'err');
+  }
+}
+
 function renderClientes() {
   const lista = document.getElementById('cli-lista');
   const busca = (document.getElementById('cli-busca').value || '').toUpperCase();
@@ -213,9 +284,49 @@ function renderClientes() {
 }
 
 // ==== VENDEDORES ====
+// Nome comparado sem acento, sem espaço sobrando e em maiúsculas
+function normNomeVend(s) {
+  return String(s || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
+}
+// Distância de Levenshtein (quantas letras precisam mudar pra um nome virar o outro)
+function distanciaNomes(a, b) {
+  const dp = Array.from({ length: a.length + 1 }, () => new Array(b.length + 1).fill(0));
+  for (let i = 0; i <= a.length; i++) dp[i][0] = i;
+  for (let j = 0; j <= b.length; j++) dp[0][j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[a.length][b.length];
+}
+// Acha um vendedor já cadastrado igual ou parecido com o nome digitado:
+// igual, 1-2 letras de diferença (1 se o nome for curto) ou um nome contido no outro
+// (ex: KILZE dentro de CARLOS KILZE, SERGIO dentro de SERGIO ZAP).
+function vendedorParecido(novo) {
+  const n = normNomeVend(novo);
+  for (const v of vVendedores) {
+    const x = normNomeVend(v.nome);
+    if (x === n) return { tipo: 'igual', nome: v.nome };
+    const limite = Math.min(n.length, x.length) >= 5 ? 2 : 1;
+    if (distanciaNomes(n, x) <= limite) return { tipo: 'parecido', nome: v.nome };
+    if (n.length >= 3 && x.length >= 3 && (x.includes(n) || n.includes(x))) return { tipo: 'parecido', nome: v.nome };
+  }
+  return null;
+}
+
 async function tentarAddVendedor() {
   const nome = document.getElementById('vend-nome').value.trim().toUpperCase();
   if (!nome) return;
+  const parecido = vendedorParecido(nome);
+  if (parecido) {
+    toast(parecido.tipo === 'igual'
+      ? `O vendedor ${parecido.nome} já está cadastrado`
+      : `"${nome}" é parecido com o vendedor já cadastrado "${parecido.nome}" — use o ${parecido.nome} (não cadastro nomes parecidos)`, 'err');
+    return;
+  }
   try {
     await salvarVendedor(nome);
     toast(`✓ Vendedor ${nome} cadastrado`, 'ok');
