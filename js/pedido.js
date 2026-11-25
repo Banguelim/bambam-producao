@@ -3,6 +3,9 @@
 // "Concluir pedido" trava o pedido, dá baixa no estoque (produção) e gera as
 // parcelas em Contas a Receber. Também imprime 2 romaneios: separação
 // (detalhado por ref/cor/tamanho) e conferência (resumido por ref).
+//
+// Vendedor: vem do cadastro do cliente, mas pode ser trocado por outro vendedor
+// JÁ CADASTRADO (lista). O pedido só é salvo/concluído com vendedor escolhido.
 
 let pClientes = [];
 let pVendedores = [];
@@ -74,9 +77,10 @@ function popularDatalistsCabecalho(refs) {
   dlCli.innerHTML = '';
   pClientes.forEach(c => { const o = document.createElement('option'); o.value = c.nome; dlCli.appendChild(o); });
 
-  const dlVend = document.getElementById('vendedores-list');
-  dlVend.innerHTML = '';
-  pVendedores.forEach(v => { const o = document.createElement('option'); o.value = v.nome; dlVend.appendChild(o); });
+  // Vendedor do pedido: lista fechada, só vendedores cadastrados
+  const selVend = document.getElementById('p-vendedor');
+  selVend.innerHTML = '<option value="">— escolha o vendedor —</option>';
+  pVendedores.forEach(v => { const o = document.createElement('option'); o.value = v.nome; o.textContent = v.nome; selVend.appendChild(o); });
 
   const dlRef = document.getElementById('refs-list');
   dlRef.innerHTML = '';
@@ -97,11 +101,42 @@ function sugerirVencimento() {
   document.getElementById('p-vencimento').value = d.toISOString().slice(0, 10);
 }
 
+// Acha o vendedor cadastrado pelo nome (sem diferenciar maiúscula/minúscula)
+function vendedorCadastrado(nome) {
+  const n = String(nome || '').trim().toUpperCase();
+  if (!n) return null;
+  return pVendedores.find(v => (v.nome || '').toUpperCase() === n) || null;
+}
+
+// Coloca um vendedor no campo do pedido. Se for um nome que não está cadastrado
+// (pedido antigo), aparece marcado "não cadastrado" pra você trocar por um da lista.
+function setVendedorPedido(valor) {
+  const sel = document.getElementById('p-vendedor');
+  const v = String(valor || '').trim();
+  sel.querySelectorAll('option[data-legado]').forEach(o => o.remove());
+  if (v && ![...sel.options].some(o => o.value === v)) {
+    const o = document.createElement('option');
+    o.value = v;
+    o.textContent = `${v} (não cadastrado)`;
+    o.dataset.legado = '1';
+    sel.appendChild(o);
+  }
+  sel.value = v;
+}
+
 function onClienteChange() {
   const nome = document.getElementById('p-cliente').value.trim();
   const c = pClientes.find(x => x.nome.toUpperCase() === nome.toUpperCase());
   if (c) {
-    document.getElementById('p-vendedor').value = c.vendedor || '';
+    const vend = vendedorCadastrado(c.vendedor);
+    if (vend) {
+      setVendedorPedido(vend.nome);
+    } else {
+      setVendedorPedido('');
+      toast(c.vendedor
+        ? `O vendedor "${c.vendedor}" do cadastro desse cliente não está na lista de vendedores — escolha o vendedor do pedido (e corrija o cliente em Clientes)`
+        : 'Esse cliente não tem vendedor no cadastro — escolha o vendedor do pedido', 'err');
+    }
     if (c.tabela_preco) {
       document.getElementById('p-tabela').value = c.tabela_preco;
       document.getElementById('it-tabela').value = c.tabela_preco;
@@ -487,8 +522,14 @@ function montarPedidoObj() {
 
 function validarCabecalho() {
   const cliente = document.getElementById('p-cliente').value.trim();
+  const vendedor = document.getElementById('p-vendedor').value.trim();
   const data = document.getElementById('p-data').value;
   if (!cliente) { toast('Escolha ou digite o cliente', 'err'); return false; }
+  if (!vendedor) { toast('Escolha o vendedor — o pedido só entra com vendedor', 'err'); return false; }
+  if (!vendedorCadastrado(vendedor)) {
+    toast(`O vendedor "${vendedor}" não está cadastrado — escolha um da lista (ou cadastre em Clientes → Vendedores)`, 'err');
+    return false;
+  }
   if (!data) { toast('Preencha a data', 'err'); return false; }
   if (pedidoItens.length === 0) { toast('Adicione ao menos um item', 'err'); return false; }
   return true;
@@ -506,9 +547,6 @@ async function salvarPedidoBtn(silencioso) {
     statusPedidoAtual = 'aberto';
     atualizarCabecalhoNumero();
     if (!silencioso) toast(`✓ Pedido ${numero} salvo`, 'ok');
-    if (!(pedido.vendedor && pVendedores.some(v => v.nome === pedido.vendedor))) {
-      if (pedido.vendedor) await salvarVendedor(pedido.vendedor);
-    }
     return numero;
   } catch (e) {
     toast('Erro ao salvar: ' + e.message, 'err');
@@ -563,8 +601,8 @@ async function concluirPedidoBtn() {
     statusPedidoAtual = 'concluido';
     atualizarCabecalhoNumero();
 
-    // 4) Gera contas a receber (parcelas)
-    await gerarContasReceber({ numero, cliente: pedido.cliente, cliente_id: pedido.cliente_id, total_valor: pedido.total_valor }, parcelas, vencBase);
+    // 4) Gera contas a receber (parcelas) — cada parcela guarda o vendedor do pedido
+    await gerarContasReceber({ numero, cliente: pedido.cliente, cliente_id: pedido.cliente_id, vendedor: pedido.vendedor, total_valor: pedido.total_valor }, parcelas, vencBase);
 
     toast(`✓ Pedido ${numero} concluído — estoque baixado e ${parcelas} parcela(s) geradas`, 'ok grande');
   } catch (e) {
@@ -681,7 +719,7 @@ function limparFormulario() {
   statusPedidoAtual = 'aberto';
   pedidoItens = [];
   document.getElementById('p-cliente').value = '';
-  document.getElementById('p-vendedor').value = '';
+  setVendedorPedido('');
   document.getElementById('p-tabela').selectedIndex = 0;
   document.getElementById('p-data').value = hojeISO();
   document.getElementById('p-prazo').value = '';
@@ -704,7 +742,7 @@ async function abrirPedido(numero) {
     numeroPedidoAtual = p.numero;
     statusPedidoAtual = p.status || 'aberto';
     document.getElementById('p-cliente').value = p.cliente || '';
-    document.getElementById('p-vendedor').value = p.vendedor || '';
+    setVendedorPedido(p.vendedor || '');
     if (p.tabela_preco) document.getElementById('p-tabela').value = p.tabela_preco;
     document.getElementById('p-data').value = p.data_pedido || hojeISO();
     document.getElementById('p-prazo').value = p.prazo_pagamento || '';
