@@ -303,8 +303,9 @@ function distanciaNomes(a, b) {
   return dp[a.length][b.length];
 }
 // Acha um vendedor já cadastrado igual ou parecido com o nome digitado:
-// igual, 1-2 letras de diferença (1 se o nome for curto) ou um nome contido no outro
-// (ex: KILZE dentro de CARLOS KILZE, SERGIO dentro de SERGIO ZAP).
+// igual, 1-2 letras de diferença (1 se o nome for curto) ou um sobrenome/nome do meio
+// dentro do outro (ex: KILZE dentro de CARLOS KILZE). Mesmo primeiro nome com sobrenome
+// diferente (CARLOS KILZE × CARLOS SOUZA) é aceito.
 function vendedorParecido(novo) {
   const n = normNomeVend(novo);
   for (const v of vVendedores) {
@@ -312,7 +313,17 @@ function vendedorParecido(novo) {
     if (x === n) return { tipo: 'igual', nome: v.nome };
     const limite = Math.min(n.length, x.length) >= 5 ? 2 : 1;
     if (distanciaNomes(n, x) <= limite) return { tipo: 'parecido', nome: v.nome };
-    if (n.length >= 3 && x.length >= 3 && (x.includes(n) || n.includes(x))) return { tipo: 'parecido', nome: v.nome };
+    // Um nome inteiro dentro do outro (ex: KILZE dentro de CARLOS KILZE) é a mesma pessoa.
+    // MAS só o primeiro nome (CARLOS dentro de CARLOS KILZE) NÃO bloqueia: pode ser outra pessoa.
+    const nw = n.split(' '), xw = x.split(' ');
+    const curto = nw.length <= xw.length ? nw : xw;
+    const longo = nw.length <= xw.length ? xw : nw;
+    if (curto.length < longo.length && curto.join(' ').length >= 3) {
+      const textoCurto = curto.join(' ');
+      const comecaIgual = longo.slice(0, curto.length).join(' ') === textoCurto;
+      const contido = (' ' + longo.join(' ') + ' ').includes(' ' + textoCurto + ' ');
+      if (contido && !comecaIgual) return { tipo: 'parecido', nome: v.nome };
+    }
   }
   return null;
 }
@@ -321,10 +332,15 @@ async function tentarAddVendedor() {
   const nome = document.getElementById('vend-nome').value.trim().toUpperCase();
   if (!nome) return;
   const parecido = vendedorParecido(nome);
-  if (parecido) {
-    toast(parecido.tipo === 'igual'
-      ? `O vendedor ${parecido.nome} já está cadastrado`
-      : `"${nome}" é parecido com o vendedor já cadastrado "${parecido.nome}" — use o ${parecido.nome} (não cadastro nomes parecidos)`, 'err');
+  if (parecido && parecido.tipo === 'igual') {
+    toast(`O vendedor ${parecido.nome} já está cadastrado`, 'err');
+    return;
+  }
+  // Parecido (erro de digitação, sobrenome repetido...) não bloqueia: pede confirmação
+  if (parecido && !confirm(
+    `"${nome}" é parecido com o vendedor já cadastrado "${parecido.nome}".\n\n` +
+    `Se for a MESMA pessoa, cancele e use o ${parecido.nome}.\n` +
+    `Se for outra pessoa, clique em OK pra cadastrar mesmo assim.`)) {
     return;
   }
   try {
