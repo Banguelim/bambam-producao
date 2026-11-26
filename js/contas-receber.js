@@ -21,6 +21,8 @@ let selecionadas = new Set();   // ids das parcelas marcadas pra juntar
 // e o nome). Clientes são ~200 docs — leve.
 let clientesPorId = new Map();
 let clientesPorNome = new Map();
+let vendedoresCadastrados = [];   // nomes dos vendedores cadastrados (pra trocar o vendedor de uma parcela)
+let parcelaTrocaVendedor = null;  // parcela aberta no modal de trocar vendedor
 
 async function init() {
   await protegerRota();
@@ -41,6 +43,8 @@ async function init() {
     document.getElementById('f-vendedor').value = '';
     render();
   });
+  document.getElementById('mv-cancelar').addEventListener('click', fecharTrocaVendedor);
+  document.getElementById('mv-salvar').addEventListener('click', salvarTrocaVendedor);
   document.getElementById('btn-desmarcar').addEventListener('click', () => { selecionadas.clear(); render(); });
   document.getElementById('btn-juntar').addEventListener('click', juntarSelecionadasBtn);
   await Promise.all([carregar(), carregarClientes()]);
@@ -54,6 +58,7 @@ async function carregarClientes() {
     // Lista do filtro = vendedores cadastrados + nomes que ainda estão nos clientes (grafias antigas somem quando o cliente for corrigido)
     let cadastrados = [];
     try { cadastrados = (await listarVendedores()).map(v => (v.nome || '').trim().toUpperCase()); } catch (e) { console.warn('Vendedores não carregados:', e); }
+    vendedoresCadastrados = cadastrados.filter(Boolean);
     const vendedores = [...new Set([...cadastrados, ...clientes.map(c => (c.vendedor || '').trim().toUpperCase())].filter(Boolean))].sort();
     const sel = document.getElementById('f-vendedor');
     sel.innerHTML = '<option value="">Todos</option>' +
@@ -334,8 +339,66 @@ function render() {
         acaoTd.appendChild(btnSep);
       }
     }
+    const btnVend = document.createElement('button');
+    btnVend.className = 'btn-mini';
+    btnVend.textContent = '✎ vendedor';
+    btnVend.title = 'Trocar o vendedor só desta parcela';
+    btnVend.addEventListener('click', () => abrirTrocaVendedor(c));
+    acaoTd.appendChild(btnVend);
     corpo.appendChild(tr);
   });
+}
+
+// Trocar o vendedor de UMA parcela (a comissão é paga pelas parcelas recebidas).
+// Só dá pra escolher vendedor cadastrado, mostra de → para e pede confirmação;
+// mexe só nessa parcela e guarda o vendedor anterior.
+function abrirTrocaVendedor(c) {
+  parcelaTrocaVendedor = c;
+  const cli = clienteDaConta(c);
+  const atual = (c.vendedor || cli?.vendedor || '').trim().toUpperCase();
+  document.getElementById('mv-info').innerHTML =
+    `<b>${c.cliente || '—'}</b><br>` +
+    `Parcela ${c.parcela_num}/${c.parcelas_total} · vencimento ${formatDataBR(c.data_vencimento)} · ${formatBRL(c.valor)}` +
+    (c.status === 'pago' ? ` · <b style="color:var(--success)">paga em ${formatDataBR(c.data_pagamento)}</b>` : '') +
+    `<br>Vendedor atual: <b>${atual || 'nenhum'}</b>` +
+    (c.vendedor ? '' : ' <i>(vem do cadastro do cliente)</i>');
+  const sel = document.getElementById('mv-select');
+  sel.innerHTML = '<option value="">— escolha o vendedor —</option>';
+  vendedoresCadastrados.forEach(v => {
+    const o = document.createElement('option');
+    o.value = v; o.textContent = v;
+    sel.appendChild(o);
+  });
+  sel.value = vendedoresCadastrados.includes(atual) ? atual : '';
+  document.getElementById('modal-vend-parcela').classList.add('visivel');
+}
+function fecharTrocaVendedor() {
+  document.getElementById('modal-vend-parcela').classList.remove('visivel');
+  parcelaTrocaVendedor = null;
+}
+async function salvarTrocaVendedor() {
+  const c = parcelaTrocaVendedor;
+  if (!c) return;
+  const novo = document.getElementById('mv-select').value;
+  if (!novo) { toast('Escolha o vendedor', 'err'); return; }
+  const cli = clienteDaConta(c);
+  const atual = (c.vendedor || cli?.vendedor || '').trim().toUpperCase();
+  if (novo === atual && c.vendedor) { toast('Essa parcela já está com esse vendedor', 'err'); return; }
+  if (!confirm(
+    `Trocar o vendedor desta parcela?\n\n` +
+    `${c.cliente} — parcela ${c.parcela_num}/${c.parcelas_total} de ${formatBRL(c.valor)}\n` +
+    `De: ${atual || 'nenhum'}\nPara: ${novo}\n\n` +
+    `Só esta parcela muda.`)) return;
+  try {
+    await trocarVendedorConta(c.id, novo, atual);
+    c.vendedor_anterior = atual || null;
+    c.vendedor = novo;
+    toast(`✓ Vendedor da parcela ${c.parcela_num}/${c.parcelas_total} de ${c.cliente}: ${atual || 'nenhum'} → ${novo}`, 'ok');
+    fecharTrocaVendedor();
+    render();
+  } catch (e) {
+    toast('Erro: ' + e.message, 'err');
+  }
 }
 
 // A conta muda de lado (pendente ↔ paga). NÃO relê o histórico de pagas
