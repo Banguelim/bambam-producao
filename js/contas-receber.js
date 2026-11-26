@@ -223,9 +223,22 @@ function render() {
   // Total do período (só aparece quando tem filtro de data ativo)
   const infoPeriodo = document.getElementById('total-periodo');
   if (dataDe || dataAte || filtraPag) {
-    const total = filtradas.reduce((a, c) => a + (statusReal(c) === 'pago' ? (c.valor_pago ?? c.valor ?? 0) : (c.valor || 0)), 0);
-    document.getElementById('total-periodo-valor').textContent = formatBRL(total);
-    document.getElementById('total-periodo-qtd').textContent = filtradas.length;
+    // Valor da parcela (pago = o que foi recebido; aberto = valor atual). "Sem juros" tira os juros lançados nela.
+    let total = 0, semJuros = 0;
+    filtradas.forEach(c => {
+      const base = statusReal(c) === 'pago' ? (c.valor_pago ?? c.valor ?? 0) : (c.valor || 0);
+      const juros = c.juros > 0 ? c.juros : 0;
+      total += base;
+      semJuros += Math.max(0, base - juros);
+    });
+    total = Math.round(total * 100) / 100;
+    semJuros = Math.round(semJuros * 100) / 100;
+    const jurosTotal = Math.round((total - semJuros) * 100) / 100;
+    infoPeriodo.innerHTML =
+      `Total no período filtrado: <b style="color:var(--text-primary)">${formatBRL(total)}</b> ` +
+      `(<span>${filtradas.length}</span> parcela(s)) — ` +
+      `<b style="color:var(--success)">sem juros: ${formatBRL(semJuros)}</b>` +
+      (jurosTotal > 0 ? ` · juros: <b style="color:var(--warning)">${formatBRL(jurosTotal)}</b>` : '');
     infoPeriodo.style.display = '';
   } else {
     infoPeriodo.style.display = 'none';
