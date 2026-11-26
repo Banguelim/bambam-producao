@@ -154,6 +154,20 @@
     <div class="vazio" id="contas-vazio" style="display:none">Nenhuma conta encontrada</div>
   </div>
 
+  <div class="modal-nota" id="modal-vend-parcela">
+    <div class="caixa" style="max-width:440px;background:var(--surface-1);color:var(--text-primary);font-family:inherit">
+      <h3 style="margin-bottom:6px">Trocar o vendedor desta parcela</h3>
+      <div id="mv-info" style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;line-height:1.5"></div>
+      <div style="font-size:12px;color:var(--warning);margin-bottom:12px">Só esta parcela muda — o cadastro do cliente e as outras parcelas ficam como estão.</div>
+      <label class="lbl">Vendedor desta parcela</label>
+      <select id="mv-select" style="width:100%;padding:9px 12px;margin-bottom:16px"></select>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-secondary" id="mv-cancelar">Cancelar</button>
+        <button class="btn btn-primary" id="mv-salvar">✓ Salvar</button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
