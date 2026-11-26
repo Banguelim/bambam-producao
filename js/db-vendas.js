@@ -391,6 +391,47 @@ async function separarJuncaoContas(conta) {
   await batch.commit();
 }
 
+// Troca o vendedor de UMA parcela (só ela). Guarda o vendedor anterior e a data da
+// troca, pra ficar rastreável (a comissão é paga em cima das parcelas recebidas).
+async function trocarVendedorConta(id, novoVendedor, vendedorAnterior) {
+  await colContasReceber().doc(id).update({
+    vendedor: novoVendedor,
+    vendedor_anterior: vendedorAnterior || null,
+    vendedor_alterado_em: firebase.firestore.FieldValue.serverTimestamp()
+  });
+}
+
+// Parcelas de UM cliente (só dele — poucas leituras) que ainda NÃO têm vendedor
+// gravado. Procura pelo id do cliente e também pelo nome, que é como as parcelas
+// importadas da planilha antiga se ligam ao cliente.
+async function listarContasSemVendedorDoCliente(cliente) {
+  const consultas = [];
+  const id = String(cliente.id || '');
+  if (id) {
+    consultas.push(colContasReceber().where('cliente_id', '==', id).get());
+    if (/^\d+$/.test(id)) consultas.push(colContasReceber().where('cliente_id', '==', Number(id)).get());
+  }
+  const nome = String(cliente.nome || '');
+  if (nome) {
+    consultas.push(colContasReceber().where('cliente', '==', nome).get());
+    if (nome.toUpperCase() !== nome) consultas.push(colContasReceber().where('cliente', '==', nome.toUpperCase()).get());
+  }
+  const porId = new Map();
+  for (const snap of await Promise.all(consultas)) {
+    snap.docs.forEach(d => porId.set(d.id, { id: d.id, ...d.data() }));
+  }
+  return [...porId.values()].filter(c => !c.vendedor);
+}
+
+// Grava o mesmo vendedor em várias parcelas (em lotes de 400).
+async function gravarVendedorEmContas(ids, vendedor) {
+  for (let i = 0; i < ids.length; i += 400) {
+    const batch = db.batch();
+    ids.slice(i, i + 400).forEach(id => batch.update(colContasReceber().doc(id), { vendedor }));
+    await batch.commit();
+  }
+}
+
 async function deletarContasDoPedido(numeroPedido) {
   const snap = await colContasReceber().where('pedido_id', '==', numeroPedido).get();
   const batch = db.batch();
