@@ -232,8 +232,24 @@ async function salvarModalCliente() {
     tabela_preco: document.getElementById('ec-tabela').value || 'BASE'
   };
   try {
+    // Trocou o vendedor do cliente? As parcelas antigas dele que ainda não têm vendedor
+    // gravado ficam com o vendedor ANTIGO (comissão do passado não muda). Só pedidos novos usam o novo.
+    const vendAntigo = (clienteEmEdicao.vendedor || '').trim();
+    let congelar = [];
+    if (vendAntigo && vendAntigo !== dados.vendedor) {
+      congelar = await listarContasSemVendedorDoCliente(clienteEmEdicao);
+      if (congelar.length > 0 && !confirm(
+        `Você está trocando o vendedor de ${nome}: de ${vendAntigo} para ${dados.vendedor || '(nenhum)'}.\n\n` +
+        `Encontrei ${congelar.length} parcela(s) antiga(s) dele. Elas vão CONTINUAR com o vendedor ${vendAntigo} ` +
+        `(a comissão do passado não muda). Só os pedidos novos usam o vendedor novo.\n\nConfirma?`)) {
+        return;
+      }
+      if (congelar.length > 0) await gravarVendedorEmContas(congelar.map(c => c.id), vendAntigo);
+    }
     await salvarCliente(dados);
-    toast(`✓ ${nome} atualizado`, 'ok');
+    toast(congelar.length > 0
+      ? `✓ ${nome} atualizado — ${congelar.length} parcela(s) antiga(s) ficaram com ${vendAntigo}`
+      : `✓ ${nome} atualizado`, 'ok');
     fecharModalCliente();
     await carregarTudo();
   } catch (e) {
